@@ -28,6 +28,23 @@ Build a touchscreen-first mixer interface for the Akai MPC Live II. The first mi
 - Channel identity and selection must remain clear while scrolling.
 - The UI should avoid requiring tiny controls or precision mouse interaction.
 
+## UI-to-DSP parameter contract
+
+The prototype's displayed ranges can be normalized without ambiguity when a
+host-side controller is added:
+
+- Track and Master fader: displayed 0–127 maps to linear gain 0.00–1.27
+  (0 dB at 100; approximately +2.1 dB at 127).
+- Mono pan: displayed -100–+100 maps to DSP -1.0–+1.0.
+- Six EQ gain controls: displayed dB values map directly to each EQ band's
+  `gainDb`; centre frequency and Q are separate DSP parameters.
+- Aux send: displayed 0–100% maps to 0.0–1.0.
+- Stereo balance: displayed -100–+100 maps to DSP -1.0–+1.0.
+- Mute, Solo and insert enable state map to explicit booleans.
+
+This is a parameter contract, not a live connection. The browser prototype
+still stores local demo state and does not call the C++ engine.
+
 ## Interaction principles
 
 - Touch operation is the primary interaction mode; no external MIDI controller is required.
