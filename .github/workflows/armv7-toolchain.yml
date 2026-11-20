@@ -26,7 +26,7 @@ jobs:
             gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf \
             binutils-arm-linux-gnueabihf file
 
-      - name: Compile ARMv7 C and C++ probes
+      - name: Compile ARMv7 C, C++ and graphics loader probes
         run: |
           mkdir -p build
           COMMON_FLAGS="-O2 -Wall -Wextra -Werror -march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard"
@@ -36,6 +36,10 @@ jobs:
 
           arm-linux-gnueabihf-g++ $COMMON_FLAGS -std=c++14 \
             tools/arm-probe/probe.cpp -o build/mpc-arm-probe-cpp
+
+          arm-linux-gnueabihf-g++ $COMMON_FLAGS -std=c++14 \
+            tools/arm-probe/graphics-load-probe.cpp -ldl \
+            -o build/mpc-arm-graphics-probe
 
           echo "=== C executable ==="
           file build/mpc-arm-probe-c
@@ -49,8 +53,12 @@ jobs:
           arm-linux-gnueabihf-readelf -l build/mpc-arm-probe-cpp | grep interpreter || true
           arm-linux-gnueabihf-readelf --version-info build/mpc-arm-probe-cpp
 
-          echo "=== Dynamic library dependencies (DT_NEEDED) ==="
-          arm-linux-gnueabihf-readelf -d build/mpc-arm-probe-cpp | grep -E 'NEEDED|RPATH|RUNPATH' || true
+          echo "=== Graphics loader probe ==="
+          file build/mpc-arm-graphics-probe
+          arm-linux-gnueabihf-readelf -h build/mpc-arm-graphics-probe
+          arm-linux-gnueabihf-readelf -l build/mpc-arm-graphics-probe | grep interpreter || true
+          arm-linux-gnueabihf-readelf -d build/mpc-arm-graphics-probe | grep -E 'NEEDED|RPATH|RUNPATH' || true
+          arm-linux-gnueabihf-readelf --version-info build/mpc-arm-graphics-probe
 
           echo "=== Cross-toolchain runtime library locations ==="
           arm-linux-gnueabihf-g++ -print-file-name=libstdc++.so.6
@@ -58,11 +66,13 @@ jobs:
           arm-linux-gnueabihf-g++ -print-file-name=libc.so.6
 
           echo "=== Reject runtime requirements newer than the MPC ==="
-          if arm-linux-gnueabihf-readelf --version-info build/mpc-arm-probe-cpp | \
-            grep -E 'GLIBCXX_3\.4\.(29|[3-9][0-9])|GLIBC_2\.(33|[4-9][0-9])'; then
-            echo "ERROR: executable requires a newer runtime than the MPC audit found."
-            exit 1
-          fi
+          for binary in build/mpc-arm-probe-cpp build/mpc-arm-graphics-probe; do
+            if arm-linux-gnueabihf-readelf --version-info "$binary" | \
+              grep -E 'GLIBCXX_3\.4\.(29|[3-9][0-9])|GLIBC_2\.(33|[4-9][0-9])'; then
+              echo "ERROR: $binary requires a newer runtime than the MPC audit found."
+              exit 1
+            fi
+          done
           echo "No GLIBC newer than 2.32 or GLIBCXX newer than 3.4.28 was found."
 
       - name: Upload probe binaries
@@ -72,4 +82,5 @@ jobs:
           path: |
             build/mpc-arm-probe-c
             build/mpc-arm-probe-cpp
+            build/mpc-arm-graphics-probe
           if-no-files-found: error
