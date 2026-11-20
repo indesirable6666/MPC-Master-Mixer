@@ -124,7 +124,8 @@ test('meter animation is opt-in and stops when switched off', () => {
 test('touch controls expose practical minimum hit areas', () => {
   assert.match(html, /\.tool\{min-height:42px;/);
   assert.match(html, /\.clip\{min-width:42px;min-height:26px;/);
-  assert.match(html, /\.band input\{[^}]*min-height:36px;/);\n  assert.match(html, /\.pan input\{[^}]*min-height:30px;/);
+  assert.match(html, /\.band input\{[^}]*min-height:36px;/);
+  assert.match(html, /\.pan input\{[^}]*min-height:30px;/);
   assert.match(html, /\.aux input\{[^}]*min-height:38px;/);
 });
 
@@ -176,6 +177,7 @@ test('selected track is announced and marked accessibly', () => {
   assert.equal(fourth.getAttribute('aria-current'), 'true');
   assert.equal(status.textContent, 'PISTE 04 · PERC');
   fourth.querySelector('.channel-title').textContent = 'BASSE SYNTHÉTIQUE TRÈS LONGUE';
+  fourth.blur();
   fourth.focus();
   assert.equal(status.textContent, 'PISTE 04 · BASSE SYNTHÉTIQUE TRÈS LONGUE');
   dom.window.close();
