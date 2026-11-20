@@ -143,4 +143,65 @@ private:
     std::array<CcMapping, kTrackCount> mappings_;
 };
 
+
+// Independent, fail-closed pan mapping for each mixer track.
+// Pan is normalized to [-1,1]: left=-1, center=0, right=1.
+class TrackPanMidiAdapter {
+public:
+    static constexpr std::size_t kTrackCount = 16;
+
+    explicit TrackPanMidiAdapter(MidiTransport& transport)
+        : transport_(transport), mappings_{} {}
+
+    bool configureTrack(std::size_t trackIndex, const CcMapping& mapping) {
+        if (trackIndex >= kTrackCount) {
+            return false;
+        }
+        if (!mapping.explicitly_verified ||
+            mapping.channel > 15 || mapping.controller > 127) {
+            mappings_[trackIndex] = CcMapping{0, 0, false};
+            return false;
+        }
+        mappings_[trackIndex] = mapping;
+        return true;
+    }
+
+    void clearTrack(std::size_t trackIndex) {
+        if (trackIndex < kTrackCount) {
+            mappings_[trackIndex] = CcMapping{0, 0, false};
+        }
+    }
+
+    void clearAll() {
+        for (auto& mapping : mappings_) {
+            mapping = CcMapping{0, 0, false};
+        }
+    }
+
+    bool hasVerifiedMapping(std::size_t trackIndex) const {
+        return trackIndex < kTrackCount &&
+               mappings_[trackIndex].explicitly_verified;
+    }
+
+    bool setTrackPan(std::size_t trackIndex, float normalizedPan) {
+        if (!hasVerifiedMapping(trackIndex) || !std::isfinite(normalizedPan) ||
+            normalizedPan < -1.0f || normalizedPan > 1.0f) {
+            return false;
+        }
+        const CcMapping& mapping = mappings_[trackIndex];
+        const auto value = static_cast<std::uint8_t>(
+            (normalizedPan + 1.0f) * 63.5f + 0.5f);
+        const MidiMessage message{
+            static_cast<std::uint8_t>(0xB0u | mapping.channel),
+            mapping.controller,
+            value
+        };
+        return transport_.send(message);
+    }
+
+private:
+    MidiTransport& transport_;
+    std::array<CcMapping, kTrackCount> mappings_;
+};
+
 } // namespace mpcmixer
