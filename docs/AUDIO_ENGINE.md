@@ -4,8 +4,8 @@
 
 `src/audio/audio_engine.hpp` is a platform-independent, allocation-free C++14 mixing core. It accepts up to 16 caller-owned mono floating-point input buffers and writes a caller-owned stereo floating-point output block.
 
-Implemented DSP building blocks:
-- Six-band parametric EQ (`SixBandEq`): six RBJ peaking biquads with independently configurable centre frequency (20Hz to Nyquist), Q (0.1–10) and gain (±12dB); default centres are 60, 180, 500, 1.5k, 5k and 12kHz, with independent planar channel state
+Implemented per track:
+- Integrated six-band parametric EQ (`SixBandEq`): six RBJ peaking biquads with independently configurable centre frequency (20Hz to Nyquist), Q (0.1–10) and gain (±12dB); default centres are 60, 180, 500, 1.5k, 5k and 12kHz, with independent planar channel state
 
 Implemented per track:
 - Linear gain from 0.0 to 1.0
@@ -46,7 +46,7 @@ This is a DSP block processor, not yet a live audio application. It does not:
 - Connect to MPC processes or modify device configuration
 - Provide insert effects, resampling, or latency management
 
-The current prototype controls are not wired to this engine. No real-time or hardware audio behavior is claimed.
+The browser prototype controls are not yet wired to this engine. Host-side DSP tests verify that configured per-track EQ runs before gain/pan and feeds both the main and Aux buses. No real-time or hardware audio behavior is claimed.
 
 ## Next milestones
 
