@@ -46,6 +46,12 @@ int main() {
     assert(near(left[3], 0.0f));
     assert(near(right[3], 1.0f));
 
+    // The complete 127-step fader range includes +2.1 dB above unity.
+    state = AudioEngine::Track{};
+    state.gain = AudioEngine::kMaxFaderGain;
+    assert(engine.setTrack(0, state));
+    assert(near(engine.track(0).gain, 1.27f));
+
     // Gain and mute.
     state = AudioEngine::Track{};
     state.gain = 0.25f;
@@ -80,7 +86,8 @@ int main() {
 
     // Invalid state is rejected without changing the previous valid state.
     assert(!engine.setMasterGain(std::numeric_limits<float>::quiet_NaN()));
-    assert(!engine.setMasterGain(1.1f));
+    assert(!engine.setMasterGain(1.28f));
+    assert(engine.setMasterGain(AudioEngine::kMaxFaderGain));
     assert(!engine.setTrack(16, AudioEngine::Track{}));
     state = AudioEngine::Track{};
     state.pan = 2.0f;
@@ -296,7 +303,7 @@ int main() {
     assert(near(pairR[0], 0.0f));
 
     // Invalid stereo controls and channel values are rejected.
-    stereo.gain = 2.0f;
+    stereo.gain = 1.28f;
     assert(!audioIn.setStereoControls(stereo));
     leftChannel.pan = std::numeric_limits<float>::quiet_NaN();
     assert(!audioIn.setChannel(0, leftChannel));
