@@ -123,7 +123,7 @@ test('meter animation is opt-in and stops when switched off', () => {
 
 test('touch controls expose practical minimum hit areas', () => {
   assert.match(html, /\.tool\{min-height:42px;/);
-  assert.match(html, /\.clip\{min-width:42px;min-height:26px;/);
+  assert.match(html, /\.clip\{min-width:42px;min-height:34px;/);
   assert.match(html, /\.band input\{[^}]*min-height:36px;/);
   assert.match(html, /\.pan input\{[^}]*min-height:30px;/);
   assert.match(html, /\.aux input\{[^}]*min-height:38px;/);
