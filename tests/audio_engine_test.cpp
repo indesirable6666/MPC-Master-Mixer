@@ -98,6 +98,57 @@ int main() {
     assert(near(left[0], 0.0f));
     assert(near(right[0], 0.0f));
 
+    // Four independent stereo Aux sends are post-fader/post-pan and pre-master.
+    AudioEngine auxEngine;
+    AudioEngine::Track auxTrack;
+    auxTrack.gain = 0.5f;
+    auxTrack.pan = -1.0f;
+    auxTrack.auxSend[0] = 0.5f;
+    auxTrack.auxSend[2] = 1.0f;
+    assert(auxEngine.setTrack(0, auxTrack));
+    float auxInput[] = {1.0f, -0.5f};
+    const float* auxInputs[AudioEngine::kTrackCount] = {};
+    auxInputs[0] = auxInput;
+    float mainL[2] = {}, mainR[2] = {};
+    float auxL0[2] = {}, auxR0[2] = {};
+    float auxL1[2] = {}, auxR1[2] = {};
+    float auxL2[2] = {}, auxR2[2] = {};
+    float auxL3[2] = {}, auxR3[2] = {};
+    float* auxLeft[AudioEngine::kAuxBusCount] = {
+        auxL0, auxL1, auxL2, auxL3
+    };
+    float* auxRight[AudioEngine::kAuxBusCount] = {
+        auxR0, auxR1, auxR2, auxR3
+    };
+    auxEngine.setMasterGain(0.25f);
+    auxEngine.processWithAux(auxInputs, mainL, mainR, auxLeft, auxRight, 2);
+    assert(near(mainL[0], 0.125f));
+    assert(near(mainR[0], 0.0f));
+    assert(near(auxL0[0], 0.25f));
+    assert(near(auxR0[0], 0.0f));
+    assert(near(auxL1[0], 0.0f));
+    assert(near(auxL2[0], 0.5f));
+    assert(near(auxL3[0], 0.0f));
+    assert(near(auxL0[1], -0.125f));
+
+    // Master mute/gain affect the main bus, not independent Aux sends.
+    auxEngine.setMasterMute(true);
+    auxEngine.processWithAux(auxInputs, mainL, mainR, auxLeft, auxRight, 1);
+    assert(near(mainL[0], 0.0f) && near(mainR[0], 0.0f));
+    assert(near(auxL0[0], 0.25f));
+    auxTrack.mute = true;
+    assert(auxEngine.setTrack(0, auxTrack));
+    auxEngine.processWithAux(auxInputs, mainL, mainR, auxLeft, auxRight, 1);
+    assert(near(auxL0[0], 0.0f) && near(auxL2[0], 0.0f));
+
+    // Invalid Aux levels are rejected without replacing the previous state.
+    auxTrack.mute = false;
+    auxTrack.auxSend[1] = std::numeric_limits<float>::quiet_NaN();
+    assert(!auxEngine.setTrack(0, auxTrack));
+    assert(near(auxEngine.track(0).auxSend[0], 0.5f));
+    auxTrack.auxSend[1] = 1.01f;
+    assert(!auxEngine.setTrack(0, auxTrack));
+
     // Two Audio In mono channels can be linked without collapsing stereo.
     mpcmixer::AudioInputPair audioIn;
     float inputL[] = {1.0f, 0.5f};
