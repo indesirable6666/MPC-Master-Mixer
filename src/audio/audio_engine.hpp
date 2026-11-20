@@ -11,12 +11,15 @@ namespace mpcmixer {
 class AudioEngine {
 public:
     static constexpr std::size_t kTrackCount = 16;
+    static constexpr std::size_t kAuxBusCount = 4;
 
     struct Track {
         float gain = 1.0f; // Linear amplitude [0, 1].
         float pan = 0.0f;  // -1 = left, 0 = centre, +1 = right.
         bool mute = false;
         bool solo = false;
+        // Post-fader, post-pan send levels for the four stereo Aux buses.
+        std::array<float, kAuxBusCount> auxSend{};
     };
 
     bool setTrack(std::size_t index, const Track& track) {
@@ -24,6 +27,11 @@ public:
             !std::isfinite(track.pan) || track.gain < 0.0f ||
             track.gain > 1.0f || track.pan < -1.0f || track.pan > 1.0f) {
             return false;
+        }
+        for (float send : track.auxSend) {
+            if (!std::isfinite(send) || send < 0.0f || send > 1.0f) {
+                return false;
+            }
         }
         tracks_[index] = track;
         return true;
@@ -50,9 +58,15 @@ public:
     // Output buffers are stereo, caller-owned, and overwritten for frameCount.
     // The float bus is intentionally not clipped: downstream output stages
     // must handle conversion/limiting according to the eventual audio backend.
-    void process(const float* const inputs[kTrackCount],
-                 float* outputLeft, float* outputRight,
-                 std::size_t frameCount) const {
+    // Four independent stereo Aux buses. Sends are post-fader and post-pan,
+    // but pre-master, so the master fader does not alter monitor/effect sends.
+    // Each output is caller-owned; a null Aux output disables only that side/bus.
+    void processWithAux(
+        const float* const inputs[kTrackCount],
+        float* outputLeft, float* outputRight,
+        float* const auxLeft[kAuxBusCount],
+        float* const auxRight[kAuxBusCount],
+        std::size_t frameCount) const {
         if (outputLeft == nullptr || outputRight == nullptr) return;
 
         bool anySolo = false;
@@ -63,27 +77,45 @@ public:
         for (std::size_t frame = 0; frame < frameCount; ++frame) {
             float left = 0.0f;
             float right = 0.0f;
-            if (!masterMute_) {
-                for (std::size_t channel = 0; channel < kTrackCount; ++channel) {
-                    const Track& state = tracks_[channel];
-                    if (state.mute || (anySolo && !state.solo) ||
-                        inputs[channel] == nullptr) {
-                        continue;
-                    }
-                    float sample = inputs[channel][frame];
-                    if (!std::isfinite(sample)) sample = 0.0f;
-                    const float scaled = sample * state.gain;
-                    const float leftPan = std::sqrt((1.0f - state.pan) * 0.5f);
-                    const float rightPan = std::sqrt((1.0f + state.pan) * 0.5f);
+            std::array<float, kAuxBusCount> sendLeft{};
+            std::array<float, kAuxBusCount> sendRight{};
+            for (std::size_t channel = 0; channel < kTrackCount; ++channel) {
+                const Track& state = tracks_[channel];
+                if (state.mute || (anySolo && !state.solo) ||
+                    inputs[channel] == nullptr) {
+                    continue;
+                }
+                float sample = inputs[channel][frame];
+                if (!std::isfinite(sample)) sample = 0.0f;
+                const float scaled = sample * state.gain;
+                const float leftPan = std::sqrt((1.0f - state.pan) * 0.5f);
+                const float rightPan = std::sqrt((1.0f + state.pan) * 0.5f);
+                if (!masterMute_) {
                     left += scaled * leftPan;
                     right += scaled * rightPan;
                 }
-                left *= masterGain_;
-                right *= masterGain_;
+                for (std::size_t bus = 0; bus < kAuxBusCount; ++bus) {
+                    sendLeft[bus] += scaled * leftPan * state.auxSend[bus];
+                    sendRight[bus] += scaled * rightPan * state.auxSend[bus];
+                }
             }
-            outputLeft[frame] = left;
-            outputRight[frame] = right;
+            outputLeft[frame] = masterMute_ ? 0.0f : left * masterGain_;
+            outputRight[frame] = masterMute_ ? 0.0f : right * masterGain_;
+            for (std::size_t bus = 0; bus < kAuxBusCount; ++bus) {
+                if (auxLeft != nullptr && auxLeft[bus] != nullptr)
+                    auxLeft[bus][frame] = sendLeft[bus];
+                if (auxRight != nullptr && auxRight[bus] != nullptr)
+                    auxRight[bus][frame] = sendRight[bus];
+            }
         }
+    }
+
+    // Backward-compatible main stereo mix without Aux output buffers.
+    void process(const float* const inputs[kTrackCount],
+                 float* outputLeft, float* outputRight,
+                 std::size_t frameCount) const {
+        processWithAux(inputs, outputLeft, outputRight, nullptr, nullptr,
+                       frameCount);
     }
 
 private:
