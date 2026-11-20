@@ -44,6 +44,8 @@ jobs:
             'SIMULATION LOCALE',
             'for(let i=0;i<16;i++)',
             'function makeStrip(index,isMaster=false)',
+            'el.addEventListener(\'focus\'',
+            'if(!isMaster&&!e.target.closest(\'input,button\'))selectChannel(index)',
             'AUX ${n}'
           ];
 
