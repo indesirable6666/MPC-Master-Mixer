@@ -154,6 +154,24 @@ test('bank navigation switches between channels 1–8 and 9–16', () => {
   dom.window.close();
 });
 
+test('peak and RMS meters expose accessible percentage values', () => {
+  const dom = loadPrototype();
+  for (const channel of dom.window.document.querySelectorAll('.channel')) {
+    const peak = channel.querySelector('[data-meter="peak"]').parentElement;
+    const rms = channel.querySelector('[data-meter="rms"]').parentElement;
+    for (const [meter, label] of [[peak, 'Peak simulé'], [rms, 'RMS simulé']]) {
+      assert.equal(meter.getAttribute('role'), 'meter');
+      assert.equal(meter.getAttribute('aria-label'), label);
+      assert.equal(meter.getAttribute('aria-valuemin'), '0');
+      assert.equal(meter.getAttribute('aria-valuemax'), '100');
+      assert.equal(meter.getAttribute('aria-valuenow'), '0');
+      assert.equal(meter.getAttribute('aria-valuetext'), '0 pour cent');
+    }
+    assert.equal(channel.querySelector('[data-meter-hold]').getAttribute('aria-hidden'), 'true');
+  }
+  dom.window.close();
+});
+
 test('live selection and bank announcements expose atomic status semantics and meters are named groups', () => {
   const dom = loadPrototype();
   const selection = dom.window.document.getElementById('selectionStatus');
