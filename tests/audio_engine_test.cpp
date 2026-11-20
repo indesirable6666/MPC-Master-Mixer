@@ -496,6 +496,7 @@ int main() {
     mpcmixer::OfflineAudioDuplexBackend hostedBackend;
     mpcmixer::AudioDuplexFormat hostedFormat;
     assert(host.prepare(hostedBackend, hostedFormat));
+    assert(!host.prepare(hostedBackend, hostedFormat));
     assert(host.start());
     float hostedInputL[] = {1.0f, 0.5f};
     float hostedInputR[] = {-0.5f, 0.25f};
