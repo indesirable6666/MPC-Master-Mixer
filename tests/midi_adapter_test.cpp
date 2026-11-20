@@ -67,6 +67,39 @@ int main() {
     assert(!rejectingAdapter.setVolume(0.5f));
     assert(rejectingTransport.attempts == 1);
 
+    // Each mixer track has an independent verified mapping.
+    SimulatedMidiTransport trackTransport;
+    TrackVolumeMidiAdapter tracks(trackTransport);
+    assert(!tracks.hasVerifiedMapping(0));
+    assert(!tracks.setTrackVolume(0, 0.5f));
+    assert(!tracks.hasVerifiedMapping(16));
+    assert(!tracks.setTrackVolume(16, 0.5f));
+    assert(!tracks.configureTrack(16, CcMapping{0, 1, true}));
+    assert(tracks.configureTrack(0, CcMapping{0, 20, true}));
+    assert(tracks.configureTrack(1, CcMapping{3, 21, true}));
+    assert(tracks.setTrackVolume(0, 0.5f));
+    assert(tracks.setTrackVolume(1, 1.0f));
+    assert(!tracks.setTrackVolume(2, 0.25f));
+    assert(!tracks.setTrackVolume(0, std::numeric_limits<float>::quiet_NaN()));
+    const auto& trackMessages = trackTransport.messages();
+    assert(trackMessages.size() == 2);
+    assert(trackMessages[0].status == 0xB0 && trackMessages[0].data1 == 20 &&
+           trackMessages[0].data2 == 64);
+    assert(trackMessages[1].status == 0xB3 && trackMessages[1].data1 == 21 &&
+           trackMessages[1].data2 == 127);
+
+    // Clearing or invalidating one track never alters another track's mapping.
+    tracks.clearTrack(0);
+    assert(!tracks.hasVerifiedMapping(0));
+    assert(tracks.hasVerifiedMapping(1));
+    assert(!tracks.configureTrack(1, CcMapping{16, 21, true}));
+    assert(!tracks.hasVerifiedMapping(1));
+    assert(!tracks.setTrackVolume(1, 0.5f));
+    assert(tracks.configureTrack(1, CcMapping{3, 21, true}));
+    tracks.clearAll();
+    assert(!tracks.hasVerifiedMapping(1));
+    assert(trackTransport.messages().size() == 2);
+
     std::cout << "MIDI adapter tests passed (no ALSA/device access).\n";
     return 0;
 }
