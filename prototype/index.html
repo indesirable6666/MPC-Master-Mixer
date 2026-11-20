@@ -19,7 +19,7 @@ button{color:inherit}
 .mode{display:flex;align-items:center;gap:7px;padding:7px 10px;border:1px solid #66512e;border-radius:6px;color:#f1c879;background:#342a1c;font-size:10px;font-weight:800;letter-spacing:.07em;white-space:nowrap}
 .mode:before{content:"";width:7px;height:7px;border-radius:50%;background:var(--amber);box-shadow:0 0 8px #e9ad4580}
 .toolbar{display:flex;gap:6px}
-.tool{min-height:36px;padding:0 11px;border:1px solid var(--line);border-radius:6px;background:var(--panel-hi);font-size:11px;font-weight:700}
+.tool{min-height:42px;padding:0 11px;border:1px solid var(--line);border-radius:6px;background:var(--panel-hi);font-size:11px;font-weight:700}
 .tool:active,.toggle:active{transform:translateY(1px)}
 .workspace{display:flex;flex:1;min-height:0;gap:0}
 .scroll-area{flex:1;min-width:0;touch-action:pan-x pan-y;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scrollbar-color:#596575 #1a2029;scrollbar-width:thin}
@@ -39,14 +39,14 @@ button{color:inherit}
 .fx.off{color:#778392;background:#202833}
 .eq{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:2px}
 .band{min-width:0;text-align:center;color:var(--muted);font-size:9px}
-.band input{display:block;width:18px;height:64px;margin:3px auto;accent-color:var(--amber);writing-mode:vertical-lr;direction:rtl}
+.band input{display:block;width:100%;height:64px;margin:3px auto;accent-color:var(--amber);writing-mode:vertical-lr;direction:rtl}
 .band output{display:block;color:var(--text);font-size:9px;font-variant-numeric:tabular-nums}
 .pan{display:flex;align-items:center;gap:7px}
 .pan span{color:var(--muted);font-size:9px;font-weight:800}
-.pan input{width:100%;min-width:0;accent-color:var(--amber)}
+.pan input{width:100%;min-width:0;min-height:30px;accent-color:var(--amber);touch-action:pan-y}
 .aux{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
 .aux label{text-align:center;color:var(--muted);font-size:9px}
-.aux input{display:block;width:100%;margin:5px 0 1px;accent-color:var(--blue)}
+.aux input{display:block;width:100%;min-height:30px;margin:5px 0 1px;accent-color:var(--blue);touch-action:pan-y}
 .aux output{color:var(--text);font-size:9px;font-variant-numeric:tabular-nums}
 .switches{display:flex;gap:6px}
 .toggle{flex:1;min-height:34px;border:1px solid #414c59;border-radius:5px;background:#252e39;font-size:10px;font-weight:850;letter-spacing:.04em}
@@ -58,7 +58,7 @@ button{color:inherit}
 .meter-fill{display:block;width:0;height:100%;background:linear-gradient(90deg,#438f6d 0 68%,#b18c43 84%,#c75c55 100%);transition:width 100ms linear}
 .meter-hold{position:absolute;top:0;bottom:0;left:0;width:2px;background:#fff;box-shadow:0 0 3px #fff;transform:translateX(-1px)}
 .meter-value{color:#cbd4df;text-align:right;font-size:8px;font-variant-numeric:tabular-nums}
-.clip{padding:1px 3px;border:1px solid #5b4244;border-radius:3px;color:#778392;text-align:center;font-size:8px;font-weight:900;background:transparent;cursor:pointer}
+.clip{min-width:42px;min-height:26px;padding:2px 5px;border:1px solid #5b4244;border-radius:3px;color:#778392;text-align:center;font-size:8px;font-weight:900;background:transparent;cursor:pointer}
 .clip.active{border-color:var(--red);background:#57292c;color:#fff;box-shadow:0 0 7px #e36e7080}
 .clip:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
 .fader-area{flex:1;min-height:110px;display:flex;align-items:stretch;justify-content:center;gap:8px;padding:8px 6px 4px;background:var(--well);border:1px solid #303a47;border-radius:6px}
@@ -180,6 +180,7 @@ for(let i=0;i<16;i++)strips.appendChild(makeStrip(i));
 document.getElementById('master').appendChild(makeStrip(0,true));
 let meterDemo=false;
 let meterFrame=0;
+let meterTimer=null;
 const meterDemoButton=document.getElementById('meterDemo');
 function renderMeter(el,peak,rms){
  const p=Math.max(0,Math.min(1,peak)),r=Math.max(0,Math.min(1,rms)),clipped=p>=0.985;
@@ -197,18 +198,21 @@ function renderMeter(el,peak,rms){
 function setMeterDemo(enabled){
  meterDemo=enabled;meterDemoButton.setAttribute('aria-pressed',String(enabled));
  meterDemoButton.textContent='DÉMO MÈTRES : '+(enabled?'ON':'OFF');
- if(!enabled)document.querySelectorAll('.channel').forEach(el=>{el.dataset.peakHold='0';el.dataset.clipLatched='false';renderMeter(el,0,0)});
+ if(meterTimer!==null){clearInterval(meterTimer);meterTimer=null}
+ if(!enabled){
+  document.querySelectorAll('.channel').forEach(el=>{el.dataset.peakHold='0';el.dataset.clipLatched='false';renderMeter(el,0,0)});
+  return;
+ }
+ meterTimer=setInterval(()=>{
+  meterFrame+=0.11;
+  document.querySelectorAll('.channel').forEach((el,i)=>{
+   const peak=0.48+0.49*Math.abs(Math.sin(meterFrame+i*0.73));
+   const rms=peak*(0.48+0.18*Math.abs(Math.sin(meterFrame*0.61+i)));
+   renderMeter(el,peak,rms);
+  });
+ },120);
 }
 meterDemoButton.addEventListener('click',()=>setMeterDemo(!meterDemo));
-setInterval(()=>{
- if(!meterDemo)return;
- meterFrame+=0.11;
- document.querySelectorAll('.channel').forEach((el,i)=>{
-  const peak=0.48+0.49*Math.abs(Math.sin(meterFrame+i*0.73));
-  const rms=peak*(0.48+0.18*Math.abs(Math.sin(meterFrame*0.61+i)));
-  renderMeter(el,peak,rms);
- });
-},120);
 document.getElementById('prev').addEventListener('click',()=>document.getElementById('scrollArea').scrollBy({left:-560,behavior:'smooth'}));
 document.getElementById('next').addEventListener('click',()=>document.getElementById('scrollArea').scrollBy({left:560,behavior:'smooth'}));
 document.getElementById('reset').addEventListener('click',()=>{
