@@ -26,6 +26,12 @@ public:
         std::array<float, kAuxBusCount> auxSend{};
     };
 
+    struct AuxReturn {
+        float gain = 1.0f;
+        float balance = 0.0f; // -1 attenuates right; +1 attenuates left.
+        bool mute = false;
+    };
+
     bool setTrack(std::size_t index, const Track& track) {
         if (index >= kTrackCount || !std::isfinite(track.gain) ||
             !std::isfinite(track.pan) || track.gain < 0.0f ||
@@ -64,6 +70,21 @@ public:
         return equalizers_[index < kTrackCount ? index : 0];
     }
 
+    bool setAuxReturn(std::size_t index, const AuxReturn& state) {
+        if (index >= kAuxBusCount || !std::isfinite(state.gain) ||
+            !std::isfinite(state.balance) || state.gain < 0.0f ||
+            state.gain > kMaxFaderGain || state.balance < -1.0f ||
+            state.balance > 1.0f) {
+            return false;
+        }
+        auxReturns_[index] = state;
+        return true;
+    }
+
+    const AuxReturn& auxReturn(std::size_t index) const {
+        return auxReturns_[index < kAuxBusCount ? index : 0];
+    }
+
     bool setMasterGain(float gain) {
         if (!std::isfinite(gain) || gain < 0.0f || gain > kMaxFaderGain) {
             return false;
@@ -85,11 +106,13 @@ public:
     // but pre-master, so the master fader does not alter monitor/effect sends.
     // Each output is caller-owned; a null Aux output disables only that side/bus.
     // Audio-thread entry point: caller owns all buffers; no allocation or locks.
-    void processWithAux(
+    void processWithAuxAndReturns(
         const float* const inputs[kTrackCount],
         float* outputLeft, float* outputRight,
         float* const auxLeft[kAuxBusCount],
         float* const auxRight[kAuxBusCount],
+        const float* const auxReturnLeft[kAuxBusCount],
+        const float* const auxReturnRight[kAuxBusCount],
         std::size_t frameCount) {
         if (outputLeft == nullptr || outputRight == nullptr) return;
 
@@ -124,6 +147,26 @@ public:
                     sendRight[bus] += scaled * rightPan * state.auxSend[bus];
                 }
             }
+            if (!masterMute_) {
+                for (std::size_t bus = 0; bus < kAuxBusCount; ++bus) {
+                    const AuxReturn& state = auxReturns_[bus];
+                    if (state.mute) continue;
+                    const float returnLeft = auxReturnLeft != nullptr &&
+                        auxReturnLeft[bus] != nullptr &&
+                        std::isfinite(auxReturnLeft[bus][frame])
+                        ? auxReturnLeft[bus][frame] : 0.0f;
+                    const float returnRight = auxReturnRight != nullptr &&
+                        auxReturnRight[bus] != nullptr &&
+                        std::isfinite(auxReturnRight[bus][frame])
+                        ? auxReturnRight[bus][frame] : 0.0f;
+                    const float leftBalance = state.balance > 0.0f
+                        ? 1.0f - state.balance : 1.0f;
+                    const float rightBalance = state.balance < 0.0f
+                        ? 1.0f + state.balance : 1.0f;
+                    left += returnLeft * state.gain * leftBalance;
+                    right += returnRight * state.gain * rightBalance;
+                }
+            }
             outputLeft[frame] = masterMute_ ? 0.0f : left * masterGain_;
             outputRight[frame] = masterMute_ ? 0.0f : right * masterGain_;
             for (std::size_t bus = 0; bus < kAuxBusCount; ++bus) {
@@ -135,18 +178,32 @@ public:
         }
     }
 
+    // Send-only overload for callers without Aux return buffers.
+    void processWithAux(
+        const float* const inputs[kTrackCount],
+        float* outputLeft, float* outputRight,
+        float* const auxLeft[kAuxBusCount],
+        float* const auxRight[kAuxBusCount],
+        std::size_t frameCount) {
+        processWithAuxAndReturns(inputs, outputLeft, outputRight,
+                                 auxLeft, auxRight, nullptr, nullptr,
+                                 frameCount);
+    }
+
     // Backward-compatible main stereo mix without Aux output buffers.
     void process(const float* const inputs[kTrackCount],
                  float* outputLeft, float* outputRight,
                  std::size_t frameCount) {
-        processWithAux(inputs, outputLeft, outputRight, nullptr, nullptr,
-                       frameCount);
+        processWithAuxAndReturns(inputs, outputLeft, outputRight,
+                                 nullptr, nullptr, nullptr, nullptr,
+                                 frameCount);
     }
 
 private:
     std::array<Track, kTrackCount> tracks_{};
     std::array<SixBandEq, kTrackCount> equalizers_{};
     std::array<InsertChain, kTrackCount> inserts_{};
+    std::array<AuxReturn, kAuxBusCount> auxReturns_{};
     float masterGain_ = 1.0f;
     bool masterMute_ = false;
 };
