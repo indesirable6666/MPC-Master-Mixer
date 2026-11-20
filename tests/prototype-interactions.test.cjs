@@ -131,6 +131,7 @@ test('touch controls expose practical minimum hit areas', () => {
   assert.match(html, /\.band input\{[^}]*min-height:36px;/);
   assert.match(html, /\.pan input\{[^}]*min-height:40px;/);
   assert.match(html, /\.aux input\{[^}]*min-height:40px;/);
+  assert.match(html, /\.toggle\{flex:1;min-height:40px;/);
 });
 
 test('bank navigation switches between channels 1–8 and 9–16', () => {
