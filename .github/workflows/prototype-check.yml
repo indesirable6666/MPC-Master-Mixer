@@ -36,7 +36,7 @@ jobs:
             'data-volume',
             'data-pan',
             'class="pan-value"',
-            'const panLabel=panValue===0?\'C\':panValue<0?\'L \' + Math.abs(panValue):\'R \' + panValue',
+            'const panLabel=panValue===0?\'C\':panValue<0?\'L \'+Math.abs(panValue):\'R \'+panValue',
             'data-eq',
             'data-aux',
             'data-toggle="',
