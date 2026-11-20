@@ -171,6 +171,9 @@ test('selected track is announced and marked accessibly', () => {
   assert.equal(first.hasAttribute('aria-current'), false);
   assert.equal(fourth.getAttribute('aria-current'), 'true');
   assert.equal(status.textContent, 'PISTE 04 · PERC');
+  fourth.querySelector('.channel-title').textContent = 'BASSE SYNTHÉTIQUE TRÈS LONGUE';
+  fourth.focus();
+  assert.equal(status.textContent, 'PISTE 04 · BASSE SYNTHÉTIQUE TRÈS LONGUE');
   dom.window.close();
 });
 
