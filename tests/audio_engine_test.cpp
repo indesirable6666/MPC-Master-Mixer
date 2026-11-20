@@ -490,7 +490,9 @@ int main() {
     assert(host.setInputRoute(0, 3));
     assert(host.setInputRoute(1, 4));
     assert(!host.setInputRoute(2, 1));
-    assert(!host.setInputRoute(0, 16));
+    assert(host.setInputRoute(0, mpcmixer::AudioDuplexEngineHost::kUnmappedTrack));
+    assert(host.setInputRoute(0, 3));
+    assert(!host.setInputRoute(0, 17));
     mpcmixer::OfflineAudioDuplexBackend hostedBackend;
     mpcmixer::AudioDuplexFormat hostedFormat;
     assert(host.prepare(hostedBackend, hostedFormat));
