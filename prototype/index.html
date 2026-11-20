@@ -90,7 +90,7 @@ button{color:inherit;touch-action:manipulation;-webkit-tap-highlight-color:trans
  <div class="scroll-area" id="scrollArea" aria-label="Tranches de canaux"><div class="strips" id="strips"></div></div>
  <aside class="master-dock" aria-label="Tranche Master"><div id="master"></div></aside>
 </main>
-<footer class="bottom"><strong>SIMULATION LOCALE</strong><span>Les réglages restent dans cette page uniquement.</span><span class="hint">Glisser horizontalement pour parcourir les 16 pistes</span></footer>
+<footer class="bottom"><strong>SIMULATION LOCALE</strong><span>Les réglages restent dans cette page uniquement.</span><strong id="selectionStatus" aria-live="polite">PISTE 01 · KICK</strong><span class="hint">Glisser horizontalement pour parcourir les 16 pistes</span></footer>
 </div>
 <script>
 const strips=document.getElementById('strips');
@@ -109,6 +109,11 @@ function makeStrip(index,isMaster=false){
  el.setAttribute('role','group');
  el.setAttribute('aria-label',isMaster?'Tranche Master':'Tranche '+(index+1)+' '+name);
  el.addEventListener('focus',()=>{if(!isMaster)selectChannel(index)});
+ el.addEventListener('keydown',e=>{
+  if(isMaster||!['ArrowLeft','ArrowRight'].includes(e.key))return;
+  const nextIndex=Math.max(0,Math.min(15,index+(e.key==='ArrowRight'?1:-1)));
+  if(nextIndex!==index){e.preventDefault();document.querySelector('[data-channel="'+nextIndex+'"]').focus()}
+ });
  el.innerHTML=`
   <div class="channel-head"><span class="channel-title">${name}</span><span class="channel-type">${isMaster?'STEREO':'<span class="channel-number">'+String(index+1).padStart(2,'0')+'</span> · AUDIO'}</span></div>
   <div class="block"><div class="block-title">Inserts · effets</div><div class="fx-row"><button class="fx" type="button" aria-pressed="true" aria-label="Insert 1, placeholder activé" title="Placeholder visuel uniquement">INSERT 1</button><button class="fx off" type="button" aria-pressed="false" aria-label="Insert 2, placeholder désactivé" title="Placeholder visuel uniquement">INSERT 2</button></div></div>
@@ -165,7 +170,17 @@ function makeStrip(index,isMaster=false){
  applyValues();
  return el;
 }
-function selectChannel(index){document.querySelectorAll('.channel').forEach(x=>x.classList.toggle('selected',x.dataset.channel===String(index)))}
+function selectChannel(index){
+ const channels=document.querySelectorAll('.channel:not([data-channel="master"])');
+ channels.forEach(el=>{
+  const selected=el.dataset.channel===String(index);
+  el.classList.toggle('selected',selected);
+  if(selected)el.setAttribute('aria-current','true');
+  else el.removeAttribute('aria-current');
+ });
+ const status=document.getElementById('selectionStatus');
+ if(status)status.textContent='PISTE '+String(index+1).padStart(2,'0')+' · '+labels[index];
+}
 function refreshMixVisibility(){
  const strips=[...document.querySelectorAll('.channel:not([data-channel="master"])')];
  const soloActive=strips.some(el=>state[Number(el.dataset.channel)].solo);
