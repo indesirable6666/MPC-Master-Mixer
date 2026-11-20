@@ -53,6 +53,10 @@ jobs:
             tools/arm-probe/gles2-symbol-probe.cpp -ldl \
             -o build/mpc-arm-gles2-symbol-probe
 
+          arm-linux-gnueabihf-g++ $COMMON_FLAGS -std=c++14 \
+            tools/arm-probe/egl-offscreen-pbuffer-probe.cpp -ldl \
+            -o build/mpc-arm-egl-offscreen-pbuffer-probe
+
           echo "=== C executable ==="
           file build/mpc-arm-probe-c
           arm-linux-gnueabihf-readelf -h build/mpc-arm-probe-c
@@ -93,13 +97,20 @@ jobs:
           arm-linux-gnueabihf-readelf -d build/mpc-arm-gles2-symbol-probe | grep -E 'NEEDED|RPATH|RUNPATH' || true
           arm-linux-gnueabihf-readelf --version-info build/mpc-arm-gles2-symbol-probe
 
+          echo "=== EGL offscreen pbuffer probe ==="
+          file build/mpc-arm-egl-offscreen-pbuffer-probe
+          arm-linux-gnueabihf-readelf -h build/mpc-arm-egl-offscreen-pbuffer-probe
+          arm-linux-gnueabihf-readelf -l build/mpc-arm-egl-offscreen-pbuffer-probe | grep interpreter || true
+          arm-linux-gnueabihf-readelf -d build/mpc-arm-egl-offscreen-pbuffer-probe | grep -E 'NEEDED|RPATH|RUNPATH' || true
+          arm-linux-gnueabihf-readelf --version-info build/mpc-arm-egl-offscreen-pbuffer-probe
+
           echo "=== Cross-toolchain runtime library locations ==="
           arm-linux-gnueabihf-g++ -print-file-name=libstdc++.so.6
           arm-linux-gnueabihf-g++ -print-file-name=libgcc_s.so.1
           arm-linux-gnueabihf-g++ -print-file-name=libc.so.6
 
           echo "=== Reject runtime requirements newer than the MPC ==="
-          for binary in build/mpc-arm-probe-cpp build/mpc-arm-graphics-probe-v2 build/mpc-arm-egl-client-extension-probe build/mpc-arm-egl-gbm-symbol-probe build/mpc-arm-gles2-symbol-probe; do
+          for binary in build/mpc-arm-probe-cpp build/mpc-arm-graphics-probe-v2 build/mpc-arm-egl-client-extension-probe build/mpc-arm-egl-gbm-symbol-probe build/mpc-arm-gles2-symbol-probe build/mpc-arm-egl-offscreen-pbuffer-probe; do
             if arm-linux-gnueabihf-readelf --version-info "$binary" | \
               grep -E 'GLIBCXX_3\.4\.(29|[3-9][0-9])|GLIBC_2\.(33|[4-9][0-9])'; then
               echo "ERROR: $binary requires a newer runtime than the MPC audit found."
@@ -134,4 +145,11 @@ jobs:
         with:
           name: mpc-armv7-gles2-symbol-probe
           path: build/mpc-arm-gles2-symbol-probe
+          if-no-files-found: error
+
+      - name: Upload guarded EGL offscreen pbuffer probe
+        uses: actions/upload-artifact@v4
+        with:
+          name: mpc-armv7-egl-offscreen-pbuffer-probe
+          path: build/mpc-arm-egl-offscreen-pbuffer-probe
           if-no-files-found: error
