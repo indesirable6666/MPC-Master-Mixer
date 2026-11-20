@@ -17,6 +17,8 @@ Build a touchscreen-first mixer interface for the Akai MPC Live II. The first mi
   5. Mute and Solo controls.
   6. Volume fader and level meter.
 - The Master strip has its own level meter and master-volume control.
+- Peak/RMS meters include a peak-hold marker and a latched clip indicator; the demo signal is synthetic and explicitly opt-in.
+- Insert buttons are visual placeholders with accessible pressed states; reset restores their illustrative defaults.
 - Channel identity and selection must remain clear while scrolling.
 - The UI should avoid requiring tiny controls or precision mouse interaction.
 
@@ -88,6 +90,6 @@ The `prototype/index.html` page now contains a more complete touch-first mixer m
 - Bank navigation buttons and a reset action.
 - Explicit offline/demo labeling; no network, MIDI, ALSA, audio-engine or device access.
 
-All values and meters are illustrative UI state. The meter display is intentionally inactive. Insert buttons are placeholders, not functioning effects. The prototype does not persist settings and does not communicate with the MPC.
+All values and meters are illustrative UI state. The meter display is inactive by default; an explicit demo button animates synthetic values only. Peak Hold and Clip are visual demonstrations, not audio measurements. Insert buttons are accessible visual placeholders, not functioning effects. The prototype does not persist settings and does not communicate with the MPC.
 
 This is a browser UI milestone only. It is not yet an ARM executable and must not be deployed as if it were an integrated MPC application.
