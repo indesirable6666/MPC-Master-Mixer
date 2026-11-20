@@ -18,7 +18,7 @@ button{color:inherit;touch-action:manipulation;-webkit-tap-highlight-color:trans
 .top-spacer{flex:1}
 .mode{display:flex;align-items:center;gap:7px;padding:7px 10px;border:1px solid #66512e;border-radius:6px;color:#f1c879;background:#342a1c;font-size:10px;font-weight:800;letter-spacing:.07em;white-space:nowrap}
 .mode:before{content:"";width:7px;height:7px;border-radius:50%;background:var(--amber);box-shadow:0 0 8px #e9ad4580}
-.toolbar{display:flex;gap:6px}
+.toolbar{display:flex;align-items:center;gap:6px}.bank-status{font-variant-numeric:tabular-nums;letter-spacing:.035em}
 .tool{min-height:42px;padding:0 11px;border:1px solid var(--line);border-radius:6px;background:var(--panel-hi);font-size:11px;font-weight:700}
 .tool:active,.toggle:active{transform:translateY(1px)}
 .workspace{display:flex;flex:1;min-height:0;gap:0}
@@ -73,7 +73,7 @@ button{color:inherit;touch-action:manipulation;-webkit-tap-highlight-color:trans
 .bottom{height:34px;flex:none;display:flex;align-items:center;gap:12px;padding:0 14px;border-top:1px solid var(--line);background:#171c24;color:var(--muted);font-size:10px}
 .bottom strong{color:#e9c47e;font-weight:750}
 .bottom .hint{margin-left:auto}
-@media(max-width:650px){.topbar{height:54px;padding:0 9px;gap:7px}.project,.toolbar .optional{display:none}.brand{font-size:13px}.mode{font-size:9px;padding:6px 7px}.master-dock{width:142px;min-width:142px;padding:8px 7px 8px 0}.strips{padding:8px}.channel{width:168px;min-width:168px}.master-dock .channel{width:100%;min-width:0}.bottom{font-size:9px;padding:0 8px}}
+@media(max-width:650px){.topbar{height:54px;padding:0 9px;gap:7px}.project,.toolbar .optional{display:none}.brand{font-size:13px}.mode{font-size:9px;padding:6px 7px}.bank-status{font-size:8px;padding:5px 6px}.master-dock{width:142px;min-width:142px;padding:8px 7px 8px 0}.strips{padding:8px}.channel{width:168px;min-width:168px}.master-dock .channel{width:100%;min-width:0}.bottom{font-size:9px;padding:0 8px}}
 @media(max-height:650px){.topbar{height:48px}.channel{gap:4px;padding:6px}.block{padding:5px}.band input{height:42px}.fader-area{min-height:80px}.fader{min-height:75px}.bottom{height:27px}}
 </style>
 </head>
@@ -84,7 +84,7 @@ button{color:inherit;touch-action:manipulation;-webkit-tap-highlight-color:trans
  <div class="project">SESSION · PROJET DE DÉMONSTRATION</div>
  <div class="top-spacer"></div>
  <div class="mode">MODE DÉMO · HORS LIGNE</div>
- <div class="toolbar"><button class="tool optional" id="prev" type="button">◀ BANQUE</button><button class="tool optional" id="next" type="button" aria-label="Afficher la banque suivante" disabled>BANQUE ▶</button><span id="bankStatus" class="mode" role="status" aria-live="polite">BANQUE 1/2 · PISTES 1–8</span><button class="tool" id="meterDemo" type="button" aria-pressed="false">DÉMO MÈTRES : OFF</button><button class="tool" id="reset" type="button">RÉINITIALISER</button></div>
+ <div class="toolbar"><button class="tool optional" id="prev" type="button">◀ BANQUE</button><button class="tool optional" id="next" type="button" aria-label="Afficher la banque suivante" disabled>BANQUE ▶</button><span id="bankStatus" class="mode bank-status" role="status" aria-live="polite">BANQUE 1/2 · PISTES 1–8</span><button class="tool" id="meterDemo" type="button" aria-pressed="false">DÉMO MÈTRES : OFF</button><button class="tool" id="reset" type="button">RÉINITIALISER</button></div>
 </header>
 <main class="workspace">
  <div class="scroll-area" id="scrollArea" aria-label="Tranches de canaux"><div class="strips" id="strips"></div></div>
