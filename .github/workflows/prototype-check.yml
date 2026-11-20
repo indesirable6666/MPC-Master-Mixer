@@ -54,7 +54,7 @@ jobs:
             }
           }
 
-          const ids = [...html.matchAll(/\\bid="([^"]+)"/g)].map(match => match[1]);
+          const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map(match => match[1]);
           if (new Set(ids).size !== ids.length) {
             console.error('Duplicate static HTML id found.');
             process.exit(1);
