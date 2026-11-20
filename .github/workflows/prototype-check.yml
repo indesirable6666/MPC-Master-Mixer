@@ -35,6 +35,8 @@ jobs:
             'id="master"',
             'data-volume',
             'data-pan',
+            'class="pan-value"',
+            'const panLabel=panValue===0?\'C\':panValue<0?\'L \' + Math.abs(panValue):\'R \' + panValue',
             'data-eq',
             'data-aux',
             'data-toggle="',
@@ -46,6 +48,8 @@ jobs:
             'function makeStrip(index,isMaster=false)',
             'el.addEventListener(\'focus\'',
             'if(!isMaster&&!e.target.closest(\'input,button\'))selectChannel(index)',
+            'if(!isMaster)selectChannel(index)',
+            'if(toggle){if(!isMaster)selectChannel(index);',
             'AUX ${n}'
           ];
 
