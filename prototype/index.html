@@ -170,10 +170,10 @@ function makeStrip(index,isMaster=false){
   update();
  });
  el.addEventListener('click',e=>{
+  if(!isMaster)selectChannel(index);
   const toggle=e.target.closest('[data-toggle]');
-  if(toggle){if(!isMaster)selectChannel(index);const key=toggle.dataset.toggle;data[key]=!data[key];update();if(!isMaster)refreshMixVisibility();return}
+  if(toggle){const key=toggle.dataset.toggle;data[key]=!data[key];update();if(!isMaster)refreshMixVisibility();return}
   const fx=e.target.closest('.fx');if(fx){const active=fx.classList.toggle('off')===false;fx.setAttribute('aria-pressed',String(active));fx.setAttribute('aria-label',fx.textContent+', placeholder '+(active?'activé':'désactivé'));return}
-  if(!isMaster&&!e.target.closest('input,button'))selectChannel(index);
  });
  function applyValues(){
   el.querySelector('[data-volume]').value=data.volume;
