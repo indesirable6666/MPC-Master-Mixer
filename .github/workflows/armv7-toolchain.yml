@@ -13,30 +13,55 @@ permissions:
 jobs:
   build-probe:
     runs-on: ubuntu-22.04
+    container:
+      image: debian:bullseye
     steps:
+      - name: Install Debian Bullseye ARM hard-float toolchain
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            ca-certificates gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf \
+            binutils-arm-linux-gnueabihf file
+
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install ARM hard-float cross compiler
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gcc-arm-linux-gnueabihf binutils-arm-linux-gnueabihf
-
-      - name: Compile ARMv7 probe
+      - name: Compile ARMv7 C and C++ probes
         run: |
           mkdir -p build
-          arm-linux-gnueabihf-gcc \
-            -O2 -Wall -Wextra -Werror \
-            -march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard \
-            tools/arm-probe/probe.c -o build/mpc-arm-probe
-          arm-linux-gnueabihf-readelf -h build/mpc-arm-probe
-          arm-linux-gnueabihf-readelf -A build/mpc-arm-probe
-          arm-linux-gnueabihf-readelf -l build/mpc-arm-probe | grep interpreter || true
-          file build/mpc-arm-probe
+          COMMON_FLAGS="-O2 -Wall -Wextra -Werror -march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard"
 
-      - name: Upload probe binary
+          arm-linux-gnueabihf-gcc $COMMON_FLAGS \
+            tools/arm-probe/probe.c -o build/mpc-arm-probe-c
+
+          arm-linux-gnueabihf-g++ $COMMON_FLAGS -std=c++14 \
+            tools/arm-probe/probe.cpp -o build/mpc-arm-probe-cpp
+
+          echo "=== C executable ==="
+          file build/mpc-arm-probe-c
+          arm-linux-gnueabihf-readelf -h build/mpc-arm-probe-c
+          arm-linux-gnueabihf-readelf -l build/mpc-arm-probe-c | grep interpreter || true
+
+          echo "=== C++ executable ==="
+          file build/mpc-arm-probe-cpp
+          arm-linux-gnueabihf-readelf -h build/mpc-arm-probe-cpp
+          arm-linux-gnueabihf-readelf -A build/mpc-arm-probe-cpp
+          arm-linux-gnueabihf-readelf -l build/mpc-arm-probe-cpp | grep interpreter || true
+          arm-linux-gnueabihf-readelf --version-info build/mpc-arm-probe-cpp
+
+          echo "=== Reject runtime requirements newer than the MPC ==="
+          if arm-linux-gnueabihf-readelf --version-info build/mpc-arm-probe-cpp | \
+            grep -E 'GLIBCXX_3\.4\.(29|[3-9][0-9])|GLIBC_2\.(33|[4-9][0-9])'; then
+            echo "ERROR: executable requires a newer runtime than the MPC audit found."
+            exit 1
+          fi
+          echo "No GLIBC newer than 2.32 or GLIBCXX newer than 3.4.28 was found."
+
+      - name: Upload probe binaries
         uses: actions/upload-artifact@v4
         with:
-          name: mpc-armv7-probe
-          path: build/mpc-arm-probe
+          name: mpc-armv7-runtime-probes
+          path: |
+            build/mpc-arm-probe-c
+            build/mpc-arm-probe-cpp
           if-no-files-found: error
