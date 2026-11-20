@@ -1,0 +1,62 @@
+name: Prototype validation
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "prototype/**"
+      - ".github/workflows/prototype-check.yml"
+  pull_request:
+    paths:
+      - "prototype/**"
+      - ".github/workflows/prototype-check.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate-prototype:
+    runs-on: ubuntu-22.04
+    container:
+      image: node:20-bullseye
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate prototype structure and JavaScript syntax
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const cp = require('node:child_process');
+          const html = fs.readFileSync('prototype/index.html', 'utf8');
+
+          const required = [
+            'id="strips"',
+            'id="master"',
+            'data-volume',
+            'data-pan',
+            'data-eq',
+            'data-aux',
+            'data-toggle="mute"',
+            'data-toggle="solo"',
+            'MODE DÉMO',
+            'SIMULATION LOCALE'
+          ];
+
+          for (const token of required) {
+            if (!html.includes(token)) {
+              console.error('Missing required prototype feature:', token);
+              process.exit(1);
+            }
+          }
+
+          const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/gi)];
+          if (scripts.length !== 1) {
+            console.error('Expected exactly one inline application script.');
+            process.exit(1);
+          }
+
+          fs.writeFileSync('/tmp/mpc-master-mixer-prototype.js', scripts[0][1]);
+          cp.execFileSync(process.execPath, ['--check', '/tmp/mpc-master-mixer-prototype.js'], {stdio: 'inherit'});
+          console.log('Prototype structure checks passed; inline JavaScript syntax is valid.');
+          NODE
