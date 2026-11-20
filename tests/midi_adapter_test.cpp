@@ -1,4 +1,5 @@
 #include "midi_adapter.hpp"
+#include "meter_model.hpp"
 
 #include <cassert>
 #include <limits>
@@ -289,6 +290,30 @@ int main() {
     MasterMidiAdapter rejectingMaster(rejectingMasterTransport);
     assert(rejectingMaster.configureVolume(CcMapping{0, 90, true}));
     assert(!rejectingMaster.setVolume(0.5f));
+
+    // MeterModel validates and stores normalized UI readings only.
+    MeterModel meter;
+    assert(meter.peak() == 0.0f && meter.rms() == 0.0f && !meter.clipped());
+    meter.update(0.8f, 0.4f);
+    assert(meter.peak() == 0.8f && meter.rms() == 0.4f);
+    meter.update(0.5f, 0.3f);
+    assert(meter.peak() == 0.8f && meter.rms() == 0.3f);
+    meter.update(1.0f, 0.7f);
+    assert(meter.peak() == 1.0f && meter.rms() == 0.7f && meter.clipped());
+    meter.resetClip();
+    assert(!meter.clipped() && meter.peak() == 1.0f);
+    meter.decayPeak(0.25f);
+    assert(meter.peak() == 0.75f);
+    meter.decayPeak(-1.0f);
+    assert(meter.peak() == 0.75f);
+    meter.update(std::numeric_limits<float>::quiet_NaN(), 0.2f);
+    meter.update(0.2f, std::numeric_limits<float>::infinity());
+    meter.update(-0.1f, 0.2f);
+    assert(meter.peak() == 0.75f && meter.rms() == 0.7f);
+    meter.update(2.0f, 3.0f);
+    assert(meter.peak() == 1.0f && meter.rms() == 1.0f && meter.clipped());
+    meter.reset();
+    assert(meter.peak() == 0.0f && meter.rms() == 0.0f && !meter.clipped());
 
     std::cout << "MIDI adapter tests passed (no ALSA/device access).\n";
     return 0;
