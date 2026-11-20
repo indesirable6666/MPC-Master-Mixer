@@ -29,7 +29,7 @@ button{color:inherit;touch-action:manipulation;-webkit-tap-highlight-color:trans
 .channel{transition:opacity 120ms ease,border-color 120ms ease}.channel.mix-muted{opacity:.48}.channel.mix-not-solo{opacity:.34}
 .channel:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
 .channel-head{display:flex;align-items:center;justify-content:space-between;min-height:30px;gap:5px}
-.channel-title{font-weight:850;letter-spacing:.03em;font-size:13px}
+.channel-title{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:850;letter-spacing:.03em;font-size:13px}.channel-type{flex-shrink:0}
 .channel-type{font-size:9px;color:var(--muted);letter-spacing:.08em}
 .channel-number{color:var(--amber);font-variant-numeric:tabular-nums}
 .block{padding:7px;background:var(--panel-hi);border:1px solid #303a47;border-radius:6px}
@@ -208,7 +208,9 @@ function selectChannel(index){
  });
  const status=document.getElementById('selectionStatus');
  const selectedTrack=document.querySelector('[data-channel="'+index+'"]');
- const trackName=selectedTrack?.querySelector('.channel-title')?.textContent?.trim()||labels[index];
+ const titleEl=selectedTrack?.querySelector('.channel-title');
+ const trackName=titleEl?.textContent?.trim()||labels[index];
+ if(titleEl)titleEl.title=trackName;
  if(status)status.textContent='PISTE '+String(index+1).padStart(2,'0')+' · '+trackName;
 }
 function refreshMixVisibility(){
