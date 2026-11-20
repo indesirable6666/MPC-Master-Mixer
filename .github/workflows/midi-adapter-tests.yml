@@ -1,0 +1,32 @@
+name: MIDI adapter tests
+
+on:
+  push:
+    paths:
+      - "src/midi/**"
+      - "tests/midi_adapter_test.cpp"
+      - "docs/MIDI_ADAPTER.md"
+      - ".github/workflows/midi-adapter-tests.yml"
+  pull_request:
+    paths:
+      - "src/midi/**"
+      - "tests/midi_adapter_test.cpp"
+      - "docs/MIDI_ADAPTER.md"
+      - ".github/workflows/midi-adapter-tests.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  host-tests:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Compile MIDI adapter tests
+        run: |
+          g++ -std=c++14 -O2 -Wall -Wextra -Werror \
+            -Isrc/midi tests/midi_adapter_test.cpp -o midi_adapter_test
+      - name: Run MIDI adapter tests
+        run: ./midi_adapter_test
