@@ -1,4 +1,5 @@
 #include "audio_engine.hpp"
+#include "audio_control_bridge.hpp"
 #include "audio_backend.hpp"
 #include "six_band_eq.hpp"
 
@@ -426,6 +427,37 @@ int main() {
     pairR[0] = 8.0f;
     audioIn.process(inputL, inputR, pairL, pairR, 0);
     assert(near(pairL[0], 7.0f) && near(pairR[0], 8.0f));
+
+    // UI/control commands are queued by the producer and applied only at
+    // the next audio block boundary, avoiding setter/process data races.
+    mpcmixer::AudioEngineCommandBridge bridge;
+    mpcmixer::AudioEngine::Track bridgeTrack;
+    bridgeTrack.gain = 0.5f;
+    assert(bridge.enqueueTrack(0, bridgeTrack));
+    assert(bridge.enqueueMasterGain(0.5f));
+    assert(bridge.pendingCountApprox() == 2);
+    float bridgeInput[] = {1.0f};
+    const float* bridgeInputs[AudioEngine::kTrackCount] = {};
+    bridgeInputs[0] = bridgeInput;
+    float bridgeLeft[1] = {}, bridgeRight[1] = {};
+    bridge.process(bridgeInputs, bridgeLeft, bridgeRight, 1);
+    assert(bridge.pendingCountApprox() == 0);
+    assert(near(bridgeLeft[0], 0.25f * std::sqrt(0.5f)));
+    assert(near(bridgeRight[0], 0.25f * std::sqrt(0.5f)));
+    assert(bridge.enqueueMasterMute(true));
+    bridge.process(bridgeInputs, bridgeLeft, bridgeRight, 1);
+    assert(near(bridgeLeft[0], 0.0f) && near(bridgeRight[0], 0.0f));
+    assert(!bridge.enqueueMasterGain(std::numeric_limits<float>::quiet_NaN()));
+    bridgeTrack.pan = 2.0f;
+    assert(!bridge.enqueueTrack(0, bridgeTrack));
+    mpcmixer::AudioEngineCommandBridge fullBridge;
+    for (std::size_t i = 0; i < mpcmixer::AudioEngineCommandBridge::kQueueCapacity; ++i)
+        assert(fullBridge.enqueueMasterMute((i % 2) != 0));
+    assert(!fullBridge.enqueueMasterMute(true));
+    assert(fullBridge.pendingCountApprox() ==
+           mpcmixer::AudioEngineCommandBridge::kQueueCapacity);
+    fullBridge.process(nullptr, bridgeLeft, bridgeRight, 0);
+    assert(fullBridge.pendingCountApprox() == 0);
 
     std::cout << "Audio engine tests passed\n";
     return 0;
