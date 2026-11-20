@@ -95,6 +95,7 @@ private:
 
 // Two mono inputs that can operate independently or as one linked stereo strip.
 // This processor is deliberately device-agnostic: callers provide both buffers.
+// Its linked-stereo and independent-mono modes are covered by host-side tests.
 class AudioInputPair {
 public:
     struct Channel {
