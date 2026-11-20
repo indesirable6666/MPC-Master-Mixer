@@ -1,0 +1,42 @@
+name: ARMv7 toolchain check
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "tools/arm-probe/**"
+      - ".github/workflows/armv7-toolchain.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build-probe:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install ARM hard-float cross compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-arm-linux-gnueabihf binutils-arm-linux-gnueabihf
+
+      - name: Compile ARMv7 probe
+        run: |
+          mkdir -p build
+          arm-linux-gnueabihf-gcc \
+            -O2 -Wall -Wextra -Werror \
+            -march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard \
+            tools/arm-probe/probe.c -o build/mpc-arm-probe
+          arm-linux-gnueabihf-readelf -h build/mpc-arm-probe
+          arm-linux-gnueabihf-readelf -A build/mpc-arm-probe
+          arm-linux-gnueabihf-readelf -l build/mpc-arm-probe | grep interpreter || true
+          file build/mpc-arm-probe
+
+      - name: Upload probe binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: mpc-armv7-probe
+          path: build/mpc-arm-probe
+          if-no-files-found: error
