@@ -131,7 +131,10 @@ function makeStrip(index,isMaster=false){
   else if(e.key==='End')nextIndex=15;
   else return;
   e.preventDefault();
-  if(nextIndex!==index)document.querySelector('[data-channel="'+nextIndex+'"]').focus();
+  if(nextIndex!==index){
+   setBank(nextIndex<8?0:1);
+   document.querySelector('[data-channel="'+nextIndex+'"]').focus();
+  }
  });
  el.innerHTML=`
   <div class="channel-head"><span class="channel-title">${name}</span><span class="channel-type">${isMaster?'STEREO':'<span class="channel-number">'+String(index+1).padStart(2,'0')+'</span> · AUDIO'}</span></div>
