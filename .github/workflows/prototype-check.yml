@@ -53,7 +53,8 @@ jobs:
             'el.addEventListener(\'focus\'',
             'if(!isMaster&&!e.target.closest(\'input,button\'))selectChannel(index)',
             'if(!isMaster)selectChannel(index)',
-            'if(toggle){if(!isMaster)selectChannel(index);',
+            'const toggle=e.target.closest(\\'[data-toggle]\\');',
+            'if(!isMaster)selectChannel(index);',
             'AUX ${n}'
           ];
 
