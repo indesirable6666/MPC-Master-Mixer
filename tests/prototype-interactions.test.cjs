@@ -208,9 +208,11 @@ test('Home and End keys jump to the first and last channel strips', () => {
   middle.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Home', bubbles: true }));
   assert.equal(dom.window.document.activeElement.dataset.channel, '0');
   assert.equal(dom.window.document.getElementById('selectionStatus').textContent, 'PISTE 01 · KICK');
+  assert.equal(dom.window.document.getElementById('bankStatus').textContent, 'BANQUE 1/2 · PISTES 1–8');
   dom.window.document.activeElement.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'End', bubbles: true }));
   assert.equal(dom.window.document.activeElement.dataset.channel, '15');
   assert.equal(dom.window.document.getElementById('selectionStatus').textContent, 'PISTE 16 · AUDIO 3');
+  assert.equal(dom.window.document.getElementById('bankStatus').textContent, 'BANQUE 2/2 · PISTES 9–16');
   dom.window.close();
 });
 
