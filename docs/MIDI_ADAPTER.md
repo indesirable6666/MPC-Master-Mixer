@@ -6,7 +6,8 @@ This milestone defines a small transport boundary between mixer controls and MID
 
 - `MidiTransport` is an injectable interface.
 - `SimulatedMidiTransport` records messages in memory only.
-- `VolumeMidiAdapter` converts normalized UI volume (0.0–1.0) to a 7-bit MIDI CC value.
+- `VolumeMidiAdapter` converts one normalized UI volume (0.0–1.0) to a 7-bit MIDI CC value.
+- `TrackVolumeMidiAdapter` stores 16 independent track mappings (zero-based indices 0–15), each disabled until explicitly verified. It supports clearing one track or all tracks.
 - A mapping is disabled by default. It is accepted only when a caller explicitly marks it as verified.
 - Invalid values, unverified mappings and missing mappings produce no message.
 
@@ -25,6 +26,9 @@ The host-side test executable checks:
 3. A deliberately configured mapping produces the expected CC bytes in the simulated transport.
 4. Volume values outside 0.0–1.0 are rejected.
 5. Clearing a mapping disables subsequent sends.
+6. Each of 16 track slots has an independent mapping; invalid track indices are rejected.
+7. Clearing or invalidating one track does not change another track's mapping.
+8. Transport failures are returned to the caller.
 
 Build and run locally:
 
