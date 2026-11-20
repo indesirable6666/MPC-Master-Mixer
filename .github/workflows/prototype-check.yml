@@ -9,6 +9,7 @@ on:
       - ".github/workflows/prototype-check.yml"
   pull_request:
     paths:
+      - "tests/**"
       - "prototype/**"
       - ".github/workflows/prototype-check.yml"
 
@@ -51,10 +52,9 @@ jobs:
             'for(let i=0;i<16;i++)',
             'function makeStrip(index,isMaster=false)',
             'el.addEventListener(\'focus\'',
-            'if(!isMaster&&!e.target.closest(\'input,button\'))selectChannel(index)',
-            'if(!isMaster)selectChannel(index)',
-            'const toggle=e.target.closest(\\'[data-toggle]\\');',
+            "if(!isMaster)selectChannel(index);",
             'if(!isMaster)selectChannel(index);',
+            "const toggle=e.target.closest('[data-toggle]');",
             'AUX ${n}'
           ];
 
