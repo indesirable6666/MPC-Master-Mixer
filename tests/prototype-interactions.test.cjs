@@ -197,3 +197,16 @@ test('left and right arrow keys move focus between adjacent channels', () => {
   assert.equal(dom.window.document.activeElement.dataset.channel, '0');
   dom.window.close();
 });
+
+test('Home and End keys jump to the first and last channel strips', () => {
+  const dom = loadPrototype();
+  const middle = dom.window.document.querySelector('[data-channel="7"]');
+  middle.focus();
+  middle.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Home', bubbles: true }));
+  assert.equal(dom.window.document.activeElement.dataset.channel, '0');
+  assert.equal(dom.window.document.getElementById('selectionStatus').textContent, 'PISTE 01 · KICK');
+  dom.window.document.activeElement.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'End', bubbles: true }));
+  assert.equal(dom.window.document.activeElement.dataset.channel, '15');
+  assert.equal(dom.window.document.getElementById('selectionStatus').textContent, 'PISTE 16 · AUDIO 3');
+  dom.window.close();
+});
