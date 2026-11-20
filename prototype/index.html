@@ -26,7 +26,7 @@ button{color:inherit;touch-action:manipulation;-webkit-tap-highlight-color:trans
 .scroll-area{scroll-behavior:smooth;flex:1;min-width:0;touch-action:pan-x pan-y;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scrollbar-color:#596575 #1a2029;scrollbar-width:thin}
 .strips{height:100%;width:max-content;display:flex;gap:8px;padding:10px}
 .channel{width:180px;min-width:180px;height:100%;min-height:0;display:flex;flex-direction:column;gap:7px;padding:8px;background:linear-gradient(180deg,#202731,#191f28);border:1px solid var(--line);border-radius:8px}
-.channel.selected{border-color:var(--amber);box-shadow:inset 0 0 0 1px #e9ad4540}.channel.selected .channel-title{color:var(--amber)}
+.channel.selected{border-color:var(--amber);box-shadow:inset 0 0 0 1px #e9ad4540}.channel.selected .channel-title{color:var(--amber)}\n.channel.stereo-linked{border-color:#70a9dc;box-shadow:inset 0 0 0 1px #70a9dc40}.channel.stereo-linked .channel-title{color:#9bc9f2}\n.stereo-link.active{border-color:var(--blue);background:#243d53;color:#d6ebff}
 .channel{transition:opacity 120ms ease,border-color 120ms ease}.channel.mix-muted{opacity:.48}.channel.mix-not-solo{opacity:.34}
 .channel:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
 .channel-head{display:flex;align-items:center;justify-content:space-between;min-height:30px;gap:5px}
@@ -99,7 +99,7 @@ button{color:inherit;touch-action:manipulation;-webkit-tap-highlight-color:trans
  <div class="project">SESSION · PROJET DE DÉMONSTRATION</div>
  <div class="top-spacer"></div>
  <div class="mode">MODE DÉMO · HORS LIGNE</div>
- <div class="toolbar"><button class="tool optional" id="prev" type="button" aria-label="Afficher la banque précédente" aria-controls="scrollArea bankStatus">◀ BANQUE</button><button class="tool optional" id="next" type="button" aria-label="Afficher la banque suivante" aria-controls="scrollArea bankStatus" disabled>BANQUE ▶</button><span id="bankStatus" class="mode bank-status" role="status" aria-live="polite" aria-atomic="true">BANQUE 1/2 · PISTES 1–8</span><button class="tool" id="meterDemo" type="button" aria-pressed="false">DÉMO MÈTRES : OFF</button><button class="tool" id="reset" type="button">RÉINITIALISER</button></div>
+ <div class="toolbar"><button class="tool optional" id="prev" type="button" aria-label="Afficher la banque précédente" aria-controls="scrollArea bankStatus">◀ BANQUE</button><button class="tool optional" id="next" type="button" aria-label="Afficher la banque suivante" aria-controls="scrollArea bankStatus" disabled>BANQUE ▶</button><span id="bankStatus" class="mode bank-status" role="status" aria-live="polite" aria-atomic="true">BANQUE 1/2 · PISTES 1–8</span><button class="tool stereo-link" id="stereoLink" type="button" aria-pressed="false" aria-controls="audioIn1 audioIn2">LINK AUDIO 1/2 : OFF</button><button class="tool" id="meterDemo" type="button" aria-pressed="false">DÉMO MÈTRES : OFF</button><button class="tool" id="reset" type="button">RÉINITIALISER</button></div>
 </header>
 <main class="workspace">
  <div class="scroll-area" id="scrollArea" aria-label="Tranches de canaux"><div class="strips" id="strips"></div></div>
@@ -110,7 +110,7 @@ button{color:inherit;touch-action:manipulation;-webkit-tap-highlight-color:trans
 <script>
 const strips=document.getElementById('strips');
 const labels=['KICK','SNARE','HI-HAT','PERC','BASS','SYNTH 1','SYNTH 2','KEYS','PAD','GUITAR','VOX','FX 1','FX 2','AUDIO 1','AUDIO 2','AUDIO 3'];
-const defaults=()=>({volume:100,pan:0,eq:[0,0,0,0,0,0],aux:[0,0,0,0],mute:false,solo:false});
+const defaults=()=>({volume:100,pan:0,eq:[0,0,0,0,0,0],aux:[0,0,0,0],mute:false,solo:false});\nlet audioStereoLinked=false;\nlet syncingAudioPair=false;
 const state=Array.from({length:16},defaults);
 const masterState=defaults();
 function meter(){return '<div class="meter-panel" role="group" aria-label="Mesures simulées"><div class="meter-row"><span class="meter-label">PEAK</span><div class="meter-track" role="meter" aria-label="Peak simulé" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="0 pour cent"><i class="meter-fill" data-meter="peak"></i><i class="meter-hold" data-meter-hold aria-hidden="true"></i></div><output class="meter-value" data-meter-value="peak">0%</output></div><div class="meter-row"><span class="meter-label">RMS</span><div class="meter-track" role="meter" aria-label="RMS simulé" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="0 pour cent"><i class="meter-fill" data-meter="rms"></i></div><output class="meter-value" data-meter-value="rms">0%</output></div><div class="meter-row"><span class="meter-label">CLIP</span><span></span><button class="clip" data-clip type="button" aria-label="Écrêtage inactif" title="Effacer Clip et Peak Hold">OFF</button></div></div>'}
@@ -119,7 +119,7 @@ function makeStrip(index,isMaster=false){
  const name=isMaster?'MASTER':labels[index];
  const el=document.createElement('section');
  el.className='channel'+(!isMaster&&index===0?' selected':'');
- el.dataset.channel=isMaster?'master':index;
+ el.dataset.channel=isMaster?'master':index;\n if(!isMaster&&index===13)el.id='audioIn1';\n if(!isMaster&&index===14)el.id='audioIn2';
  el.tabIndex=isMaster?-1:0;
  el.setAttribute('role','group');
  el.setAttribute('aria-label',isMaster?'Tranche Master':'Tranche '+(index+1)+' '+name);
@@ -192,7 +192,7 @@ function makeStrip(index,isMaster=false){
  el.addEventListener('click',e=>{
   if(!isMaster)selectChannel(index);
   const toggle=e.target.closest('[data-toggle]');
-  if(toggle){const key=toggle.dataset.toggle;data[key]=!data[key];update();if(!isMaster)refreshMixVisibility();return}
+  if(toggle){const key=toggle.dataset.toggle;data[key]=!data[key];update();if(!isMaster){refreshMixVisibility();if(audioStereoLinked&&(index===13||index===14))syncLinkedAudioPair(index)}return}
   const fx=e.target.closest('.fx');if(fx){const active=fx.classList.toggle('off')===false;fx.setAttribute('aria-pressed',String(active));fx.setAttribute('aria-label',fx.textContent+', placeholder '+(active?'activé':'désactivé'));return}
  });
  function applyValues(){
@@ -205,6 +205,39 @@ function makeStrip(index,isMaster=false){
  applyValues();
  return el;
 }
+function syncLinkedAudioPair(sourceIndex){
+ if(syncingAudioPair)return;
+ const targetIndex=sourceIndex===13?14:13;
+ const source=state[sourceIndex],target=state[targetIndex];
+ Object.assign(target,{volume:source.volume,pan:source.pan,eq:[...source.eq],aux:[...source.aux],mute:source.mute,solo:source.solo});
+ const targetEl=document.querySelector('[data-channel="'+targetIndex+'"]');
+ if(!targetEl)return;
+ syncingAudioPair=true;
+ targetEl.querySelector('[data-volume]').value=target.volume;
+ targetEl.querySelector('[data-volume]').dispatchEvent(new Event('input',{bubbles:true}));
+ targetEl.querySelector('[data-pan]').value=target.pan;
+ targetEl.querySelector('[data-pan]').dispatchEvent(new Event('input',{bubbles:true}));
+ targetEl.querySelectorAll('[data-eq]').forEach(input=>{input.value=target.eq[Number(input.dataset.eq)];input.dispatchEvent(new Event('input',{bubbles:true}))});
+ targetEl.querySelectorAll('[data-aux]').forEach(input=>{input.value=target.aux[Number(input.dataset.aux)];input.dispatchEvent(new Event('input',{bubbles:true}))});
+ ['mute','solo'].forEach(key=>{const button=targetEl.querySelector('[data-toggle="'+key+'"]');button.classList.toggle('active',target[key]);button.setAttribute('aria-pressed',String(target[key]))});
+ targetEl.classList.add('stereo-linked');
+ syncingAudioPair=false;
+ refreshMixVisibility();
+}
+function setAudioStereoLinked(enabled){
+ audioStereoLinked=enabled;
+ const button=document.getElementById('stereoLink');
+ button.setAttribute('aria-pressed',String(enabled));
+ button.classList.toggle('active',enabled);
+ button.textContent='LINK AUDIO 1/2 : '+(enabled?'ON':'OFF');
+ const left=document.getElementById('audioIn1'),right=document.getElementById('audioIn2');
+ [left,right].forEach((el,i)=>{
+  el.classList.toggle('stereo-linked',enabled);
+  el.querySelector('.channel-type').textContent=enabled?(i===0?'STÉRÉO · L':'STÉRÉO · R'):'14 · AUDIO';
+ });
+ if(enabled)syncLinkedAudioPair(13);
+}
+document.getElementById('stereoLink').addEventListener('click',()=>setAudioStereoLinked(!audioStereoLinked));
 function selectChannel(index){
  const channels=document.querySelectorAll('.channel:not([data-channel="master"])');
  channels.forEach(el=>{
