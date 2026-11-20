@@ -1,5 +1,6 @@
 #include "audio_engine.hpp"
 #include "audio_duplex_backend.hpp"
+#include "audio_duplex_engine_host.hpp"
 #include "audio_control_bridge.hpp"
 #include "audio_backend.hpp"
 #include "six_band_eq.hpp"
@@ -478,6 +479,38 @@ int main() {
            mpcmixer::AudioEngineCommandBridge::kQueueCapacity);
     fullBridge.process(nullptr, bridgeLeft, bridgeRight, 0);
     assert(fullBridge.pendingCountApprox() == 0);
+
+    // The duplex host maps physical inputs only through explicit routes.
+    mpcmixer::AudioEngineCommandBridge hostedBridge;
+    mpcmixer::AudioEngine::Track hostedTrack;
+    hostedTrack.gain = 0.5f;
+    assert(hostedBridge.enqueueTrack(3, hostedTrack));
+    mpcmixer::AudioDuplexEngineHost host(hostedBridge);
+    assert(host.inputRoute(0) == mpcmixer::AudioDuplexEngineHost::kUnmappedTrack);
+    assert(host.setInputRoute(0, 3));
+    assert(host.setInputRoute(1, 4));
+    assert(!host.setInputRoute(2, 1));
+    assert(!host.setInputRoute(0, 16));
+    mpcmixer::OfflineAudioDuplexBackend hostedBackend;
+    mpcmixer::AudioDuplexFormat hostedFormat;
+    assert(host.prepare(hostedBackend, hostedFormat));
+    assert(host.start());
+    float hostedInputL[] = {1.0f, 0.5f};
+    float hostedInputR[] = {-0.5f, 0.25f};
+    const float* hostedInputs[] = {hostedInputL, hostedInputR};
+    float hostedOutputL[2] = {}, hostedOutputR[2] = {};
+    float* hostedOutputs[] = {hostedOutputL, hostedOutputR};
+    mpcmixer::AudioDuplexBuffer hostedBlock{hostedInputs, hostedOutputs, 2, 2, 2};
+    assert(hostedBackend.processBlock(hostedBlock) ==
+           mpcmixer::AudioDuplexStatus::Processed);
+    assert(near(hostedOutputL[0], 0.5f * std::sqrt(0.5f)));
+    assert(near(hostedOutputR[0], -0.5f * std::sqrt(0.5f)));
+    assert(host.setInputRoute(1, 3));
+    hostedOutputL[0] = hostedOutputR[0] = 7.0f;
+    host.processBlock(hostedBlock);
+    assert(near(hostedOutputL[0], 7.0f) && near(hostedOutputR[0], 7.0f));
+    host.stop();
+    host.shutdown();
 
     // Full-duplex callback contract: caller-owned planar buffers are passed
     // through the offline driver without copying or allocating.
