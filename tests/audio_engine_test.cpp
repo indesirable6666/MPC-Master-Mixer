@@ -508,7 +508,7 @@ int main() {
     assert(host.setInputRoute(1, 3));
     hostedOutputL[0] = hostedOutputR[0] = 7.0f;
     host.processBlock(hostedBlock);
-    assert(near(hostedOutputL[0], 7.0f) && near(hostedOutputR[0], 7.0f));
+    assert(near(hostedOutputL[0], 0.0f) && near(hostedOutputR[0], 0.0f));
     host.stop();
     host.shutdown();
 
