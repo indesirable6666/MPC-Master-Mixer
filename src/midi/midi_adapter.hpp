@@ -382,4 +382,80 @@ private:
     std::array<CcMapping, kTrackCount> soloMappings_;
 };
 
+
+// Dedicated Master-bus controls. Volume and Mute have independent,
+// explicitly verified CC mappings and remain disabled until configured.
+class MasterMidiAdapter {
+public:
+    explicit MasterMidiAdapter(MidiTransport& transport)
+        : transport_(transport),
+          volumeMapping_{0, 0, false},
+          muteMapping_{0, 0, false} {}
+
+    bool configureVolume(const CcMapping& mapping) {
+        return configure(mapping, volumeMapping_);
+    }
+
+    bool configureMute(const CcMapping& mapping) {
+        return configure(mapping, muteMapping_);
+    }
+
+    void clearVolume() { volumeMapping_ = CcMapping{0, 0, false}; }
+    void clearMute() { muteMapping_ = CcMapping{0, 0, false}; }
+    void clearAll() {
+        clearVolume();
+        clearMute();
+    }
+
+    bool hasVolumeMapping() const {
+        return volumeMapping_.explicitly_verified;
+    }
+
+    bool hasMuteMapping() const {
+        return muteMapping_.explicitly_verified;
+    }
+
+    bool setVolume(float normalized) {
+        if (!hasVolumeMapping() || !std::isfinite(normalized) ||
+            normalized < 0.0f || normalized > 1.0f) {
+            return false;
+        }
+        const auto value = static_cast<std::uint8_t>(
+            normalized * 127.0f + 0.5f);
+        return send(volumeMapping_, value);
+    }
+
+    bool setMuted(bool muted) {
+        if (!hasMuteMapping()) {
+            return false;
+        }
+        return send(muteMapping_,
+                    static_cast<std::uint8_t>(muted ? 127 : 0));
+    }
+
+private:
+    static bool configure(const CcMapping& mapping, CcMapping& destination) {
+        if (!mapping.explicitly_verified ||
+            mapping.channel > 15 || mapping.controller > 127) {
+            destination = CcMapping{0, 0, false};
+            return false;
+        }
+        destination = mapping;
+        return true;
+    }
+
+    bool send(const CcMapping& mapping, std::uint8_t value) {
+        const MidiMessage message{
+            static_cast<std::uint8_t>(0xB0u | mapping.channel),
+            mapping.controller,
+            value
+        };
+        return transport_.send(message);
+    }
+
+    MidiTransport& transport_;
+    CcMapping volumeMapping_;
+    CcMapping muteMapping_;
+};
+
 } // namespace mpcmixer
