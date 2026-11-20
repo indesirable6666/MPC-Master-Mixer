@@ -26,7 +26,7 @@ int main() {
         }
 
         std::printf("%s: loaded\n", check.name);
-        for (const char** symbol = check.symbols; *symbol; ++symbol) {
+        for (const char* const* symbol = check.symbols; *symbol; ++symbol) {
             dlerror();
             void* address = dlsym(handle, *symbol);
             const char* error = dlerror();
