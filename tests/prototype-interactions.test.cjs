@@ -121,6 +121,10 @@ test('meter animation is opt-in and stops when switched off', () => {
   dom.window.close();
 });
 
+test('all interactive controls expose a consistent visible keyboard focus ring', () => {
+  assert.match(html, /:focus-visible\\{outline:2px solid var\\(--amber\\);outline-offset:3px\\}/);
+});
+
 test('touch controls expose practical minimum hit areas', () => {
   assert.match(html, /\.tool\{min-height:42px;/);
   assert.match(html, /\.clip\{min-width:42px;min-height:34px;/);
