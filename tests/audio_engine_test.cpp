@@ -485,6 +485,8 @@ int main() {
     mpcmixer::AudioEngine::Track hostedTrack;
     hostedTrack.gain = 0.5f;
     assert(hostedBridge.enqueueTrack(3, hostedTrack));
+    hostedTrack.gain = 0.25f;
+    assert(hostedBridge.enqueueTrack(4, hostedTrack));
     mpcmixer::AudioDuplexEngineHost host(hostedBridge);
     assert(host.inputRoute(0) == mpcmixer::AudioDuplexEngineHost::kUnmappedTrack);
     assert(host.setInputRoute(0, 3));
@@ -506,8 +508,8 @@ int main() {
     mpcmixer::AudioDuplexBuffer hostedBlock{hostedInputs, hostedOutputs, 2, 2, 2};
     assert(hostedBackend.processBlock(hostedBlock) ==
            mpcmixer::AudioDuplexStatus::Processed);
-    assert(near(hostedOutputL[0], 0.5f * std::sqrt(0.5f)));
-    assert(near(hostedOutputR[0], -0.5f * std::sqrt(0.5f)));
+    assert(near(hostedOutputL[0], 0.375f * std::sqrt(0.5f)));
+    assert(near(hostedOutputR[0], 0.375f * std::sqrt(0.5f)));
     assert(host.setInputRoute(1, 3));
     hostedOutputL[0] = hostedOutputR[0] = 7.0f;
     host.processBlock(hostedBlock);
