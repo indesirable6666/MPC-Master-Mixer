@@ -1,4 +1,5 @@
 #include "audio_engine.hpp"
+#include "audio_duplex_backend.hpp"
 #include "audio_control_bridge.hpp"
 #include "audio_backend.hpp"
 #include "six_band_eq.hpp"
@@ -477,6 +478,39 @@ int main() {
            mpcmixer::AudioEngineCommandBridge::kQueueCapacity);
     fullBridge.process(nullptr, bridgeLeft, bridgeRight, 0);
     assert(fullBridge.pendingCountApprox() == 0);
+
+    // Full-duplex callback contract: caller-owned planar buffers are passed
+    // through the offline driver without copying or allocating.
+    struct DuplexProbe { std::size_t calls = 0; float firstInput = 0.0f; };
+    DuplexProbe duplexProbe;
+    const auto duplexCallback = [](void* context,
+                                   const mpcmixer::AudioDuplexBuffer& block) noexcept {
+        DuplexProbe* probe = static_cast<DuplexProbe*>(context);
+        ++probe->calls;
+        probe->firstInput = block.inputChannels[0][0];
+        for (std::size_t i = 0; i < block.frameCount; ++i) {
+            block.outputChannels[0][i] = block.inputChannels[0][i];
+            block.outputChannels[1][i] = block.inputChannels[1][i];
+        }
+    };
+    mpcmixer::OfflineAudioDuplexBackend duplex;
+    mpcmixer::AudioDuplexFormat duplexFormat;
+    assert(duplex.prepare(duplexFormat, duplexCallback, &duplexProbe));
+    assert(duplex.start());
+    float duplexInL[] = {0.25f, -0.5f}, duplexInR[] = {-0.75f, 1.0f};
+    float duplexOutL[2] = {}, duplexOutR[2] = {};
+    const float* duplexInputs[] = {duplexInL, duplexInR};
+    float* duplexOutputs[] = {duplexOutL, duplexOutR};
+    mpcmixer::AudioDuplexBuffer duplexBlock{duplexInputs, duplexOutputs, 2, 2, 2};
+    assert(duplex.processBlock(duplexBlock) == mpcmixer::AudioDuplexStatus::Processed);
+    assert(duplexProbe.calls == 1 && near(duplexProbe.firstInput, 0.25f));
+    assert(near(duplexOutL[1], -0.5f) && near(duplexOutR[1], 1.0f));
+    duplexBlock.frameCount = duplexFormat.maxFramesPerBlock + 1;
+    assert(duplex.processBlock(duplexBlock) == mpcmixer::AudioDuplexStatus::InvalidBuffer);
+    duplex.stop();
+    assert(duplex.processBlock(duplexBlock) == mpcmixer::AudioDuplexStatus::NotPrepared);
+    duplex.shutdown();
+    assert(!duplex.prepare(duplexFormat, nullptr, &duplexProbe));
 
     std::cout << "Audio engine tests passed\n";
     return 0;
