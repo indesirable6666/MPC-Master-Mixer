@@ -30,6 +30,13 @@ test('fader updates its dB and raw-value readouts and selects its channel', () =
   input(dom, '[data-channel="2"] [data-volume]', 50);
   assert.equal(channel.querySelector('.db').textContent, '-6.0 dB');
   assert.equal(channel.querySelector('.value').textContent, '50 / 127');
+  assert.equal(channel.querySelector('[data-volume]').getAttribute('aria-valuetext'), '-6.0 dB, 50 sur 127');
+  input(dom, '[data-channel="2"] [data-volume]', 0);
+  assert.equal(channel.querySelector('.db').textContent, '−∞ dB');
+  assert.equal(channel.querySelector('[data-volume]').getAttribute('aria-valuetext'), '−∞ dB, 0 sur 127');
+  input(dom, '[data-channel="2"] [data-volume]', 127);
+  assert.equal(channel.querySelector('.db').textContent, '2.1 dB');
+  assert.equal(channel.querySelector('[data-volume]').getAttribute('aria-valuetext'), '2.1 dB, 127 sur 127');
   assert.ok(channel.classList.contains('selected'));
   dom.window.close();
 });
