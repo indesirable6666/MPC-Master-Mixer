@@ -255,6 +255,10 @@ test('clicking any channel action also selects that channel', () => {
   dom.window.close();
 });
 
+test('reduced-motion preference disables smooth scrolling and decorative transitions', () => {
+  assert.match(html, /@media\(prefers-reduced-motion:reduce\)\{\.scroll-area\{scroll-behavior:auto\}\.channel,\.meter-fill\{transition:none\}\}/);
+});
+
 test('narrow-screen layout compacts the toolbar and footer without shrinking channel controls', () => {
   assert.match(html, /@media\(max-width:480px\)\{[^}]*\.topbar/);
   assert.match(html, /\.topbar>\.mode\{display:none\}/);
