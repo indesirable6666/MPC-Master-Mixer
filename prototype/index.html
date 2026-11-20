@@ -195,7 +195,7 @@ function makeStrip(index,isMaster=false){
   if(!isMaster)selectChannel(index);
   if(t.matches('[data-volume]'))data.volume=Number(t.value);
   if(t.matches('[data-pan]'))data.pan=Number(t.value);
-  if(t.matches('[data-stereo-balance]')){audioStereoBalance=Number(t.value);document.querySelectorAll('[data-stereo-balance]').forEach(input=>{input.value=audioStereoBalance;input.setAttribute('aria-valuetext',audioStereoBalance===0?'Centre':(audioStereoBalance<0?'Gauche ':'Droite ')+Math.abs(audioStereoBalance)+' pour cent);input.closest('.pan').querySelector('.balance-value').textContent=audioStereoBalance===0?'C':audioStereoBalance<0?'L '+Math.abs(audioStereoBalance):'R '+audioStereoBalance;});}
+  if(t.matches('[data-stereo-balance]')){audioStereoBalance=Number(t.value);document.querySelectorAll('[data-stereo-balance]').forEach(input=>{input.value=audioStereoBalance;input.setAttribute('aria-valuetext',audioStereoBalance===0?'Centre':(audioStereoBalance<0?'Gauche ':'Droite ')+Math.abs(audioStereoBalance)+' pour cent');input.closest('.pan').querySelector('.balance-value').textContent=audioStereoBalance===0?'C':audioStereoBalance<0?'L '+Math.abs(audioStereoBalance):'R '+audioStereoBalance;});}
   if(t.matches('[data-eq]'))data.eq[Number(t.dataset.eq)]=Number(t.value);
   if(t.matches('[data-aux]'))data.aux[Number(t.dataset.aux)]=Number(t.value);
   update();
