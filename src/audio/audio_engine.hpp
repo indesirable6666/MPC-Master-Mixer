@@ -11,6 +11,8 @@ namespace mpcmixer {
 
 // Platform-independent DSP core. It processes caller-owned mono float buffers;
 // it does not open audio devices, allocate memory, or access the MPC/ALSA.
+// Setters are control-thread operations and must not race process() calls;
+// the host must publish parameter changes at a safe block boundary.
 class AudioEngine {
 public:
     static constexpr std::size_t kTrackCount = 16;
