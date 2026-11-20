@@ -57,8 +57,9 @@ button{color:inherit}
 .meter-fill{display:block;width:0;height:100%;background:linear-gradient(90deg,#438f6d 0 68%,#b18c43 84%,#c75c55 100%);transition:width 100ms linear}
 .meter-hold{position:absolute;top:0;bottom:0;left:0;width:2px;background:#fff;box-shadow:0 0 3px #fff;transform:translateX(-1px)}
 .meter-value{color:#cbd4df;text-align:right;font-size:8px;font-variant-numeric:tabular-nums}
-.clip{padding:1px 3px;border:1px solid #5b4244;border-radius:3px;color:#778392;text-align:center;font-size:8px;font-weight:900}
+.clip{padding:1px 3px;border:1px solid #5b4244;border-radius:3px;color:#778392;text-align:center;font-size:8px;font-weight:900;background:transparent;cursor:pointer}
 .clip.active{border-color:var(--red);background:#57292c;color:#fff;box-shadow:0 0 7px #e36e7080}
+.clip:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
 .fader-area{flex:1;min-height:110px;display:flex;align-items:stretch;justify-content:center;gap:8px;padding:8px 6px 4px;background:var(--well);border:1px solid #303a47;border-radius:6px}
 .scale{display:flex;flex-direction:column;justify-content:space-between;padding:2px 0;color:#8390a0;font-size:8px}
 .fader{height:100%;min-height:100px;width:34px;margin:0;accent-color:var(--amber);writing-mode:vertical-lr;direction:rtl}
@@ -96,7 +97,7 @@ const labels=['KICK','SNARE','HI-HAT','PERC','BASS','SYNTH 1','SYNTH 2','KEYS','
 const defaults=()=>({volume:100,pan:0,eq:[0,0,0,0,0,0],aux:[0,0,0,0],mute:false,solo:false});
 const state=Array.from({length:16},defaults);
 const masterState=defaults();
-function meter(){return '<div class="meter-panel" aria-label="Mesures simulées"><div class="meter-row"><span class="meter-label">PEAK</span><div class="meter-track"><i class="meter-fill" data-meter="peak"></i><i class="meter-hold" data-meter-hold></i></div><output class="meter-value" data-meter-value="peak">0%</output></div><div class="meter-row"><span class="meter-label">RMS</span><div class="meter-track"><i class="meter-fill" data-meter="rms"></i></div><output class="meter-value" data-meter-value="rms">0%</output></div><div class="meter-row"><span class="meter-label">CLIP</span><span></span><output class="clip" data-clip aria-label="Écrêtage inactif">OFF</output></div></div>'}
+function meter(){return '<div class="meter-panel" aria-label="Mesures simulées"><div class="meter-row"><span class="meter-label">PEAK</span><div class="meter-track"><i class="meter-fill" data-meter="peak"></i><i class="meter-hold" data-meter-hold></i></div><output class="meter-value" data-meter-value="peak">0%</output></div><div class="meter-row"><span class="meter-label">RMS</span><div class="meter-track"><i class="meter-fill" data-meter="rms"></i></div><output class="meter-value" data-meter-value="rms">0%</output></div><div class="meter-row"><span class="meter-label">CLIP</span><span></span><button class="clip" data-clip type="button" aria-label="Écrêtage inactif" title="Effacer Clip et Peak Hold">OFF</button></div></div>'}
 function makeStrip(index,isMaster=false){
  const data=isMaster?masterState:state[index];
  const name=isMaster?'MASTER':labels[index];
@@ -129,6 +130,13 @@ function makeStrip(index,isMaster=false){
   el.querySelector('.value').textContent=raw+' / 127';
   ['mute','solo'].forEach(k=>{const b=el.querySelector('[data-toggle="'+k+'"]');b.classList.toggle('active',data[k]);b.setAttribute('aria-pressed',String(data[k]))});
  };
+ el.querySelector('[data-clip]').addEventListener('click',()=>{
+ const current=Number(el.dataset.currentPeak||0);
+ if(current<0.985){
+  el.dataset.clipLatched='false';el.dataset.peakHold=String(current);
+  renderMeter(el,current,Number(el.dataset.currentRms||0));
+ }
+});
  el.addEventListener('input',e=>{
   const t=e.target;
   if(!isMaster)selectChannel(index);
@@ -163,7 +171,7 @@ const meterDemoButton=document.getElementById('meterDemo');
 function renderMeter(el,peak,rms){
  const p=Math.max(0,Math.min(1,peak)),r=Math.max(0,Math.min(1,rms)),clipped=p>=0.985;
  const hold=Math.max(Number(el.dataset.peakHold||0),p);
- el.dataset.peakHold=String(hold);
+ el.dataset.currentPeak=String(p);el.dataset.currentRms=String(r);el.dataset.peakHold=String(hold);
  el.querySelector('[data-meter="peak"]').style.width=(p*100).toFixed(1)+'%';
  el.querySelector('[data-meter-hold]').style.left=(hold*100).toFixed(1)+'%';
  el.dataset.clipLatched=String(el.dataset.clipLatched==='true'||clipped);
