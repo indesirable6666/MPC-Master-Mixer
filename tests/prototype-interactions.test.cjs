@@ -75,8 +75,12 @@ test('EQ and aux controls update their displayed values', () => {
   const channel = '[data-channel="4"]';
   input(dom, `${channel} [data-eq="2"]`, 3.5);
   input(dom, `${channel} [data-aux="1"]`, 64);
-  assert.equal(dom.window.document.querySelector(`${channel} [data-eq="2"] + output`).textContent, '+3.5');
-  assert.equal(dom.window.document.querySelector(`${channel} [data-aux="1"] + output`).textContent, '64');
+  const eq = dom.window.document.querySelector(`${channel} [data-eq="2"]`);
+  const aux = dom.window.document.querySelector(`${channel} [data-aux="1"]`);
+  assert.equal(eq.nextElementSibling.textContent, '+3.5 dB');
+  assert.equal(eq.getAttribute('aria-valuetext'), '+3.5 décibels');
+  assert.equal(aux.nextElementSibling.textContent, '64%');
+  assert.equal(aux.getAttribute('aria-valuetext'), '64 pour cent');
   dom.window.close();
 });
 
@@ -120,8 +124,8 @@ test('meter animation is opt-in and stops when switched off', () => {
 test('touch controls expose practical minimum hit areas', () => {
   assert.match(html, /\.tool\{min-height:42px;/);
   assert.match(html, /\.clip\{min-width:42px;min-height:26px;/);
-  assert.match(html, /\.pan input\{[^}]*min-height:30px;/);
-  assert.match(html, /\.aux input\{[^}]*min-height:30px;/);
+  assert.match(html, /\.band input\{[^}]*min-height:36px;/);\n  assert.match(html, /\.pan input\{[^}]*min-height:30px;/);
+  assert.match(html, /\.aux input\{[^}]*min-height:38px;/);
 });
 
 test('bank navigation switches between channels 1–8 and 9–16', () => {
