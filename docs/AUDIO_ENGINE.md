@@ -6,14 +6,14 @@
 
 Implemented per track:
 - Six-band parametric EQ (`SixBandEq`): six RBJ peaking biquads with independently configurable centre frequency (20Hz to Nyquist), Q (0.1–10) and gain (±12dB); default centres are 60, 180, 500, 1.5k, 5k and 12kHz, with independent planar channel state
-- Linear gain from 0.0 to 1.0
+- Linear gain from 0.0 to 1.27 (+2.1 dB), matching the prototype's 0–127 fader range
 - Constant-power pan from hard left to hard right
 - Mute and solo
 - Four independent stereo Aux buses with per-track send levels
 - Null input as silence
 
 Implemented on the master bus:
-- Master gain
+- Master gain (0.0–1.27, +2.1 dB maximum)
 - Master mute
 
 The core ignores non-finite input samples and rejects invalid control values. The stereo float bus is not clipped; a future output stage must define limiting and sample-format conversion. Aux sends are post-fader and post-pan, pre-master; master gain/mute affect the main bus only. Aux output buffers are caller-owned and optional.
