@@ -228,6 +228,7 @@ function setBank(bank){
 }
 prevBank.addEventListener('click',()=>setBank(currentBank-1));
 nextBank.addEventListener('click',()=>setBank(currentBank+1));
+setBank(0);
 document.getElementById('reset').addEventListener('click',()=>{
  setMeterDemo(false);
  state.forEach((s,i)=>Object.assign(s,defaults()));
