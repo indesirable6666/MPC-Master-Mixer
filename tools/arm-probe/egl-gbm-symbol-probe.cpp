@@ -1,5 +1,6 @@
 #include <dlfcn.h>
 #include <cstdio>
+#include <unistd.h>
 
 typedef void* (*EGLGetProcAddressFn)(const char*);
 typedef void* (*EGLGetPlatformDisplayEXTFn)(unsigned int, void*, const int*);
@@ -42,6 +43,18 @@ static void inspect_gbm() {
 }
 
 int main() {
+    FILE* report = std::fopen("mpc-graphics-report.txt", "wx");
+    if (!report) {
+        std::perror("Cannot create mpc-graphics-report.txt (it may already exist)");
+        return 2;
+    }
+    if (dup2(fileno(report), STDOUT_FILENO) == -1) {
+        std::perror("Cannot redirect report output");
+        std::fclose(report);
+        return 2;
+    }
+    std::fclose(report);
+
     std::puts("MPC Master Mixer: EGL/GBM symbol capability probe");
     std::puts("Loads libraries and resolves symbols only.");
     std::puts("Does NOT initialize EGL, request a display, open DRM devices,");
