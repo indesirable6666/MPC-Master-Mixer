@@ -15,6 +15,10 @@ This milestone defines a small transport boundary between mixer controls and MID
 - Every mapping is disabled by default and accepted only when a caller explicitly marks it as verified.
 - Invalid values, unverified mappings and missing mappings produce no message. Clearing a track or all tracks disables the corresponding mappings.
 
+## Meter model
+
+`src/mixer/meter_model.hpp` provides a small UI-side `MeterModel` for normalized peak/RMS display values, peak hold/decay and clip indication. It validates inputs and clamps amplitudes to [0,1]. It does not capture audio, access ALSA, or obtain signal data from the MPC; a separately verified audio-analysis source would be required to feed it.
+
 ## Important limitations
 
 This is **not** a live MIDI implementation. It does not create an ALSA sequencer client, open MIDI ports, connect to MPC ports, send messages to hardware, or read feedback from MPC.
@@ -39,6 +43,7 @@ The host-side test executable checks:
 12. Invalid switch mappings fail closed, clearing only the addressed mapping; transport failures propagate.
 13. Master volume and Mute mappings are independent, opt-in and encoded as documented in the simulated transport.
 14. Master controls reject invalid values, clear independently and propagate transport failures.
+15. Meter values are clamped, invalid/non-finite updates are ignored, peak hold/decay and clip reset behave as expected.
 
 Build and run locally:
 
