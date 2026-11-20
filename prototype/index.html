@@ -170,6 +170,7 @@ document.getElementById('reset').addEventListener('click',()=>{
   el.querySelector('.db').textContent='0.0 dB';el.querySelector('.value').textContent='100 / 127';
   el.querySelectorAll('[data-eq]').forEach(x=>x.nextElementSibling.textContent='0.0');
   el.querySelectorAll('[data-aux]').forEach(x=>x.nextElementSibling.textContent='0');
+  el.querySelector('[data-volume]').dispatchEvent(new Event('input',{bubbles:true}));
  });
 });
 </script>
