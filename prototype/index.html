@@ -3,57 +3,166 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>MPC Master Mixer — prototype tactile</title>
+<meta name="theme-color" content="#11151b">
+<title>MPC Master Mixer — interface tactile</title>
 <style>
-:root{color-scheme:dark;--bg:#111318;--panel:#1b1f27;--panel2:#252b35;--line:#39414e;--text:#edf1f7;--muted:#a6afbd;--accent:#e5a83b;--green:#54c58a;--red:#e36b6b}
-*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;background:var(--bg);color:var(--text);font:14px system-ui,-apple-system,sans-serif;overflow:hidden}
-header{height:54px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;border-bottom:1px solid var(--line);background:#171a21}
-.brand{font-weight:800;letter-spacing:.06em}.brand span{color:var(--accent)}.status{font-size:11px;color:var(--muted)}
-main{height:calc(100% - 54px);display:flex;min-width:0}
-.viewport{flex:1;min-width:0;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scrollbar-color:#697383 #20242c;scrollbar-width:thin}
-.channels{height:100%;display:flex;gap:7px;padding:9px;width:max-content}
-.strip{width:174px;min-width:174px;height:100%;background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:8px;display:flex;flex-direction:column;gap:7px}
-.strip.selected{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
-.name{display:flex;align-items:center;justify-content:space-between;gap:5px;font-weight:700}.name small{color:var(--muted);font-weight:500}
-.section{background:var(--panel2);border-radius:6px;padding:6px}.section-title{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px}
-.eq{display:grid;grid-template-columns:repeat(6,1fr);gap:3px}.band{min-width:0;text-align:center;font-size:9px;color:var(--muted)}.band input{writing-mode:vertical-lr;direction:rtl;width:16px;height:54px;accent-color:var(--accent);display:block;margin:2px auto}.band b{font-size:9px;color:var(--text)}
-.inserts{display:flex;gap:4px}.chip{flex:1;text-align:center;background:#343c49;border-radius:4px;padding:5px 2px;font-size:10px;color:#d7deea}
-.panrow{display:flex;align-items:center;gap:7px}.panrow label{font-size:10px;color:var(--muted);width:25px}.panrow input{flex:1;min-width:0;accent-color:var(--accent)}
-.aux{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}.aux label{font-size:9px;color:var(--muted);text-align:center}.aux input{width:100%;accent-color:var(--accent)}
-.actions{display:flex;gap:6px}.toggle{flex:1;min-height:34px;border:1px solid var(--line);border-radius:5px;background:#252b35;color:var(--text);font-weight:700}.toggle.active{background:#614b24;border-color:var(--accent);color:#ffe0a1}
-.meter{height:7px;border-radius:8px;background:#303743;overflow:hidden}.meter i{display:block;height:100%;width:0;background:linear-gradient(90deg,#47bd7c 0 70%,#e5bd43 70% 90%,#df6666 90%)}
-.faderbox{flex:1;min-height:90px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#171b22;border-radius:6px}.faderbox input{height:100%;min-height:90px;writing-mode:vertical-lr;direction:rtl;width:34px;accent-color:var(--accent)}.db{font-variant-numeric:tabular-nums;font-size:12px;color:var(--accent);font-weight:700}
-.master{width:194px;min-width:194px;height:100%;padding:9px 9px 9px 0}.master .strip{width:100%;border-color:#8a672b;background:#20232a}.master .faderbox input{width:42px}
-footer{position:absolute;bottom:0;left:0;padding:4px 12px;background:#111318dd;color:var(--muted);font-size:10px;pointer-events:none}
-@media(max-height:600px){.strip{gap:4px;padding:6px}.section{padding:4px}.band input{height:38px}.faderbox input{min-height:65px}.master{width:170px;min-width:170px}}
+:root{color-scheme:dark;--bg:#101319;--panel:#1a2029;--panel-hi:#222a35;--well:#111720;--line:#35404d;--text:#edf2f7;--muted:#94a1b1;--amber:#e9ad45;--green:#55c68a;--red:#e36e70;--blue:#70a9dc}
+*{box-sizing:border-box;touch-action:pan-y}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font:14px/1.35 system-ui,-apple-system,"Segoe UI",sans-serif}
+button,input{font:inherit}
+button{color:inherit}
+.app{height:100dvh;display:flex;flex-direction:column;min-height:0}
+.topbar{height:62px;flex:none;display:flex;align-items:center;gap:14px;padding:0 16px;background:#171c24;border-bottom:1px solid var(--line)}
+.brand{font-size:16px;font-weight:850;letter-spacing:.075em;white-space:nowrap}.brand b{color:var(--amber)}
+.project{min-width:0;margin-left:8px;color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top-spacer{flex:1}
+.mode{display:flex;align-items:center;gap:7px;padding:7px 10px;border:1px solid #66512e;border-radius:6px;color:#f1c879;background:#342a1c;font-size:10px;font-weight:800;letter-spacing:.07em;white-space:nowrap}
+.mode:before{content:"";width:7px;height:7px;border-radius:50%;background:var(--amber);box-shadow:0 0 8px #e9ad4580}
+.toolbar{display:flex;gap:6px}
+.tool{min-height:36px;padding:0 11px;border:1px solid var(--line);border-radius:6px;background:var(--panel-hi);font-size:11px;font-weight:700}
+.tool:active,.toggle:active{transform:translateY(1px)}
+.workspace{display:flex;flex:1;min-height:0;gap:0}
+.scroll-area{flex:1;min-width:0;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scrollbar-color:#596575 #1a2029;scrollbar-width:thin}
+.strips{height:100%;width:max-content;display:flex;gap:8px;padding:10px}
+.channel{width:180px;min-width:180px;height:100%;min-height:0;display:flex;flex-direction:column;gap:7px;padding:8px;background:linear-gradient(180deg,#202731,#191f28);border:1px solid var(--line);border-radius:8px}
+.channel.selected{border-color:var(--amber);box-shadow:inset 0 0 0 1px #e9ad4540}
+.channel-head{display:flex;align-items:center;justify-content:space-between;min-height:30px;gap:5px}
+.channel-title{font-weight:850;letter-spacing:.03em;font-size:13px}
+.channel-type{font-size:9px;color:var(--muted);letter-spacing:.08em}
+.channel-number{color:var(--amber);font-variant-numeric:tabular-nums}
+.block{padding:7px;background:var(--panel-hi);border:1px solid #303a47;border-radius:6px}
+.block-title{margin-bottom:6px;color:#aeb9c7;font-size:9px;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
+.fx-row{display:flex;gap:5px}
+.fx{flex:1;min-width:0;padding:6px 2px;border:1px solid #3b4654;border-radius:4px;background:#2b3542;color:#cbd4df;text-align:center;font-size:9px;font-weight:750}
+.fx.off{color:#778392;background:#202833}
+.eq{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:2px}
+.band{min-width:0;text-align:center;color:var(--muted);font-size:9px}
+.band input{display:block;width:18px;height:64px;margin:3px auto;accent-color:var(--amber);writing-mode:vertical-lr;direction:rtl}
+.band output{display:block;color:var(--text);font-size:9px;font-variant-numeric:tabular-nums}
+.pan{display:flex;align-items:center;gap:7px}
+.pan span{color:var(--muted);font-size:9px;font-weight:800}
+.pan input{width:100%;min-width:0;accent-color:var(--amber)}
+.aux{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+.aux label{text-align:center;color:var(--muted);font-size:9px}
+.aux input{display:block;width:100%;margin:5px 0 1px;accent-color:var(--blue)}
+.aux output{color:var(--text);font-size:9px;font-variant-numeric:tabular-nums}
+.switches{display:flex;gap:6px}
+.toggle{flex:1;min-height:34px;border:1px solid #414c59;border-radius:5px;background:#252e39;font-size:10px;font-weight:850;letter-spacing:.04em}
+.toggle.active{border-color:var(--amber);background:#574324;color:#ffe0a2}
+.meter-wrap{display:flex;align-items:center;gap:7px;padding:0 2px}
+.meter-label{color:var(--muted);font-size:8px;font-weight:800}
+.meter{height:7px;flex:1;display:flex;gap:2px;overflow:hidden;border-radius:3px;background:#0e141b}
+.meter i{display:block;flex:1;background:#34404c}
+.meter i:nth-child(-n+8){background:#438f6d}
+.meter i:nth-child(n+9):nth-child(-n+11){background:#b18c43}
+.meter i:nth-child(n+12){background:#9b4d50}
+.fader-area{flex:1;min-height:110px;display:flex;align-items:stretch;justify-content:center;gap:8px;padding:8px 6px 4px;background:var(--well);border:1px solid #303a47;border-radius:6px}
+.scale{display:flex;flex-direction:column;justify-content:space-between;padding:2px 0;color:#8390a0;font-size:8px}
+.fader{height:100%;min-height:100px;width:34px;margin:0;accent-color:var(--amber);writing-mode:vertical-lr;direction:rtl}
+.fader-readout{display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px;padding-bottom:3px}
+.db{color:var(--amber);font-size:12px;font-weight:850;font-variant-numeric:tabular-nums}
+.value{color:var(--muted);font-size:9px;font-variant-numeric:tabular-nums}
+.master-dock{width:194px;min-width:194px;padding:10px 10px 10px 0;border-left:1px solid #303a47;background:#141920}
+.master-dock .channel{width:100%;min-width:0;border-color:#80602f;background:linear-gradient(180deg,#29271f,#1c2027)}
+.master-dock .fader{width:42px}
+.bottom{height:34px;flex:none;display:flex;align-items:center;gap:12px;padding:0 14px;border-top:1px solid var(--line);background:#171c24;color:var(--muted);font-size:10px}
+.bottom strong{color:#e9c47e;font-weight:750}
+.bottom .hint{margin-left:auto}
+@media(max-width:650px){.topbar{height:54px;padding:0 9px;gap:7px}.project,.toolbar .optional{display:none}.brand{font-size:13px}.mode{font-size:9px;padding:6px 7px}.master-dock{width:142px;min-width:142px;padding:8px 7px 8px 0}.strips{padding:8px}.channel{width:168px;min-width:168px}.master-dock .channel{width:100%;min-width:0}.bottom{font-size:9px;padding:0 8px}}
+@media(max-height:650px){.topbar{height:48px}.channel{gap:4px;padding:6px}.block{padding:5px}.band input{height:42px}.fader-area{min-height:80px}.fader{min-height:75px}.bottom{height:27px}}
 </style>
 </head>
 <body>
-<header><div class="brand">MPC <span>MASTER MIXER</span></div><div class="status">PROTOTYPE TACTILE · COMMANDES SIMULÉES</div></header>
-<main><div class="viewport" id="viewport"><div class="channels" id="channels"></div></div><aside class="master" id="master"></aside></main>
-<footer>Prototype visuel uniquement — aucun contrôle du moteur audio MPC ni message MIDI n'est envoyé.</footer>
+<div class="app">
+<header class="topbar">
+ <div class="brand">MPC <b>MASTER MIXER</b></div>
+ <div class="project">SESSION · PROJET DE DÉMONSTRATION</div>
+ <div class="top-spacer"></div>
+ <div class="mode">MODE DÉMO · HORS LIGNE</div>
+ <div class="toolbar"><button class="tool optional" id="prev" type="button">◀ BANQUE</button><button class="tool optional" id="next" type="button">BANQUE ▶</button><button class="tool" id="reset" type="button">RÉINITIALISER</button></div>
+</header>
+<main class="workspace">
+ <div class="scroll-area" id="scrollArea" aria-label="Tranches de canaux"><div class="strips" id="strips"></div></div>
+ <aside class="master-dock" aria-label="Tranche Master"><div id="master"></div></aside>
+</main>
+<footer class="bottom"><strong>SIMULATION LOCALE</strong><span>Les réglages restent dans cette page uniquement.</span><span class="hint">Glisser horizontalement pour parcourir les 16 pistes</span></footer>
+</div>
 <script>
-const channels=document.getElementById('channels');
-function makeStrip(n,isMaster=false){
- const el=document.createElement('section');el.className='strip'+(n===1?' selected':'');
- const title=isMaster?'MASTER':'CH '+String(n).padStart(2,'0');
+const strips=document.getElementById('strips');
+const labels=['KICK','SNARE','HI-HAT','PERC','BASS','SYNTH 1','SYNTH 2','KEYS','PAD','GUITAR','VOX','FX 1','FX 2','AUDIO 1','AUDIO 2','AUDIO 3'];
+const defaults=()=>({volume:100,pan:0,eq:[0,0,0,0,0,0],aux:[0,0,0,0],mute:false,solo:false});
+const state=Array.from({length:16},defaults);
+const masterState=defaults();
+function meter(){return '<div class="meter-wrap"><span class="meter-label">LVL</span><div class="meter" aria-label="Vu-mètre inactif">'+Array.from({length:14},()=>'<i></i>').join('')+'</div></div>'}
+function makeStrip(index,isMaster=false){
+ const data=isMaster?masterState:state[index];
+ const name=isMaster?'MASTER':labels[index];
+ const el=document.createElement('section');
+ el.className='channel'+(!isMaster&&index===0?' selected':'');
+ el.dataset.channel=isMaster?'master':index;
  el.innerHTML=`
- <div class="name"><span>${title}</span><small>${isMaster?'STEREO':'AUDIO'}</small></div>
- <div class="section"><div class="section-title">Inserts / effets</div><div class="inserts"><div class="chip">FX 1</div><div class="chip">FX 2</div></div></div>
- <div class="section"><div class="section-title">EQ paramétrique · 6 bandes</div><div class="eq">${['LF','LM','M1','M2','HM','HF'].map((x,i)=>`<label class="band">${x}<input aria-label="EQ ${x} ${title}" type="range" min="-12" max="12" value="0"><b>0</b></label>`).join('')}</div></div>
- <div class="section"><div class="section-title">Panoramique</div><div class="panrow"><label> L</label><input aria-label="Pan ${title}" type="range" min="-100" max="100" value="0"><label>R</label></div></div>
- <div class="section"><div class="section-title">Aux sends</div><div class="aux">${[1,2,3,4].map(x=>`<label> AUX ${x}<input aria-label="Aux ${x} ${title}" type="range" min="0" max="100" value="0"></label>`).join('')}</div></div>
- <div class="actions"><button class="toggle" type="button">MUTE</button><button class="toggle" type="button">SOLO</button></div>
- <div class="meter"><i></i></div>
- <div class="faderbox"><input aria-label="Volume ${title}" type="range" min="0" max="127" value="100"><div class="db">0.0 dB</div></div>`;
- el.querySelectorAll('input[type=range]').forEach(input=>input.addEventListener('input',()=>{
-   const out=input.parentElement.querySelector('b');if(out)out.textContent=(Number(input.value)>0?'+':'')+input.value;
-   if(input.closest('.faderbox'))el.querySelector('.db').textContent=((Number(input.value)-100)*0.12).toFixed(1)+' dB';
- }));
- el.querySelectorAll('.toggle').forEach(btn=>btn.addEventListener('click',()=>btn.classList.toggle('active')));
+  <div class="channel-head"><span class="channel-title">${name}</span><span class="channel-type">${isMaster?'STEREO':'<span class="channel-number">'+String(index+1).padStart(2,'0')+'</span> · AUDIO'}</span></div>
+  <div class="block"><div class="block-title">Inserts · effets</div><div class="fx-row"><button class="fx" type="button">INSERT 1</button><button class="fx off" type="button">INSERT 2</button></div></div>
+  <div class="block"><div class="block-title">EQ paramétrique · 6 bandes</div><div class="eq">${['LF','LM','M1','M2','HM','HF'].map((band,i)=>`<label class="band">${band}<input data-eq="${i}" type="range" min="-12" max="12" step="0.5" value="0" aria-label="EQ ${band} ${name}"><output>0.0</output></label>`).join('')}</div></div>
+  <div class="block"><div class="block-title">Panoramique</div><div class="pan"><span>L</span><input data-pan type="range" min="-100" max="100" value="0" aria-label="Panoramique ${name}"><span>R</span></div></div>
+  <div class="block"><div class="block-title">Aux sends</div><div class="aux">${[1,2,3,4].map((n)=>`<label>AUX ${n}<input data-aux="${n-1}" type="range" min="0" max="100" value="0" aria-label="Aux ${n} ${name}"><output>0</output></label>`).join('')}</div></div>
+  <div class="switches"><button class="toggle" data-toggle="mute" type="button" aria-pressed="false">MUTE</button><button class="toggle" data-toggle="solo" type="button" aria-pressed="false">SOLO</button></div>
+  ${meter()}
+  <div class="fader-area"><div class="scale"><span>+6</span><span>0</span><span>-12</span><span>-∞</span></div><input class="fader" data-volume type="range" min="0" max="127" value="100" aria-label="Volume ${name}"><div class="fader-readout"><output class="db">0.0 dB</output><span class="value">100 / 127</span></div></div>`;
+ const update=()=>{
+  el.querySelectorAll('[data-eq]').forEach(input=>{const v=Number(input.value);input.nextElementSibling.textContent=(v>0?'+':'')+v.toFixed(1)});
+  el.querySelector('[data-pan]').title='Pan '+data.pan;
+  el.querySelectorAll('[data-aux]').forEach(input=>input.nextElementSibling.textContent=input.value);
+  const db=el.querySelector('.db');
+  const raw=Number(data.volume);
+  db.textContent=raw===0?'−∞ dB':(20*Math.log10(raw/100)).toFixed(1)+' dB';
+  el.querySelector('.value').textContent=raw+' / 127';
+  ['mute','solo'].forEach(k=>{const b=el.querySelector('[data-toggle="'+k+'"]');b.classList.toggle('active',data[k]);b.setAttribute('aria-pressed',String(data[k]))});
+ };
+ el.addEventListener('input',e=>{
+  const t=e.target;
+  if(t.matches('[data-volume]'))data.volume=Number(t.value);
+  if(t.matches('[data-pan]'))data.pan=Number(t.value);
+  if(t.matches('[data-eq]'))data.eq[Number(t.dataset.eq)]=Number(t.value);
+  if(t.matches('[data-aux]'))data.aux[Number(t.dataset.aux)]=Number(t.value);
+  update();
+ });
+ el.addEventListener('click',e=>{
+  const toggle=e.target.closest('[data-toggle]');
+  if(toggle){const key=toggle.dataset.toggle;data[key]=!data[key];update();return}
+  const fx=e.target.closest('.fx');if(fx){fx.classList.toggle('off');}
+  if(!isMaster&&e.target.closest('.channel-head'))selectChannel(index);
+ });
+ function applyValues(){
+  el.querySelector('[data-volume]').value=data.volume;
+  el.querySelector('[data-pan]').value=data.pan;
+  el.querySelectorAll('[data-eq]').forEach(x=>x.value=data.eq[Number(x.dataset.eq)]);
+  el.querySelectorAll('[data-aux]').forEach(x=>x.value=data.aux[Number(x.dataset.aux)]);
+  update();
+ }
+ applyValues();
  return el;
 }
-for(let i=1;i<=16;i++)channels.appendChild(makeStrip(i));
+function selectChannel(index){document.querySelectorAll('.channel').forEach(x=>x.classList.toggle('selected',x.dataset.channel===String(index)))}
+for(let i=0;i<16;i++)strips.appendChild(makeStrip(i));
 document.getElementById('master').appendChild(makeStrip(0,true));
+document.getElementById('prev').addEventListener('click',()=>document.getElementById('scrollArea').scrollBy({left:-560,behavior:'smooth'}));
+document.getElementById('next').addEventListener('click',()=>document.getElementById('scrollArea').scrollBy({left:560,behavior:'smooth'}));
+document.getElementById('reset').addEventListener('click',()=>{
+ state.forEach((s,i)=>Object.assign(s,defaults()));
+ Object.assign(masterState,defaults());
+ document.querySelectorAll('.channel').forEach(el=>{
+  const idx=el.dataset.channel==='master'?null:Number(el.dataset.channel);
+  const d=idx===null?masterState:state[idx];
+  el.querySelector('[data-volume]').value=d.volume;el.querySelector('[data-pan]').value=d.pan;
+  el.querySelectorAll('[data-eq]').forEach(x=>x.value=d.eq[Number(x.dataset.eq)]);
+  el.querySelectorAll('[data-aux]').forEach(x=>x.value=d.aux[Number(x.dataset.aux)]);
+  el.querySelectorAll('[data-toggle]').forEach(x=>{x.classList.remove('active');x.setAttribute('aria-pressed','false')});
+  el.querySelector('.db').textContent='0.0 dB';el.querySelector('.value').textContent='100 / 127';
+  el.querySelectorAll('[data-eq]').forEach(x=>x.nextElementSibling.textContent='0.0');
+  el.querySelectorAll('[data-aux]').forEach(x=>x.nextElementSibling.textContent='0');
+ });
+});
 </script>
-</body></html>
+</body>
+</html>
