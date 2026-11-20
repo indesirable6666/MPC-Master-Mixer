@@ -1,6 +1,7 @@
 #include "midi_adapter.hpp"
 
 #include <cassert>
+#include <limits>
 #include <iostream>
 
 using namespace mpcmixer;
@@ -29,6 +30,8 @@ int main() {
     assert(adapter.setVolume(1.0f));
     assert(!adapter.setVolume(-0.01f));
     assert(!adapter.setVolume(1.01f));
+    assert(!adapter.setVolume(std::numeric_limits<float>::quiet_NaN()));
+    assert(!adapter.setVolume(std::numeric_limits<float>::infinity()));
 
     const auto& messages = transport.messages();
     assert(messages.size() == 3);
