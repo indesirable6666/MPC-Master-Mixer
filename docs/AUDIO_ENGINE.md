@@ -8,17 +8,19 @@ Implemented per track:
 - Linear gain from 0.0 to 1.0
 - Constant-power pan from hard left to hard right
 - Mute and solo
+- Four independent stereo Aux buses with per-track send levels
 - Null input as silence
 
 Implemented on the master bus:
 - Master gain
 - Master mute
 
-The core ignores non-finite input samples and rejects invalid control values. The stereo float bus is not clipped; a future output stage must define limiting and sample-format conversion.
+The core ignores non-finite input samples and rejects invalid control values. The stereo float bus is not clipped; a future output stage must define limiting and sample-format conversion. Aux sends are post-fader and post-pan, pre-master; master gain/mute affect the main bus only. Aux output buffers are caller-owned and optional.
 
 ## What is deliberately not connected
 
 This is a DSP block processor, not yet a live audio application. It does not:
+- Implement the six-band EQ or insert effects yet
 - Open ALSA, JACK, PulseAudio, or any audio device
 - Capture or play sound
 - Read or write MPC audio routes
@@ -37,7 +39,7 @@ The current prototype controls are not wired to this engine. No real-time or har
 
 ## Host tests
 
-The `Audio engine tests` GitHub Actions workflow compiles with C++14, warnings-as-errors, and runs deterministic tests for summing, panning, gain, mute, solo, master controls, invalid parameters, and non-finite samples. These tests do not require audio hardware.
+The `Audio engine tests` GitHub Actions workflow compiles with C++14, warnings-as-errors, and runs deterministic tests for summing, panning, gain, mute, solo, master controls, four stereo Aux buses, invalid parameters, and non-finite samples. These tests do not require audio hardware.
 
 
 ## Paire d'entrées Audio In
