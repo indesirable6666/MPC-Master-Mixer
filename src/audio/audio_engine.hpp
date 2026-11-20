@@ -14,9 +14,10 @@ class AudioEngine {
 public:
     static constexpr std::size_t kTrackCount = 16;
     static constexpr std::size_t kAuxBusCount = 4;
+    static constexpr float kMaxFaderGain = 1.27f; // +2.1 dB, matching the prototype's 127/100 fader range.
 
     struct Track {
-        float gain = 1.0f; // Linear amplitude [0, 1].
+        float gain = 1.0f; // Linear amplitude [0, +2.1 dB].
         float pan = 0.0f;  // -1 = left, 0 = centre, +1 = right.
         bool mute = false;
         bool solo = false;
@@ -27,7 +28,7 @@ public:
     bool setTrack(std::size_t index, const Track& track) {
         if (index >= kTrackCount || !std::isfinite(track.gain) ||
             !std::isfinite(track.pan) || track.gain < 0.0f ||
-            track.gain > 1.0f || track.pan < -1.0f || track.pan > 1.0f) {
+            track.gain > kMaxFaderGain || track.pan < -1.0f || track.pan > 1.0f) {
             return false;
         }
         for (float send : track.auxSend) {
@@ -55,7 +56,7 @@ public:
     }
 
     bool setMasterGain(float gain) {
-        if (!std::isfinite(gain) || gain < 0.0f || gain > 1.0f) {
+        if (!std::isfinite(gain) || gain < 0.0f || gain > kMaxFaderGain) {
             return false;
         }
         masterGain_ = gain;
@@ -152,7 +153,7 @@ public:
     };
 
     struct StereoControls {
-        float gain = 1.0f;
+        float gain = 1.0f; // Linear amplitude, maximum +2.1 dB.
         float balance = 0.0f; // -1 attenuates right; +1 attenuates left.
         bool mute = false;
     };
@@ -160,7 +161,7 @@ public:
     bool setChannel(std::size_t side, const Channel& channel) {
         if (side >= 2 || !std::isfinite(channel.gain) ||
             !std::isfinite(channel.pan) || channel.gain < 0.0f ||
-            channel.gain > 1.0f || channel.pan < -1.0f ||
+            channel.gain > AudioEngine::kMaxFaderGain || channel.pan < -1.0f ||
             channel.pan > 1.0f) {
             return false;
         }
@@ -175,7 +176,7 @@ public:
     bool setStereoControls(const StereoControls& controls) {
         if (!std::isfinite(controls.gain) ||
             !std::isfinite(controls.balance) || controls.gain < 0.0f ||
-            controls.gain > 1.0f || controls.balance < -1.0f ||
+            controls.gain > AudioEngine::kMaxFaderGain || controls.balance < -1.0f ||
             controls.balance > 1.0f) {
             return false;
         }
