@@ -9,6 +9,7 @@ This milestone defines a small transport boundary between mixer controls and MID
 - `VolumeMidiAdapter` converts one normalized UI volume (0.0–1.0) to a 7-bit MIDI CC value.
 - `TrackVolumeMidiAdapter` stores 16 independent track-volume mappings (zero-based indices 0–15).
 - `TrackPanMidiAdapter` stores 16 independent track-pan mappings. Pan is normalized to [-1,1], with left=-1, center=0 and right=1; values map to MIDI CC values 0, 64 and 127 respectively.
+- `TrackAuxMidiAdapter` stores 64 independent Aux-send mappings (16 tracks × 4 Aux sends). Each track/Aux pair has its own explicitly verified CC mapping; normalized send levels [0,1] map to [0,127].
 - Every mapping is disabled by default and accepted only when a caller explicitly marks it as verified.
 - Invalid values, unverified mappings and missing mappings produce no message. Clearing a track or all tracks disables the corresponding mappings.
 
@@ -30,6 +31,8 @@ The host-side test executable checks:
 6. Each of 16 track slots has an independent mapping; invalid track indices are rejected.
 7. Clearing one track does not alter another track's mapping.
 8. Transport failures are returned to the caller.
+9. All 64 track/Aux slots are independent; invalid indices, unverified mappings and out-of-range send levels are rejected.
+10. Clearing one send, one track or all mappings leaves unrelated slots unaffected.
 
 Build and run locally:
 
