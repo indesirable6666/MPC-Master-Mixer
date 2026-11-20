@@ -15,9 +15,12 @@ public:
     static constexpr float kMinGainDb = -12.0f;
     static constexpr float kMaxGainDb = 12.0f;
 
-    static constexpr std::array<float, kBandCount> kFrequenciesHz = {
-        60.0f, 180.0f, 500.0f, 1500.0f, 5000.0f, 12000.0f
-    };
+    static float frequencyHz(std::size_t band) {
+        static constexpr float frequencies[kBandCount] = {
+            60.0f, 180.0f, 500.0f, 1500.0f, 5000.0f, 12000.0f
+        };
+        return frequencies[band < kBandCount ? band : 0];
+    }
 
     struct Coefficients {
         float b0 = 1.0f;
@@ -38,7 +41,7 @@ public:
         for (std::size_t band = 0; band < kBandCount; ++band) {
             if (!std::isfinite(gainsDb[band]) ||
                 gainsDb[band] < kMinGainDb || gainsDb[band] > kMaxGainDb ||
-                kFrequenciesHz[band] >= sampleRate * 0.5f) {
+                frequencyHz(band) >= sampleRate * 0.5f) {
                 return false;
             }
         }
@@ -46,7 +49,7 @@ public:
         std::array<Coefficients, kBandCount> next{};
         for (std::size_t band = 0; band < kBandCount; ++band) {
             const float amplitude = std::pow(10.0f, gainsDb[band] / 40.0f);
-            const float omega = 2.0f * kPi * kFrequenciesHz[band] / sampleRate;
+            const float omega = 2.0f * kPi * frequencyHz(band) / sampleRate;
             const float cosine = std::cos(omega);
             const float alpha = std::sin(omega) / (2.0f * kQ);
             const float a0 = 1.0f + alpha / amplitude;
