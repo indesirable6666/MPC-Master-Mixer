@@ -180,6 +180,9 @@ test('selected track is announced and marked accessibly', () => {
   fourth.blur();
   fourth.focus();
   assert.equal(status.textContent, 'PISTE 04 · BASSE SYNTHÉTIQUE TRÈS LONGUE');
+  assert.equal(fourth.querySelector('.channel-title').title, 'BASSE SYNTHÉTIQUE TRÈS LONGUE');
+  assert.match(html, /\.channel-title\{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap/);
+  assert.match(html, /\.channel-type\{flex-shrink:0\}/);
   dom.window.close();
 });
 
