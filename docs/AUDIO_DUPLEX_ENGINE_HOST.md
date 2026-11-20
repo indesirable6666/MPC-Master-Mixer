@@ -18,8 +18,9 @@ inputs are ignored; the mixer treats their tracks as silence.
 
 ## Thread and lifecycle contract
 
-- Configure routes and call `prepare`, `start`, `stop`, and `shutdown` on
-  the control thread.
+- Call `prepare`, `start`, `stop`, and `shutdown` on the control
+  thread. Input routes are atomic and may be updated while running; each
+  channel's route is sampled once per callback block.
 - The backend invokes the static callback with its own planar float buffers.
 - The callback builds a fixed-size stack array of track pointers and drains the
   SPSC command bridge at the start of the audio block.
