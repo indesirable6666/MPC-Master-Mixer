@@ -17,7 +17,7 @@ Build a touchscreen-first mixer interface for the Akai MPC Live II. The first mi
   5. Mute and Solo controls.
   6. Volume fader and level meter.
 - The Master strip has its own level meter and master-volume control.
-- Peak/RMS meters include a peak-hold marker and a latched clip indicator; the demo signal is synthetic and explicitly opt-in.
+- Peak/RMS meters include accessible percentage values, a decorative peak-hold marker, and a latched clip indicator; their meter semantics expose the current 0–100 value to assistive technology. The demo signal is synthetic and explicitly opt-in.
 - The synthetic meter timer is created only while meter demo is enabled and is cleared immediately when disabled, avoiding idle background work.
 - Touch controls use enlarged minimum hit areas for toolbar actions, pan and Aux sliders, Mute/Solo switches (40 px minimum height), and the Clip reset control (minimum 42 × 34 px). On narrow screens, the toolbar and footer compact while preserving the fixed Master strip and full-width channel touch targets. Long channel names truncate visually inside their strip with an ellipsis; the full name remains available in the title tooltip and selected-track footer.
 - EQ and Aux controls use larger labels, clearer dB/percent readouts, taller touch targets, and accessible value announcements.
