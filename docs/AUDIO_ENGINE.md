@@ -38,3 +38,17 @@ The current prototype controls are not wired to this engine. No real-time or har
 ## Host tests
 
 The `Audio engine tests` GitHub Actions workflow compiles with C++14, warnings-as-errors, and runs deterministic tests for summing, panning, gain, mute, solo, master controls, invalid parameters, and non-finite samples. These tests do not require audio hardware.
+
+
+## Paire d'entrées Audio In
+
+`AudioInputPair` représente deux entrées mono indépendantes (Audio In L et
+Audio In R). Le mode non lié conserve deux voies mono avec gain, panoramique,
+mute et solo indépendants. Le mode lié traite les deux buffers comme une seule
+voie stéréo : le gain et le mute sont communs, le réglage Balance atténue le
+côté opposé sans sommer les deux canaux ni détruire la séparation gauche/droite.
+
+Le processeur est sans allocation et reçoit des buffers fournis par l'appelant.
+Il ne capture aucun signal physique et n'ouvre aucun périphérique audio. La
+connexion à l'entrée matérielle MPC et l'intégration dans le bus principal
+restent des étapes séparées, à valider sur la cible avec autorisation explicite.
