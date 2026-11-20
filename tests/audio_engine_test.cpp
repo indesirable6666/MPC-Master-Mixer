@@ -280,6 +280,50 @@ int main() {
     eq.reset();
     assert(near(eq.processSample(0.5f), 0.5f));
 
+    // Stereo Aux returns are mixed into the master bus with their own
+    // gain, balance and mute, and are not fed back into Aux sends.
+    AudioEngine returnEngine;
+    AudioEngine::AuxReturn returnState;
+    returnState.gain = 0.5f;
+    returnState.balance = 1.0f;
+    assert(returnEngine.setAuxReturn(0, returnState));
+    assert(!returnEngine.setAuxReturn(4, returnState));
+    returnState.gain = 1.28f;
+    assert(!returnEngine.setAuxReturn(0, returnState));
+    returnState.gain = 0.5f;
+    assert(returnEngine.setAuxReturn(0, returnState));
+    float returnL[] = {1.0f, 0.5f};
+    float returnR[] = {0.5f, -1.0f};
+    const float* returnInputsL[AudioEngine::kAuxBusCount] = {
+        returnL, nullptr, nullptr, nullptr
+    };
+    const float* returnInputsR[AudioEngine::kAuxBusCount] = {
+        returnR, nullptr, nullptr, nullptr
+    };
+    float returnMainL[2] = {}, returnMainR[2] = {};
+    float unusedAuxL[2] = {}, unusedAuxR[2] = {};
+    float* returnSendL[AudioEngine::kAuxBusCount] = {
+        unusedAuxL, nullptr, nullptr, nullptr
+    };
+    float* returnSendR[AudioEngine::kAuxBusCount] = {
+        unusedAuxR, nullptr, nullptr, nullptr
+    };
+    returnEngine.setMasterGain(0.5f);
+    returnEngine.processWithAuxAndReturns(
+        nullptr, returnMainL, returnMainR, returnSendL, returnSendR,
+        returnInputsL, returnInputsR, 2);
+    assert(near(returnMainL[0], 0.0f));
+    assert(near(returnMainR[0], 0.125f));
+    assert(near(returnMainR[1], -0.25f));
+    assert(near(unusedAuxL[0], 0.0f));
+    assert(near(unusedAuxR[0], 0.0f));
+    returnState.mute = true;
+    assert(returnEngine.setAuxReturn(0, returnState));
+    returnEngine.processWithAuxAndReturns(
+        nullptr, returnMainL, returnMainR, returnSendL, returnSendR,
+        returnInputsL, returnInputsR, 1);
+    assert(near(returnMainL[0], 0.0f) && near(returnMainR[0], 0.0f));
+
     // Two Audio In mono channels can be linked without collapsing stereo.
     mpcmixer::AudioInputPair audioIn;
     float inputL[] = {1.0f, 0.5f};
