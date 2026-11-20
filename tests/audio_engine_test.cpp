@@ -200,6 +200,19 @@ int main() {
     assert(std::fabs(eqLeft[0] - 1.0f) > 0.0001f);
     for (float sample : eqRight) assert(near(sample, 0.0f));
 
+    auto parametricBands = mpcmixer::SixBandEq::defaultBandParameters();
+    parametricBands[3].frequencyHz = 2300.0f;
+    parametricBands[3].q = 2.2f;
+    parametricBands[3].gainDb = -4.5f;
+    assert(eq.configure(48000.0f, parametricBands));
+    assert(near(eq.bandParameters(3).frequencyHz, 2300.0f));
+    assert(near(eq.bandParameters(3).q, 2.2f));
+    assert(near(eq.bandParameters(3).gainDb, -4.5f));
+    parametricBands[3].q = 0.05f;
+    assert(!eq.configure(48000.0f, parametricBands));
+    parametricBands[3].q = 1.0f;
+    parametricBands[3].frequencyHz = 24000.0f;
+    assert(!eq.configure(48000.0f, parametricBands));
     const auto validEqCoefficients = eq.coefficients(2);
     eqGains[0] = 13.0f;
     assert(!eq.configure(48000.0f, eqGains));
