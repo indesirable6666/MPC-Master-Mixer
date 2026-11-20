@@ -276,4 +276,110 @@ private:
     std::array<std::array<CcMapping, kAuxCount>, kTrackCount> mappings_;
 };
 
+
+// Independent, explicitly verified CC mappings for each track's Mute and Solo
+// switches. Boolean state uses 0 (off) and 127 (on); this is an adapter
+// convention, not a claim that the MPC accepts these CC assignments.
+class TrackMuteSoloMidiAdapter {
+public:
+    static constexpr std::size_t kTrackCount = 16;
+
+    explicit TrackMuteSoloMidiAdapter(MidiTransport& transport)
+        : transport_(transport), muteMappings_{}, soloMappings_{} {}
+
+    bool configureMute(std::size_t trackIndex, const CcMapping& mapping) {
+        return configure(trackIndex, mapping, muteMappings_);
+    }
+
+    bool configureSolo(std::size_t trackIndex, const CcMapping& mapping) {
+        return configure(trackIndex, mapping, soloMappings_);
+    }
+
+    void clearMute(std::size_t trackIndex) {
+        clear(trackIndex, muteMappings_);
+    }
+
+    void clearSolo(std::size_t trackIndex) {
+        clear(trackIndex, soloMappings_);
+    }
+
+    void clearTrack(std::size_t trackIndex) {
+        clearMute(trackIndex);
+        clearSolo(trackIndex);
+    }
+
+    void clearAll() {
+        for (std::size_t i = 0; i < kTrackCount; ++i) {
+            clearTrack(i);
+        }
+    }
+
+    bool hasMuteMapping(std::size_t trackIndex) const {
+        return hasMapping(trackIndex, muteMappings_);
+    }
+
+    bool hasSoloMapping(std::size_t trackIndex) const {
+        return hasMapping(trackIndex, soloMappings_);
+    }
+
+    bool setMuted(std::size_t trackIndex, bool muted) {
+        return sendSwitch(trackIndex, muted, muteMappings_);
+    }
+
+    bool setSolo(std::size_t trackIndex, bool solo) {
+        return sendSwitch(trackIndex, solo, soloMappings_);
+    }
+
+private:
+    static bool validMapping(const CcMapping& mapping) {
+        return mapping.explicitly_verified &&
+               mapping.channel <= 15 && mapping.controller <= 127;
+    }
+
+    bool configure(std::size_t trackIndex, const CcMapping& mapping,
+                   std::array<CcMapping, kTrackCount>& mappings) {
+        if (trackIndex >= kTrackCount) {
+            return false;
+        }
+        if (!validMapping(mapping)) {
+            mappings[trackIndex] = CcMapping{0, 0, false};
+            return false;
+        }
+        mappings[trackIndex] = mapping;
+        return true;
+    }
+
+    static void clear(std::size_t trackIndex,
+                      std::array<CcMapping, kTrackCount>& mappings) {
+        if (trackIndex < kTrackCount) {
+            mappings[trackIndex] = CcMapping{0, 0, false};
+        }
+    }
+
+    static bool hasMapping(
+        std::size_t trackIndex,
+        const std::array<CcMapping, kTrackCount>& mappings) {
+        return trackIndex < kTrackCount &&
+               mappings[trackIndex].explicitly_verified;
+    }
+
+    bool sendSwitch(std::size_t trackIndex, bool enabled,
+                    const std::array<CcMapping, kTrackCount>& mappings) {
+        if (!hasMapping(trackIndex, mappings)) {
+            return false;
+        }
+        const CcMapping& mapping = mappings[trackIndex];
+        const MidiMessage message{
+            static_cast<std::uint8_t>(0xB0u | mapping.channel),
+            mapping.controller,
+            static_cast<std::uint8_t>(enabled ? 127 : 0)
+        };
+        return transport_.send(message);
+    }
+
+    MidiTransport& transport_;
+    std::array<CcMapping, kTrackCount> muteMappings_;
+    std::array<CcMapping, kTrackCount> soloMappings_;
+};
+
 } // namespace mpcmixer
