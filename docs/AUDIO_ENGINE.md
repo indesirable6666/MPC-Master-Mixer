@@ -20,12 +20,27 @@ Implemented on the master bus:
 
 The core ignores non-finite input samples and rejects invalid control values. The stereo float bus is not clipped; a future output stage must define limiting and sample-format conversion. Aux sends are post-fader and post-pan, pre-master; master gain/mute affect the main bus only. Aux output buffers are caller-owned and optional.
 
+## Audio capture boundary
+
+`src/audio/audio_backend.hpp` defines a device-independent `AudioCaptureBackend`
+contract. Format preparation and shutdown belong on a control thread; the
+capture callback uses caller-owned planar float buffers and must not allocate,
+lock, log, or block. The included `SilentAudioCaptureBackend` is an explicit
+offline default: it fills buffers with zero and reports `Silence`. It does not
+open ALSA or any other device. This makes the boundary testable without
+pretending that physical inputs are connected.
+
+A future target backend must be implemented separately after the MPC's
+supported capture API, channel mapping, buffer size, sample format, and routing
+are independently established. It must not take ownership of or reconfigure
+the MPC's existing audio device.
+
 ## What is deliberately not connected
 
 This is a DSP block processor, not yet a live audio application. It does not:
 - Integrate the standalone EQ stage into each channel's complete processing chain
 - Implement insert effects
-- Open ALSA, JACK, PulseAudio, or any audio device
+- Open ALSA, JACK, PulseAudio, or any audio device (the capture interface currently uses the silent backend only)
 - Capture or play sound
 - Read or write MPC audio routes
 - Connect to MPC processes or modify device configuration
@@ -35,15 +50,14 @@ The current prototype controls are not wired to this engine. No real-time or har
 
 ## Next milestones
 
-1. Expand DSP tests and establish block-processing performance on a host.
-2. Define an audio I/O backend separately from the DSP core.
-3. Verify the target's available audio APIs, device routing, and buffer constraints using a documented, read-only audit first.
-4. Only after explicit hardware authorization, implement and test a target backend without changing MPC startup, audio routing, or system files.
-5. Connect UI controls to the engine only after the backend and signal path are independently validated.
+1. Establish block-processing performance on a host.
+2. Verify the target's available audio APIs, device routing, and buffer constraints using a documented, read-only audit first.
+3. Only after explicit hardware authorization, implement and test a target backend without changing MPC startup, audio routing, or system files.
+4. Connect UI controls to the engine only after the backend and signal path are independently validated.
 
 ## Host tests
 
-The `Audio engine tests` GitHub Actions workflow compiles with C++14, warnings-as-errors, and runs deterministic tests for summing, panning, gain, mute, solo, master controls, four stereo Aux buses, six-band EQ coefficient validation and signal processing, invalid parameters, and non-finite samples. These tests do not require audio hardware.
+The `Audio engine tests` GitHub Actions workflow compiles with C++14, warnings-as-errors, and runs deterministic tests for summing, panning, gain, mute, solo, master controls, four stereo Aux buses, six-band EQ coefficient validation and signal processing, silent capture backend behavior, invalid parameters, and non-finite samples. These tests do not require audio hardware.
 
 
 ## Paire d'entrées Audio In
