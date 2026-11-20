@@ -131,6 +131,31 @@ int main() {
     assert(near(eqMainR[0], eqAuxR[0]));
     assert(!eqEngine.setTrackEq(16, 48000.0f, engineEqBands));
 
+    // A per-track insert runs after EQ and before fader/pan and Aux sends.
+    AudioEngine insertEngine;
+    mpcmixer::SoftClipInsert softClip;
+    assert(softClip.setDrive(2.0f));
+    softClip.setEnabled(true);
+    assert(insertEngine.setTrackInsert(0, 0, &softClip));
+    assert(insertEngine.setTrackInsert(0, 1, nullptr));
+    assert(!insertEngine.setTrackInsert(16, 0, &softClip));
+    assert(!insertEngine.setTrackInsert(0, 2, &softClip));
+    float insertInput[] = {0.75f, -0.75f};
+    const float* insertInputs[AudioEngine::kTrackCount] = {};
+    insertInputs[0] = insertInput;
+    float insertLeft[2] = {}, insertRight[2] = {};
+    insertEngine.process(insertInputs, insertLeft, insertRight, 2);
+    assert(near(insertLeft[0], std::sqrt(0.5f)));
+    assert(near(insertRight[0], std::sqrt(0.5f)));
+    assert(near(insertLeft[1], -std::sqrt(0.5f)));
+    assert(near(insertRight[1], -std::sqrt(0.5f)));
+    assert(!softClip.setDrive(9.0f));
+    assert(near(softClip.drive(), 2.0f));
+    softClip.setEnabled(false);
+    insertEngine.process(insertInputs, insertLeft, insertRight, 1);
+    assert(near(insertLeft[0], 0.75f * std::sqrt(0.5f)));
+    assert(near(softClip.processSample(std::numeric_limits<float>::quiet_NaN()), 0.0f));
+
     // The default capture backend is explicit silence and never touches a device.
     mpcmixer::SilentAudioCaptureBackend silentBackend;
     mpcmixer::AudioFormat captureFormat;
