@@ -18,6 +18,8 @@ Build a touchscreen-first mixer interface for the Akai MPC Live II. The first mi
   6. Volume fader and level meter.
 - The Master strip has its own level meter and master-volume control.
 - Peak/RMS meters include a peak-hold marker and a latched clip indicator; the demo signal is synthetic and explicitly opt-in.
+- The synthetic meter timer is created only while meter demo is enabled and is cleared immediately when disabled, avoiding idle background work.
+- Touch controls use enlarged minimum hit areas for toolbar actions, pan/Aux sliders, and the Clip reset control.
 - Insert buttons are visual placeholders with accessible pressed states; reset restores their illustrative defaults.
 - Channel identity and selection must remain clear while scrolling.
 - The UI should avoid requiring tiny controls or precision mouse interaction.
