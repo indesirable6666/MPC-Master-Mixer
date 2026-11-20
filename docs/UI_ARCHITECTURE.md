@@ -91,7 +91,7 @@ The `prototype/index.html` page now contains a more complete touch-first mixer m
 - 16 named channel strips in a horizontally scrollable bank.
 - A fixed Master strip docked to the right.
 - Six EQ controls, pan, four Aux Sends, insert placeholders, Mute/Solo and volume controls per strip.
-- Local interaction for faders, EQ, pan, Aux, Mute/Solo and insert placeholder toggles.
+- Local interaction for faders, EQ, pan, Aux, Mute/Solo and insert placeholder toggles; touching any channel action also selects and announces that channel.
 - Bank navigation buttons and a reset action.
 - Explicit offline/demo labeling; no network, MIDI, ALSA, audio-engine or device access.
 
