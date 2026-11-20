@@ -159,3 +159,32 @@ test('bank indicator follows horizontal touch scrolling', () => {
   assert.equal(dom.window.document.getElementById('prev').disabled, true);
   dom.window.close();
 });
+
+test('selected track is announced and marked accessibly', () => {
+  const dom = loadPrototype();
+  const first = dom.window.document.querySelector('[data-channel="0"]');
+  const status = dom.window.document.getElementById('selectionStatus');
+  assert.equal(first.getAttribute('aria-current'), 'true');
+  assert.equal(status.textContent, 'PISTE 01 · KICK');
+  const fourth = dom.window.document.querySelector('[data-channel="3"]');
+  fourth.focus();
+  assert.equal(first.hasAttribute('aria-current'), false);
+  assert.equal(fourth.getAttribute('aria-current'), 'true');
+  assert.equal(status.textContent, 'PISTE 04 · PERC');
+  dom.window.close();
+});
+
+test('left and right arrow keys move focus between adjacent channels', () => {
+  const dom = loadPrototype();
+  const third = dom.window.document.querySelector('[data-channel="2"]');
+  third.focus();
+  third.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  assert.equal(dom.window.document.activeElement.dataset.channel, '3');
+  dom.window.document.activeElement.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+  assert.equal(dom.window.document.activeElement.dataset.channel, '2');
+  const first = dom.window.document.querySelector('[data-channel="0"]');
+  first.focus();
+  first.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+  assert.equal(dom.window.document.activeElement.dataset.channel, '0');
+  dom.window.close();
+});
