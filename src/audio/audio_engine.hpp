@@ -1,5 +1,7 @@
 #pragma once
 
+#include "six_band_eq.hpp"
+
 #include <array>
 #include <cmath>
 #include <cstddef>
@@ -41,6 +43,17 @@ public:
         return tracks_[index < kTrackCount ? index : 0];
     }
 
+    bool setTrackEq(
+        std::size_t index, float sampleRate,
+        const std::array<SixBandEq::BandParameters, SixBandEq::kBandCount>& bands) {
+        if (index >= kTrackCount) return false;
+        return equalizers_[index].configure(sampleRate, bands);
+    }
+
+    const SixBandEq& trackEq(std::size_t index) const {
+        return equalizers_[index < kTrackCount ? index : 0];
+    }
+
     bool setMasterGain(float gain) {
         if (!std::isfinite(gain) || gain < 0.0f || gain > 1.0f) {
             return false;
@@ -66,7 +79,7 @@ public:
         float* outputLeft, float* outputRight,
         float* const auxLeft[kAuxBusCount],
         float* const auxRight[kAuxBusCount],
-        std::size_t frameCount) const {
+        std::size_t frameCount) {
         if (outputLeft == nullptr || outputRight == nullptr) return;
 
         bool anySolo = false;
@@ -81,12 +94,12 @@ public:
             std::array<float, kAuxBusCount> sendRight{};
             for (std::size_t channel = 0; channel < kTrackCount; ++channel) {
                 const Track& state = tracks_[channel];
-                if (state.mute || (anySolo && !state.solo) ||
-                    inputs[channel] == nullptr) {
-                    continue;
-                }
-                float sample = inputs[channel][frame];
+                const float* input = inputs == nullptr ? nullptr : inputs[channel];
+                if (input == nullptr) continue;
+                float sample = input[frame];
                 if (!std::isfinite(sample)) sample = 0.0f;
+                sample = equalizers_[channel].processSample(sample);
+                if (state.mute || (anySolo && !state.solo)) continue;
                 const float scaled = sample * state.gain;
                 const float leftPan = std::sqrt((1.0f - state.pan) * 0.5f);
                 const float rightPan = std::sqrt((1.0f + state.pan) * 0.5f);
@@ -120,6 +133,7 @@ public:
 
 private:
     std::array<Track, kTrackCount> tracks_{};
+    std::array<SixBandEq, kTrackCount> equalizers_{};
     float masterGain_ = 1.0f;
     bool masterMute_ = false;
 };
