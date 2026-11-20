@@ -26,6 +26,7 @@ button{color:inherit}
 .strips{height:100%;width:max-content;display:flex;gap:8px;padding:10px}
 .channel{width:180px;min-width:180px;height:100%;min-height:0;display:flex;flex-direction:column;gap:7px;padding:8px;background:linear-gradient(180deg,#202731,#191f28);border:1px solid var(--line);border-radius:8px}
 .channel.selected{border-color:var(--amber);box-shadow:inset 0 0 0 1px #e9ad4540}
+.channel:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
 .channel-head{display:flex;align-items:center;justify-content:space-between;min-height:30px;gap:5px}
 .channel-title{font-weight:850;letter-spacing:.03em;font-size:13px}
 .channel-type{font-size:9px;color:var(--muted);letter-spacing:.08em}
@@ -100,6 +101,10 @@ function makeStrip(index,isMaster=false){
  const el=document.createElement('section');
  el.className='channel'+(!isMaster&&index===0?' selected':'');
  el.dataset.channel=isMaster?'master':index;
+ el.tabIndex=isMaster?-1:0;
+ el.setAttribute('role','group');
+ el.setAttribute('aria-label',isMaster?'Tranche Master':'Tranche '+(index+1)+' '+name);
+ el.addEventListener('focus',()=>{if(!isMaster)selectChannel(index)});
  el.innerHTML=`
   <div class="channel-head"><span class="channel-title">${name}</span><span class="channel-type">${isMaster?'STEREO':'<span class="channel-number">'+String(index+1).padStart(2,'0')+'</span> · AUDIO'}</span></div>
   <div class="block"><div class="block-title">Inserts · effets</div><div class="fx-row"><button class="fx" type="button">INSERT 1</button><button class="fx off" type="button">INSERT 2</button></div></div>
@@ -130,8 +135,8 @@ function makeStrip(index,isMaster=false){
  el.addEventListener('click',e=>{
   const toggle=e.target.closest('[data-toggle]');
   if(toggle){const key=toggle.dataset.toggle;data[key]=!data[key];update();return}
-  const fx=e.target.closest('.fx');if(fx){fx.classList.toggle('off');}
-  if(!isMaster&&e.target.closest('.channel-head'))selectChannel(index);
+  const fx=e.target.closest('.fx');if(fx){fx.classList.toggle('off');return}
+  if(!isMaster&&!e.target.closest('input,button'))selectChannel(index);
  });
  function applyValues(){
   el.querySelector('[data-volume]').value=data.volume;
