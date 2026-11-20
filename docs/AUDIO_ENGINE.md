@@ -10,14 +10,14 @@ Implemented per track:
 - Constant-power pan from hard left to hard right
 - Mute and solo
 - Two non-owning insert slots per track, including a tested soft-clip effect
-- Four independent stereo Aux buses with per-track send levels
+- Four independent stereo Aux buses with per-track send levels and stereo returns (gain, balance, mute)
 - Null input as silence
 
 Implemented on the master bus:
 - Master gain (0.0–1.27, +2.1 dB maximum)
 - Master mute
 
-The core ignores non-finite input samples and rejects invalid control values. The stereo float bus is not clipped; a future output stage must define limiting and sample-format conversion. Aux sends are post-fader and post-pan, pre-master; master gain/mute affect the main bus only. Aux output buffers are caller-owned and optional.
+The core ignores non-finite input samples and rejects invalid control values. The stereo float bus is not clipped; a future output stage must define limiting and sample-format conversion. Aux sends are post-fader and post-pan, pre-master; stereo returns are summed into the main bus before master gain/mute and are never fed back into sends. Aux output and return buffers are caller-owned and optional.
 
 ## Audio capture boundary
 
@@ -55,7 +55,7 @@ The browser prototype controls are not yet wired to this engine. Host-side DSP t
 
 ## Host tests
 
-The `Audio engine tests` GitHub Actions workflow compiles with C++14, warnings-as-errors, and runs deterministic tests for summing, panning, gain, mute, solo, master controls, four stereo Aux buses, six-band EQ frequency/Q/gain validation and signal processing, two-slot insert chains and soft clipping, silent capture backend behavior, invalid parameters, and non-finite samples. These tests do not require audio hardware.
+The `Audio engine tests` GitHub Actions workflow compiles with C++14, warnings-as-errors, and runs deterministic tests for summing, panning, gain, mute, solo, master controls, four stereo Aux sends and returns, six-band EQ frequency/Q/gain validation and signal processing, two-slot insert chains and soft clipping, silent capture backend behavior, invalid parameters, and non-finite samples. These tests do not require audio hardware.
 
 
 ## Paire d'entrées Audio In
