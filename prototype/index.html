@@ -53,8 +53,9 @@ button{color:inherit}
 .meter-panel{display:grid;gap:4px;padding:5px 6px;background:#111720;border:1px solid #303a47;border-radius:5px}
 .meter-row{display:grid;grid-template-columns:24px 1fr 25px;align-items:center;gap:5px}
 .meter-label{color:var(--muted);font-size:8px;font-weight:850}
-.meter-track{height:6px;overflow:hidden;border-radius:3px;background:#28323e}
+.meter-track{position:relative;height:6px;overflow:hidden;border-radius:3px;background:#28323e}
 .meter-fill{display:block;width:0;height:100%;background:linear-gradient(90deg,#438f6d 0 68%,#b18c43 84%,#c75c55 100%);transition:width 100ms linear}
+.meter-hold{position:absolute;top:0;bottom:0;left:0;width:2px;background:#fff;box-shadow:0 0 3px #fff;transform:translateX(-1px)}
 .meter-value{color:#cbd4df;text-align:right;font-size:8px;font-variant-numeric:tabular-nums}
 .clip{padding:1px 3px;border:1px solid #5b4244;border-radius:3px;color:#778392;text-align:center;font-size:8px;font-weight:900}
 .clip.active{border-color:var(--red);background:#57292c;color:#fff;box-shadow:0 0 7px #e36e7080}
@@ -95,7 +96,7 @@ const labels=['KICK','SNARE','HI-HAT','PERC','BASS','SYNTH 1','SYNTH 2','KEYS','
 const defaults=()=>({volume:100,pan:0,eq:[0,0,0,0,0,0],aux:[0,0,0,0],mute:false,solo:false});
 const state=Array.from({length:16},defaults);
 const masterState=defaults();
-function meter(){return '<div class="meter-panel" aria-label="Mesures simulées"><div class="meter-row"><span class="meter-label">PEAK</span><div class="meter-track"><i class="meter-fill" data-meter="peak"></i></div><output class="meter-value" data-meter-value="peak">0%</output></div><div class="meter-row"><span class="meter-label">RMS</span><div class="meter-track"><i class="meter-fill" data-meter="rms"></i></div><output class="meter-value" data-meter-value="rms">0%</output></div><div class="meter-row"><span class="meter-label">CLIP</span><span></span><output class="clip" data-clip aria-label="Écrêtage inactif">OFF</output></div></div>'}
+function meter(){return '<div class="meter-panel" aria-label="Mesures simulées"><div class="meter-row"><span class="meter-label">PEAK</span><div class="meter-track"><i class="meter-fill" data-meter="peak"></i><i class="meter-hold" data-meter-hold></i></div><output class="meter-value" data-meter-value="peak">0%</output></div><div class="meter-row"><span class="meter-label">RMS</span><div class="meter-track"><i class="meter-fill" data-meter="rms"></i></div><output class="meter-value" data-meter-value="rms">0%</output></div><div class="meter-row"><span class="meter-label">CLIP</span><span></span><output class="clip" data-clip aria-label="Écrêtage inactif">OFF</output></div></div>'}
 function makeStrip(index,isMaster=false){
  const data=isMaster?masterState:state[index];
  const name=isMaster?'MASTER':labels[index];
@@ -161,17 +162,21 @@ let meterFrame=0;
 const meterDemoButton=document.getElementById('meterDemo');
 function renderMeter(el,peak,rms){
  const p=Math.max(0,Math.min(1,peak)),r=Math.max(0,Math.min(1,rms)),clipped=p>=0.985;
+ const hold=Math.max(Number(el.dataset.peakHold||0),p);
+ el.dataset.peakHold=String(hold);
  el.querySelector('[data-meter="peak"]').style.width=(p*100).toFixed(1)+'%';
+ el.querySelector('[data-meter-hold]').style.left=(hold*100).toFixed(1)+'%';
+ el.dataset.clipLatched=String(el.dataset.clipLatched==='true'||clipped);
  el.querySelector('[data-meter="rms"]').style.width=(r*100).toFixed(1)+'%';
  el.querySelector('[data-meter-value="peak"]').textContent=Math.round(p*100)+'%';
  el.querySelector('[data-meter-value="rms"]').textContent=Math.round(r*100)+'%';
- const clip=el.querySelector('[data-clip]');clip.textContent=clipped?'CLIP':'OFF';clip.classList.toggle('active',clipped);
- clip.setAttribute('aria-label',clipped?'Écrêtage simulé':'Écrêtage inactif');
+ const clip=el.querySelector('[data-clip]');const latched=el.dataset.clipLatched==='true';clip.textContent=latched?'CLIP':'OFF';clip.classList.toggle('active',latched);
+ clip.setAttribute('aria-label',latched?'Écrêtage simulé mémorisé':'Écrêtage inactif');
 }
 function setMeterDemo(enabled){
  meterDemo=enabled;meterDemoButton.setAttribute('aria-pressed',String(enabled));
  meterDemoButton.textContent='DÉMO MÈTRES : '+(enabled?'ON':'OFF');
- if(!enabled)document.querySelectorAll('.channel').forEach(el=>renderMeter(el,0,0));
+ if(!enabled)document.querySelectorAll('.channel').forEach(el=>{el.dataset.peakHold='0';el.dataset.clipLatched='false';renderMeter(el,0,0)});
 }
 meterDemoButton.addEventListener('click',()=>setMeterDemo(!meterDemo));
 setInterval(()=>{
@@ -186,6 +191,7 @@ setInterval(()=>{
 document.getElementById('prev').addEventListener('click',()=>document.getElementById('scrollArea').scrollBy({left:-560,behavior:'smooth'}));
 document.getElementById('next').addEventListener('click',()=>document.getElementById('scrollArea').scrollBy({left:560,behavior:'smooth'}));
 document.getElementById('reset').addEventListener('click',()=>{
+ setMeterDemo(false);
  state.forEach((s,i)=>Object.assign(s,defaults()));
  Object.assign(masterState,defaults());
  document.querySelectorAll('.channel').forEach(el=>{
