@@ -4,6 +4,7 @@
 #include "audio_duplex_backend.hpp"
 
 #include <array>
+#include <atomic>
 #include <cstddef>
 
 namespace mpcmixer {
@@ -17,7 +18,8 @@ public:
 
     explicit AudioDuplexEngineHost(AudioEngineCommandBridge& bridge) noexcept
         : bridge_(bridge) {
-        inputTrack_.fill(kUnmappedTrack);
+        for (auto& route : inputTrack_)
+            route.store(kUnmappedTrack, std::memory_order_relaxed);
     }
 
     AudioDuplexEngineHost(const AudioDuplexEngineHost&) = delete;
@@ -27,17 +29,18 @@ public:
         if (inputChannel >= inputTrack_.size() ||
             (trackIndex != kUnmappedTrack && trackIndex >= AudioEngine::kTrackCount))
             return false;
-        inputTrack_[inputChannel] = trackIndex;
+        inputTrack_[inputChannel].store(trackIndex, std::memory_order_release);
         return true;
     }
 
     std::size_t inputRoute(std::size_t inputChannel) const noexcept {
         return inputChannel < inputTrack_.size()
-            ? inputTrack_[inputChannel] : kUnmappedTrack;
+            ? inputTrack_[inputChannel].load(std::memory_order_acquire)
+            : kUnmappedTrack;
     }
 
     bool prepare(AudioDuplexBackend& backend, const AudioDuplexFormat& format) noexcept {
-        if (!format.valid() || format.outputChannels != 2 ||
+        if (backend_ != nullptr || !format.valid() || format.outputChannels != 2 ||
             format.inputChannels > inputTrack_.size()) return false;
         backend_ = &backend;
         if (!backend_->prepare(format, &AudioDuplexEngineHost::processCallback, this)) {
@@ -77,7 +80,8 @@ public:
 
         std::array<const float*, AudioEngine::kTrackCount> trackInputs{};
         for (std::size_t channel = 0; channel < block.inputChannelCount; ++channel) {
-            const std::size_t track = inputTrack_[channel];
+            const std::size_t track =
+                inputTrack_[channel].load(std::memory_order_acquire);
             if (track == kUnmappedTrack) continue;
             if (block.inputChannels[channel] == nullptr) {
                 silence(block);
@@ -108,7 +112,7 @@ public:
 
 private:
     AudioEngineCommandBridge& bridge_;
-    std::array<std::size_t, 2> inputTrack_{};
+    std::array<std::atomic<std::size_t>, 2> inputTrack_{};
     AudioDuplexBackend* backend_ = nullptr;
 };
 
