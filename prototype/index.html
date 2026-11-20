@@ -7,7 +7,7 @@
 <title>MPC Master Mixer — interface tactile</title>
 <style>
 :root{color-scheme:dark;--bg:#101319;--panel:#1a2029;--panel-hi:#222a35;--well:#111720;--line:#35404d;--text:#edf2f7;--muted:#94a1b1;--amber:#e9ad45;--green:#55c68a;--red:#e36e70;--blue:#70a9dc}
-*{box-sizing:border-box;touch-action:pan-y}
+*{box-sizing:border-box}
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font:14px/1.35 system-ui,-apple-system,"Segoe UI",sans-serif}
 button,input{font:inherit}
 button{color:inherit}
@@ -22,7 +22,7 @@ button{color:inherit}
 .tool{min-height:36px;padding:0 11px;border:1px solid var(--line);border-radius:6px;background:var(--panel-hi);font-size:11px;font-weight:700}
 .tool:active,.toggle:active{transform:translateY(1px)}
 .workspace{display:flex;flex:1;min-height:0;gap:0}
-.scroll-area{flex:1;min-width:0;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scrollbar-color:#596575 #1a2029;scrollbar-width:thin}
+.scroll-area{flex:1;min-width:0;touch-action:pan-x pan-y;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scrollbar-color:#596575 #1a2029;scrollbar-width:thin}
 .strips{height:100%;width:max-content;display:flex;gap:8px;padding:10px}
 .channel{width:180px;min-width:180px;height:100%;min-height:0;display:flex;flex-direction:column;gap:7px;padding:8px;background:linear-gradient(180deg,#202731,#191f28);border:1px solid var(--line);border-radius:8px}
 .channel.selected{border-color:var(--amber);box-shadow:inset 0 0 0 1px #e9ad4540}
