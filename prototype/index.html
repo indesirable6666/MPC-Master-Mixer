@@ -129,6 +129,8 @@ function makeStrip(index,isMaster=false){
   else if(e.key==='ArrowRight')nextIndex=Math.min(15,index+1);
   else if(e.key==='Home')nextIndex=0;
   else if(e.key==='End')nextIndex=15;
+  else if(e.key==='PageUp')nextIndex=Math.max(0,index-8);
+  else if(e.key==='PageDown')nextIndex=Math.min(15,index+8);
   else return;
   e.preventDefault();
   if(nextIndex!==index){
