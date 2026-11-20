@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - "src/midi/**"
+      - "src/mixer/**"
       - "tests/midi_adapter_test.cpp"
       - "docs/MIDI_ADAPTER.md"
       - ".github/workflows/midi-adapter-tests.yml"
@@ -27,6 +28,6 @@ jobs:
       - name: Compile MIDI adapter tests
         run: |
           g++ -std=c++14 -O2 -Wall -Wextra -Werror \
-            -Isrc/midi tests/midi_adapter_test.cpp -o midi_adapter_test
+            -Isrc/midi -Isrc/mixer tests/midi_adapter_test.cpp -o midi_adapter_test
       - name: Run MIDI adapter tests
         run: ./midi_adapter_test
