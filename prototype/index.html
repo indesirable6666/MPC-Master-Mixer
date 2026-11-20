@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>MPC Master Mixer — prototype tactile</title>
+<style>
+:root{color-scheme:dark;--bg:#111318;--panel:#1b1f27;--panel2:#252b35;--line:#39414e;--text:#edf1f7;--muted:#a6afbd;--accent:#e5a83b;--green:#54c58a;--red:#e36b6b}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;background:var(--bg);color:var(--text);font:14px system-ui,-apple-system,sans-serif;overflow:hidden}
+header{height:54px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;border-bottom:1px solid var(--line);background:#171a21}
+.brand{font-weight:800;letter-spacing:.06em}.brand span{color:var(--accent)}.status{font-size:11px;color:var(--muted)}
+main{height:calc(100% - 54px);display:flex;min-width:0}
+.viewport{flex:1;min-width:0;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scrollbar-color:#697383 #20242c;scrollbar-width:thin}
+.channels{height:100%;display:flex;gap:7px;padding:9px;width:max-content}
+.strip{width:174px;min-width:174px;height:100%;background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:8px;display:flex;flex-direction:column;gap:7px}
+.strip.selected{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.name{display:flex;align-items:center;justify-content:space-between;gap:5px;font-weight:700}.name small{color:var(--muted);font-weight:500}
+.section{background:var(--panel2);border-radius:6px;padding:6px}.section-title{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px}
+.eq{display:grid;grid-template-columns:repeat(6,1fr);gap:3px}.band{min-width:0;text-align:center;font-size:9px;color:var(--muted)}.band input{writing-mode:vertical-lr;direction:rtl;width:16px;height:54px;accent-color:var(--accent);display:block;margin:2px auto}.band b{font-size:9px;color:var(--text)}
+.inserts{display:flex;gap:4px}.chip{flex:1;text-align:center;background:#343c49;border-radius:4px;padding:5px 2px;font-size:10px;color:#d7deea}
+.panrow{display:flex;align-items:center;gap:7px}.panrow label{font-size:10px;color:var(--muted);width:25px}.panrow input{flex:1;min-width:0;accent-color:var(--accent)}
+.aux{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}.aux label{font-size:9px;color:var(--muted);text-align:center}.aux input{width:100%;accent-color:var(--accent)}
+.actions{display:flex;gap:6px}.toggle{flex:1;min-height:34px;border:1px solid var(--line);border-radius:5px;background:#252b35;color:var(--text);font-weight:700}.toggle.active{background:#614b24;border-color:var(--accent);color:#ffe0a1}
+.meter{height:7px;border-radius:8px;background:#303743;overflow:hidden}.meter i{display:block;height:100%;width:0;background:linear-gradient(90deg,#47bd7c 0 70%,#e5bd43 70% 90%,#df6666 90%)}
+.faderbox{flex:1;min-height:90px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#171b22;border-radius:6px}.faderbox input{height:100%;min-height:90px;writing-mode:vertical-lr;direction:rtl;width:34px;accent-color:var(--accent)}.db{font-variant-numeric:tabular-nums;font-size:12px;color:var(--accent);font-weight:700}
+.master{width:194px;min-width:194px;height:100%;padding:9px 9px 9px 0}.master .strip{width:100%;border-color:#8a672b;background:#20232a}.master .faderbox input{width:42px}
+footer{position:absolute;bottom:0;left:0;padding:4px 12px;background:#111318dd;color:var(--muted);font-size:10px;pointer-events:none}
+@media(max-height:600px){.strip{gap:4px;padding:6px}.section{padding:4px}.band input{height:38px}.faderbox input{min-height:65px}.master{width:170px;min-width:170px}}
+</style>
+</head>
+<body>
+<header><div class="brand">MPC <span>MASTER MIXER</span></div><div class="status">PROTOTYPE TACTILE · COMMANDES SIMULÉES</div></header>
+<main><div class="viewport" id="viewport"><div class="channels" id="channels"></div></div><aside class="master" id="master"></aside></main>
+<footer>Prototype visuel uniquement — aucun contrôle du moteur audio MPC ni message MIDI n'est envoyé.</footer>
+<script>
+const channels=document.getElementById('channels');
+function makeStrip(n,isMaster=false){
+ const el=document.createElement('section');el.className='strip'+(n===1?' selected':'');
+ const title=isMaster?'MASTER':'CH '+String(n).padStart(2,'0');
+ el.innerHTML=`
+ <div class="name"><span>${title}</span><small>${isMaster?'STEREO':'AUDIO'}</small></div>
+ <div class="section"><div class="section-title">Inserts / effets</div><div class="inserts"><div class="chip">FX 1</div><div class="chip">FX 2</div></div></div>
+ <div class="section"><div class="section-title">EQ paramétrique · 6 bandes</div><div class="eq">${['LF','LM','M1','M2','HM','HF'].map((x,i)=>`<label class="band">${x}<input aria-label="EQ ${x} ${title}" type="range" min="-12" max="12" value="0"><b>0</b></label>`).join('')}</div></div>
+ <div class="section"><div class="section-title">Panoramique</div><div class="panrow"><label> L</label><input aria-label="Pan ${title}" type="range" min="-100" max="100" value="0"><label>R</label></div></div>
+ <div class="section"><div class="section-title">Aux sends</div><div class="aux">${[1,2,3,4].map(x=>`<label> AUX ${x}<input aria-label="Aux ${x} ${title}" type="range" min="0" max="100" value="0"></label>`).join('')}</div></div>
+ <div class="actions"><button class="toggle" type="button">MUTE</button><button class="toggle" type="button">SOLO</button></div>
+ <div class="meter"><i></i></div>
+ <div class="faderbox"><input aria-label="Volume ${title}" type="range" min="0" max="127" value="100"><div class="db">0.0 dB</div></div>`;
+ el.querySelectorAll('input[type=range]').forEach(input=>input.addEventListener('input',()=>{
+   const out=input.parentElement.querySelector('b');if(out)out.textContent=(Number(input.value)>0?'+':'')+input.value;
+   if(input.closest('.faderbox'))el.querySelector('.db').textContent=((Number(input.value)-100)*0.12).toFixed(1)+' dB';
+ }));
+ el.querySelectorAll('.toggle').forEach(btn=>btn.addEventListener('click',()=>btn.classList.toggle('active')));
+ return el;
+}
+for(let i=1;i<=16;i++)channels.appendChild(makeStrip(i));
+document.getElementById('master').appendChild(makeStrip(0,true));
+</script>
+</body></html>
