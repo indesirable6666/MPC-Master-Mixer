@@ -217,15 +217,24 @@ let currentBank=0;
 const bankStatus=document.getElementById('bankStatus');
 const prevBank=document.getElementById('prev');
 const nextBank=document.getElementById('next');
-function setBank(bank){
- currentBank=Math.max(0,Math.min(1,bank));
- const firstTrack=strips.children[currentBank*8];
- if(firstTrack)document.getElementById('scrollArea').scrollLeft=firstTrack.offsetLeft;
+const scrollArea=document.getElementById('scrollArea');
+function updateBankUi(){
  prevBank.disabled=currentBank===0;
  nextBank.disabled=currentBank===1;
  bankStatus.textContent='BANQUE '+(currentBank+1)+'/2 · PISTES '+(currentBank*8+1)+'–'+(currentBank*8+8);
  bankStatus.setAttribute('aria-label','Banque '+(currentBank+1)+' sur 2, pistes '+(currentBank*8+1)+' à '+(currentBank*8+8));
 }
+function setBank(bank){
+ currentBank=Math.max(0,Math.min(1,bank));
+ const firstTrack=strips.children[currentBank*8];
+ if(firstTrack)scrollArea.scrollLeft=firstTrack.offsetLeft;
+ updateBankUi();
+}
+scrollArea.addEventListener('scroll',()=>{
+ const secondBankTrack=strips.children[8];
+ if(secondBankTrack)currentBank=scrollArea.scrollLeft>=secondBankTrack.offsetLeft-1?1:0;
+ updateBankUi();
+});
 prevBank.addEventListener('click',()=>setBank(currentBank-1));
 nextBank.addEventListener('click',()=>setBank(currentBank+1));
 setBank(0);
