@@ -149,6 +149,18 @@ test('bank navigation switches between channels 1–8 and 9–16', () => {
   dom.window.close();
 });
 
+test('bank navigation buttons expose clear accessible names and controlled regions', () => {
+  const dom = loadPrototype();
+  const prev = dom.window.document.getElementById('prev');
+  const next = dom.window.document.getElementById('next');
+  assert.equal(prev.getAttribute('aria-label'), 'Afficher la banque précédente');
+  assert.equal(next.getAttribute('aria-label'), 'Afficher la banque suivante');
+  for (const button of [prev, next]) {
+    assert.equal(button.getAttribute('aria-controls'), 'scrollArea bankStatus');
+  }
+  dom.window.close();
+});
+
 test('bank indicator follows horizontal touch scrolling', () => {
   const dom = loadPrototype();
   const area = dom.window.document.getElementById('scrollArea');
