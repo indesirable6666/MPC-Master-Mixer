@@ -1,6 +1,7 @@
 #pragma once
 
 #include "six_band_eq.hpp"
+#include "insert_effects.hpp"
 
 #include <array>
 #include <cmath>
@@ -50,6 +51,13 @@ public:
         const std::array<SixBandEq::BandParameters, SixBandEq::kBandCount>& bands) {
         if (index >= kTrackCount) return false;
         return equalizers_[index].configure(sampleRate, bands);
+    }
+
+    // Non-owning insert pointers: keep effects alive until processing stops.
+    bool setTrackInsert(std::size_t trackIndex, std::size_t slot,
+                        AudioInsert* effect) noexcept {
+        if (trackIndex >= kTrackCount) return false;
+        return inserts_[trackIndex].setSlot(slot, effect);
     }
 
     const SixBandEq& trackEq(std::size_t index) const {
@@ -102,6 +110,7 @@ public:
                 float sample = input[frame];
                 if (!std::isfinite(sample)) sample = 0.0f;
                 sample = equalizers_[channel].processSample(sample);
+                sample = inserts_[channel].processSample(sample);
                 if (state.mute || (anySolo && !state.solo)) continue;
                 const float scaled = sample * state.gain;
                 const float leftPan = std::sqrt((1.0f - state.pan) * 0.5f);
@@ -137,6 +146,7 @@ public:
 private:
     std::array<Track, kTrackCount> tracks_{};
     std::array<SixBandEq, kTrackCount> equalizers_{};
+    std::array<InsertChain, kTrackCount> inserts_{};
     float masterGain_ = 1.0f;
     bool masterMute_ = false;
 };
