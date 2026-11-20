@@ -8,12 +8,27 @@ namespace mpcmixer {
 
 // Six-band parametric EQ stage. Coefficients are prepared by configure()
 // outside the audio callback; process() performs no allocation or trig work.
-// Each band is an RBJ peaking biquad with a fixed centre frequency and Q.
+// Each band is an RBJ peaking biquad with independently configurable frequency, Q and gain.
 class SixBandEq {
 public:
     static constexpr std::size_t kBandCount = 6;
     static constexpr float kMinGainDb = -12.0f;
     static constexpr float kMaxGainDb = 12.0f;
+    static constexpr float kMinFrequencyHz = 20.0f;
+    static constexpr float kMinQ = 0.1f;
+    static constexpr float kMaxQ = 10.0f;
+
+    struct BandParameters {
+        float frequencyHz;
+        float q;
+        float gainDb;
+    };
+
+    static std::array<BandParameters, kBandCount> defaultBandParameters() {
+        return {{{60.0f, 1.0f, 0.0f}, {180.0f, 1.0f, 0.0f},
+                 {500.0f, 1.0f, 0.0f}, {1500.0f, 1.0f, 0.0f},
+                 {5000.0f, 1.0f, 0.0f}, {12000.0f, 1.0f, 0.0f}}};
+    }
 
     static float frequencyHz(std::size_t band) {
         static constexpr float frequencies[kBandCount] = {
@@ -33,25 +48,28 @@ public:
     SixBandEq() = default;
 
     bool configure(float sampleRate,
-                   const std::array<float, kBandCount>& gainsDb) {
+                   const std::array<BandParameters, kBandCount>& bands) {
         if (!std::isfinite(sampleRate) || sampleRate < 8000.0f ||
             sampleRate > 192000.0f) {
             return false;
         }
-        for (std::size_t band = 0; band < kBandCount; ++band) {
-            if (!std::isfinite(gainsDb[band]) ||
-                gainsDb[band] < kMinGainDb || gainsDb[band] > kMaxGainDb ||
-                frequencyHz(band) >= sampleRate * 0.5f) {
+        for (const BandParameters& band : bands) {
+            if (!std::isfinite(band.frequencyHz) ||
+                !std::isfinite(band.q) || !std::isfinite(band.gainDb) ||
+                band.frequencyHz < kMinFrequencyHz ||
+                band.frequencyHz >= sampleRate * 0.5f ||
+                band.q < kMinQ || band.q > kMaxQ ||
+                band.gainDb < kMinGainDb || band.gainDb > kMaxGainDb) {
                 return false;
             }
         }
 
         std::array<Coefficients, kBandCount> next{};
         for (std::size_t band = 0; band < kBandCount; ++band) {
-            const float amplitude = std::pow(10.0f, gainsDb[band] / 40.0f);
-            const float omega = 2.0f * kPi * frequencyHz(band) / sampleRate;
+            const float amplitude = std::pow(10.0f, bands[band].gainDb / 40.0f);
+            const float omega = 2.0f * kPi * bands[band].frequencyHz / sampleRate;
             const float cosine = std::cos(omega);
-            const float alpha = std::sin(omega) / (2.0f * kQ);
+            const float alpha = std::sin(omega) / (2.0f * bands[band].q);
             const float a0 = 1.0f + alpha / amplitude;
             next[band].b0 = (1.0f + alpha * amplitude) / a0;
             next[band].b1 = (-2.0f * cosine) / a0;
@@ -60,10 +78,25 @@ public:
             next[band].a2 = (1.0f - alpha / amplitude) / a0;
         }
         coefficients_ = next;
+        bands_ = bands;
         sampleRate_ = sampleRate;
         configured_ = true;
         reset();
         return true;
+    }
+
+    // Convenience overload for the six gain controls using the documented
+    // default centre frequencies and Q=1.0.
+    bool configure(float sampleRate,
+                   const std::array<float, kBandCount>& gainsDb) {
+        auto bands = defaultBandParameters();
+        for (std::size_t band = 0; band < kBandCount; ++band)
+            bands[band].gainDb = gainsDb[band];
+        return configure(sampleRate, bands);
+    }
+
+    const BandParameters& bandParameters(std::size_t band) const {
+        return bands_[band < kBandCount ? band : 0];
     }
 
     bool configured() const { return configured_; }
@@ -111,8 +144,8 @@ private:
     };
 
     static constexpr float kPi = 3.14159265358979323846f;
-    static constexpr float kQ = 1.0f;
     std::array<Coefficients, kBandCount> coefficients_{};
+    std::array<BandParameters, kBandCount> bands_ = defaultBandParameters();
     std::array<std::array<State, kBandCount>, 2> state_{};
     float sampleRate_ = 0.0f;
     bool configured_ = false;
