@@ -305,3 +305,47 @@ test('narrow-screen layout compacts the toolbar and footer without shrinking cha
   assert.match(html, /\.bottom \.hint\{display:none\}/);
   assert.match(html, /\.channel\{width:168px;min-width:168px\}/);
 });
+
+test('Audio In 1 and 2 can be linked as a stereo pair with shared controls', () => {
+  const dom = loadPrototype();
+  const button = dom.window.document.getElementById('stereoLink');
+  const left = dom.window.document.getElementById('audioIn1');
+  const right = dom.window.document.getElementById('audioIn2');
+  assert.ok(left && right);
+  assert.equal(button.getAttribute('aria-pressed'), 'false');
+  button.click();
+  assert.equal(button.getAttribute('aria-pressed'), 'true');
+  assert.match(button.textContent, /ON/);
+  assert.ok(left.classList.contains('stereo-linked'));
+  assert.ok(right.classList.contains('stereo-linked'));
+  assert.equal(left.querySelector('.channel-type').textContent, 'STÉRÉO · L');
+  assert.equal(right.querySelector('.channel-type').textContent, 'STÉRÉO · R');
+  assert.equal(left.querySelector('[data-pan]').disabled, true);
+  assert.equal(right.querySelector('[data-pan]').disabled, true);
+
+  const leftFader = left.querySelector('[data-volume]');
+  const rightFader = right.querySelector('[data-volume]');
+  leftFader.value = '73';
+  leftFader.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+  assert.equal(rightFader.value, '73');
+  assert.equal(right.querySelector('.value').textContent, '73 / 127');
+
+  const leftAux = left.querySelector('[data-aux="2"]');
+  const rightAux = right.querySelector('[data-aux="2"]');
+  leftAux.value = '45';
+  leftAux.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+  assert.equal(rightAux.value, '45');
+  assert.equal(rightAux.nextElementSibling.textContent, '45%');
+
+  left.querySelector('[data-toggle="mute"]').click();
+  assert.equal(right.querySelector('[data-toggle="mute"]').getAttribute('aria-pressed'), 'true');
+
+  button.click();
+  assert.equal(button.getAttribute('aria-pressed'), 'false');
+  assert.ok(!left.classList.contains('stereo-linked'));
+  assert.ok(!right.classList.contains('stereo-linked'));
+  assert.equal(left.querySelector('[data-pan]').disabled, false);
+  assert.equal(right.querySelector('[data-pan]').disabled, false);
+  dom.window.close();
+});
+
