@@ -10,6 +10,7 @@ This milestone defines a small transport boundary between mixer controls and MID
 - `TrackVolumeMidiAdapter` stores 16 independent track-volume mappings (zero-based indices 0–15).
 - `TrackPanMidiAdapter` stores 16 independent track-pan mappings. Pan is normalized to [-1,1], with left=-1, center=0 and right=1; values map to MIDI CC values 0, 64 and 127 respectively.
 - `TrackAuxMidiAdapter` stores 64 independent Aux-send mappings (16 tracks × 4 Aux sends). Each track/Aux pair has its own explicitly verified CC mapping; normalized send levels [0,1] map to [0,127].
+- `TrackMuteSoloMidiAdapter` stores separate Mute and Solo CC mappings for each of 16 tracks. Switch states are encoded as 0 (off) and 127 (on); each mapping must be explicitly verified.
 - Every mapping is disabled by default and accepted only when a caller explicitly marks it as verified.
 - Invalid values, unverified mappings and missing mappings produce no message. Clearing a track or all tracks disables the corresponding mappings.
 
@@ -17,7 +18,7 @@ This milestone defines a small transport boundary between mixer controls and MID
 
 This is **not** a live MIDI implementation. It does not create an ALSA sequencer client, open MIDI ports, connect to MPC ports, send messages to hardware, or read feedback from MPC.
 
-The exact MIDI channel, CC number, per-track addressing and feedback behavior have not been verified. No default CC mapping is provided. The normalized pan range and conversion are adapter conventions, not a claim about MPC's internal pan representation.
+The exact MIDI channel, CC number, per-track addressing and feedback behavior have not been verified. No default CC mapping is provided. The normalized pan range/conversion and the 0/127 switch encoding are adapter conventions, not claims about MPC's internal controls or accepted MIDI protocol.
 
 ## Automated tests
 
@@ -33,6 +34,8 @@ The host-side test executable checks:
 8. Transport failures are returned to the caller.
 9. All 64 track/Aux slots are independent; invalid indices, unverified mappings and out-of-range send levels are rejected.
 10. Clearing one send, one track or all mappings leaves unrelated slots unaffected.
+11. Mute and Solo mappings are independent per track and per switch type; boolean states encode to 0/127 in the simulated transport.
+12. Invalid switch mappings fail closed, clearing only the addressed mapping; transport failures propagate.
 
 Build and run locally:
 
