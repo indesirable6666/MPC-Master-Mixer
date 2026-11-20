@@ -117,7 +117,7 @@ function makeStrip(index,isMaster=false){
   <div class="block"><div class="block-title">Aux sends</div><div class="aux">${[1,2,3,4].map((n)=>`<label>AUX ${n}<input data-aux="${n-1}" type="range" min="0" max="100" value="0" aria-label="Aux ${n} ${name}"><output>0</output></label>`).join('')}</div></div>
   <div class="switches"><button class="toggle" data-toggle="mute" type="button" aria-pressed="false">MUTE</button><button class="toggle" data-toggle="solo" type="button" aria-pressed="false">SOLO</button></div>
   ${meter()}
-  <div class="fader-area"><div class="scale" aria-hidden="true"><span>+2</span><span>0</span><span>-12</span><span>-∞</span></div><input class="fader" data-volume type="range" min="0" max="127" value="100" aria-label="Volume ${name}"><div class="fader-readout"><output class="db">0.0 dB</output><span class="value">100 / 127</span></div></div>`;
+  <div class="fader-area"><div class="scale" aria-hidden="true"><span>+2</span><span>0</span><span>-12</span><span>-∞</span></div><input class="fader" data-volume type="range" min="0" max="127" value="100" aria-label="Volume ${name}" title="Valeur simulée locale — ne modifie pas le son de la MPC"><div class="fader-readout"><output class="db">0.0 dB</output><span class="value">100 / 127</span></div></div>`;
  const update=()=>{
   el.querySelectorAll('[data-eq]').forEach(input=>{const v=Number(input.value);input.nextElementSibling.textContent=(v>0?'+':'')+v.toFixed(1)});
   const panValue=Number(data.pan);
