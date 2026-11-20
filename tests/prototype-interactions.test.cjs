@@ -143,3 +143,19 @@ test('bank navigation switches between channels 1–8 and 9–16', () => {
   assert.equal(next.disabled, false);
   dom.window.close();
 });
+
+test('bank indicator follows horizontal touch scrolling', () => {
+  const dom = loadPrototype();
+  const area = dom.window.document.getElementById('scrollArea');
+  const secondBankTrack = dom.window.document.querySelector('[data-channel="8"]');
+  Object.defineProperty(secondBankTrack, 'offsetLeft', { configurable: true, value: 900 });
+  area.scrollLeft = 901;
+  area.dispatchEvent(new dom.window.Event('scroll'));
+  assert.equal(dom.window.document.getElementById('bankStatus').textContent, 'BANQUE 2/2 · PISTES 9–16');
+  assert.equal(dom.window.document.getElementById('next').disabled, true);
+  area.scrollLeft = 0;
+  area.dispatchEvent(new dom.window.Event('scroll'));
+  assert.equal(dom.window.document.getElementById('bankStatus').textContent, 'BANQUE 1/2 · PISTES 1–8');
+  assert.equal(dom.window.document.getElementById('prev').disabled, true);
+  dom.window.close();
+});
