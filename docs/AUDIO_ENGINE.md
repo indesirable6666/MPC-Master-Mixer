@@ -4,6 +4,9 @@
 
 `src/audio/audio_engine.hpp` is a platform-independent, allocation-free C++14 mixing core. It accepts up to 16 caller-owned mono floating-point input buffers and writes a caller-owned stereo floating-point output block.
 
+Implemented DSP building blocks:
+- Six-band parametric EQ (`SixBandEq`): RBJ peaking biquads centred at 60, 180, 500, 1.5k, 5k and 12kHz, ±12dB, independent planar channel state
+
 Implemented per track:
 - Linear gain from 0.0 to 1.0
 - Constant-power pan from hard left to hard right
@@ -20,12 +23,13 @@ The core ignores non-finite input samples and rejects invalid control values. Th
 ## What is deliberately not connected
 
 This is a DSP block processor, not yet a live audio application. It does not:
-- Implement the six-band EQ or insert effects yet
+- Integrate the standalone EQ stage into each channel's complete processing chain
+- Implement insert effects
 - Open ALSA, JACK, PulseAudio, or any audio device
 - Capture or play sound
 - Read or write MPC audio routes
 - Connect to MPC processes or modify device configuration
-- Provide EQ, inserts, Aux buses, resampling, or latency management
+- Provide insert effects, resampling, or latency management
 
 The current prototype controls are not wired to this engine. No real-time or hardware audio behavior is claimed.
 
@@ -39,7 +43,7 @@ The current prototype controls are not wired to this engine. No real-time or har
 
 ## Host tests
 
-The `Audio engine tests` GitHub Actions workflow compiles with C++14, warnings-as-errors, and runs deterministic tests for summing, panning, gain, mute, solo, master controls, four stereo Aux buses, invalid parameters, and non-finite samples. These tests do not require audio hardware.
+The `Audio engine tests` GitHub Actions workflow compiles with C++14, warnings-as-errors, and runs deterministic tests for summing, panning, gain, mute, solo, master controls, four stereo Aux buses, six-band EQ coefficient validation and signal processing, invalid parameters, and non-finite samples. These tests do not require audio hardware.
 
 
 ## Paire d'entrées Audio In
