@@ -9,6 +9,7 @@ Implemented per track:
 - Linear gain from 0.0 to 1.27 (+2.1 dB), matching the prototype's 0–127 fader range
 - Constant-power pan from hard left to hard right
 - Mute and solo
+- Two non-owning insert slots per track, including a tested soft-clip effect
 - Four independent stereo Aux buses with per-track send levels
 - Null input as silence
 
@@ -36,14 +37,14 @@ the MPC's existing audio device.
 ## What is deliberately not connected
 
 This is a DSP block processor, not yet a live audio application. It does not:
-- Implement insert effects
+- Add further insert effects (the initial soft-clip insert is implemented)
 - Open ALSA, JACK, PulseAudio, or any audio device (the capture interface currently uses the silent backend only)
 - Capture or play sound
 - Read or write MPC audio routes
 - Connect to MPC processes or modify device configuration
 - Provide resampling or latency management
 
-The browser prototype controls are not yet wired to this engine. Host-side DSP tests verify that configured per-track EQ runs before gain/pan and feeds both the main and Aux buses. No real-time or hardware audio behavior is claimed.
+The browser prototype controls are not yet wired to this engine. Host-side DSP tests verify that configured per-track EQ and inserts run before gain/pan and feed both the main and Aux buses. No real-time or hardware audio behavior is claimed.
 
 ## Next milestones
 
@@ -54,7 +55,7 @@ The browser prototype controls are not yet wired to this engine. Host-side DSP t
 
 ## Host tests
 
-The `Audio engine tests` GitHub Actions workflow compiles with C++14, warnings-as-errors, and runs deterministic tests for summing, panning, gain, mute, solo, master controls, four stereo Aux buses, six-band EQ frequency/Q/gain validation and signal processing, silent capture backend behavior, invalid parameters, and non-finite samples. These tests do not require audio hardware.
+The `Audio engine tests` GitHub Actions workflow compiles with C++14, warnings-as-errors, and runs deterministic tests for summing, panning, gain, mute, solo, master controls, four stereo Aux buses, six-band EQ frequency/Q/gain validation and signal processing, two-slot insert chains and soft clipping, silent capture backend behavior, invalid parameters, and non-finite samples. These tests do not require audio hardware.
 
 
 ## Paire d'entrées Audio In
