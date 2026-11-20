@@ -195,6 +195,7 @@ function makeStrip(index,isMaster=false){
   if(t.matches('[data-eq]'))data.eq[Number(t.dataset.eq)]=Number(t.value);
   if(t.matches('[data-aux]'))data.aux[Number(t.dataset.aux)]=Number(t.value);
   update();
+  if(!isMaster&&audioStereoLinked&&!syncingAudioPair&&(index===13||index===14))syncLinkedAudioPair(index);
  });
  el.addEventListener('click',e=>{
   if(!isMaster)selectChannel(index);
