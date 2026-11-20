@@ -5,6 +5,8 @@ on:
   push:
     paths:
       - "tools/arm-probe/**"
+      - "src/audio/**"
+      - "tests/audio_engine_test.cpp"
       - ".github/workflows/armv7-toolchain.yml"
 
 permissions:
@@ -56,6 +58,10 @@ jobs:
           arm-linux-gnueabihf-g++ $COMMON_FLAGS -std=c++14 \
             tools/arm-probe/egl-offscreen-pbuffer-probe.cpp -ldl \
             -o build/mpc-arm-egl-offscreen-pbuffer-probe
+
+          arm-linux-gnueabihf-g++ $COMMON_FLAGS -std=c++14 \
+            -Isrc/audio tests/audio_engine_test.cpp \
+            -o build/mpc-audio-engine-test-armv7
 
           echo "=== C executable ==="
           file build/mpc-arm-probe-c
@@ -110,7 +116,7 @@ jobs:
           arm-linux-gnueabihf-g++ -print-file-name=libc.so.6
 
           echo "=== Reject runtime requirements newer than the MPC ==="
-          for binary in build/mpc-arm-probe-cpp build/mpc-arm-graphics-probe-v2 build/mpc-arm-egl-client-extension-probe build/mpc-arm-egl-gbm-symbol-probe build/mpc-arm-gles2-symbol-probe build/mpc-arm-egl-offscreen-pbuffer-probe; do
+          for binary in build/mpc-arm-probe-cpp build/mpc-arm-graphics-probe-v2 build/mpc-arm-egl-client-extension-probe build/mpc-arm-egl-gbm-symbol-probe build/mpc-arm-gles2-symbol-probe build/mpc-arm-egl-offscreen-pbuffer-probe build/mpc-audio-engine-test-armv7; do
             if arm-linux-gnueabihf-readelf --version-info "$binary" | \
               grep -E 'GLIBCXX_3\.4\.(29|[3-9][0-9])|GLIBC_2\.(33|[4-9][0-9])'; then
               echo "ERROR: $binary requires a newer runtime than the MPC audit found."
@@ -118,6 +124,13 @@ jobs:
             fi
           done
           echo "No GLIBC newer than 2.32 or GLIBCXX newer than 3.4.28 was found."
+
+      - name: Upload ARMv7 audio engine host-test binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: mpc-armv7-audio-engine-test
+          path: build/mpc-audio-engine-test-armv7
+          if-no-files-found: error
 
       - name: Upload graphics loader probe v2
         uses: actions/upload-artifact@v4
