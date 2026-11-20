@@ -101,6 +101,29 @@ int main() {
     assert(near(left[0], 0.0f));
     assert(near(right[0], 0.0f));
 
+    // The channel mixer runs each track's configured EQ before its fader,
+    // pan and Aux sends (the default unconfigured EQ is transparent).
+    AudioEngine eqEngine;
+    AudioEngine::Track eqTrack;
+    eqTrack.auxSend[0] = 1.0f;
+    assert(eqEngine.setTrack(0, eqTrack));
+    auto engineEqBands = mpcmixer::SixBandEq::defaultBandParameters();
+    engineEqBands[2].gainDb = 6.0f;
+    assert(eqEngine.setTrackEq(0, 48000.0f, engineEqBands));
+    float eqImpulse[] = {1.0f, 0.0f, 0.0f, 0.0f};
+    const float* eqInputs[AudioEngine::kTrackCount] = {};
+    eqInputs[0] = eqImpulse;
+    float eqMainL[4] = {}, eqMainR[4] = {};
+    float eqAuxL[4] = {}, eqAuxR[4] = {};
+    float* eqAuxLeft[AudioEngine::kAuxBusCount] = {eqAuxL, nullptr, nullptr, nullptr};
+    float* eqAuxRight[AudioEngine::kAuxBusCount] = {eqAuxR, nullptr, nullptr, nullptr};
+    eqEngine.processWithAux(eqInputs, eqMainL, eqMainR,
+                            eqAuxLeft, eqAuxRight, 4);
+    assert(eqMainL[0] > std::sqrt(0.5f));
+    assert(near(eqMainL[0], eqAuxL[0]));
+    assert(near(eqMainR[0], eqAuxR[0]));
+    assert(!eqEngine.setTrackEq(16, 48000.0f, engineEqBands));
+
     // The default capture backend is explicit silence and never touches a device.
     mpcmixer::SilentAudioCaptureBackend silentBackend;
     mpcmixer::AudioFormat captureFormat;
