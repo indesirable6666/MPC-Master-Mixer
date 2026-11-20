@@ -46,7 +46,7 @@ button{color:inherit;touch-action:manipulation;-webkit-tap-highlight-color:trans
 .band output{display:block;color:var(--text);font-size:10px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
 .pan{display:flex;align-items:center;gap:7px}
 .pan span{color:var(--muted);font-size:9px;font-weight:800}
-.pan input{width:100%;min-width:0;min-height:40px;accent-color:var(--amber);touch-action:pan-y}
+.pan input{width:100%;min-width:0;min-height:40px;accent-color:var(--amber);touch-action:pan-y}.stereo-balance{display:none}.channel.stereo-linked .pan:not(.stereo-balance){display:none}.channel.stereo-linked .stereo-balance{display:flex}
 .aux{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
 .aux label{text-align:center;color:#c2ccd8;font-size:10px;font-weight:750}
 .aux input{display:block;width:100%;min-height:40px;margin:5px 0 2px;accent-color:var(--blue);touch-action:pan-y}
@@ -115,6 +115,7 @@ const strips=document.getElementById('strips');
 const labels=['KICK','SNARE','HI-HAT','PERC','BASS','SYNTH 1','SYNTH 2','KEYS','PAD','GUITAR','VOX','FX 1','FX 2','AUDIO 1','AUDIO 2','AUDIO 3'];
 const defaults=()=>({volume:100,pan:0,eq:[0,0,0,0,0,0],aux:[0,0,0,0],mute:false,solo:false});
 let audioStereoLinked=false;
+let audioStereoBalance=0;
 let syncingAudioPair=false;
 const state=Array.from({length:16},defaults);
 const masterState=defaults();
@@ -151,7 +152,7 @@ function makeStrip(index,isMaster=false){
   <div class="channel-head"><span class="channel-title">${name}</span><span class="channel-type">${isMaster?'STEREO':'<span class="channel-number">'+String(index+1).padStart(2,'0')+'</span> · AUDIO'}</span></div>
   <div class="block"><div class="block-title">Inserts · effets</div><div class="fx-row"><button class="fx" type="button" aria-pressed="true" aria-label="Insert 1, placeholder activé" title="Placeholder visuel uniquement">INSERT 1</button><button class="fx off" type="button" aria-pressed="false" aria-label="Insert 2, placeholder désactivé" title="Placeholder visuel uniquement">INSERT 2</button></div></div>
   <div class="block"><div class="block-title">EQ paramétrique · 6 bandes</div><div class="eq">${['LF','LM','M1','M2','HM','HF'].map((band,i)=>`<label class="band">${band}<input data-eq="${i}" type="range" min="-12" max="12" step="0.5" value="0" aria-label="EQ ${band} ${name}"><output>0.0</output></label>`).join('')}</div></div>
-  <div class="block"><div class="block-title">Panoramique</div><div class="pan"><span>L</span><input data-pan type="range" min="-100" max="100" value="0" aria-label="Panoramique ${name}"><span>R</span><output class="pan-value" aria-live="polite">C</output></div></div>
+  <div class="block"><div class="block-title">${index===13||index===14?'Panoramique / balance':'Panoramique'}</div><div class="pan"><span>L</span><input data-pan type="range" min="-100" max="100" value="0" aria-label="Panoramique ${name}"><span>R</span><output class="pan-value" aria-live="polite">C</output></div>${index===13||index===14?'<div class="pan stereo-balance"><span>L</span><input data-stereo-balance type="range" min="-100" max="100" value="0" disabled aria-label="Balance stéréo Audio In 1/2"><span>R</span><output class="balance-value" aria-live="polite">C</output></div>':''}</div>
   <div class="block"><div class="block-title">Aux sends</div><div class="aux">${[1,2,3,4].map((n)=>`<label>AUX ${n}<input data-aux="${n-1}" type="range" min="0" max="100" value="0" aria-label="Aux ${n} ${name}"><output>0</output></label>`).join('')}</div></div>
   <div class="switches"><button class="toggle" data-toggle="mute" type="button" aria-pressed="false">MUTE</button><button class="toggle" data-toggle="solo" type="button" aria-pressed="false">SOLO</button></div>
   ${meter()}
@@ -168,6 +169,8 @@ function makeStrip(index,isMaster=false){
   panInput.title='Pan '+panLabel;
   panInput.setAttribute('aria-valuetext',panValue===0?'Centre':panValue<0?'Gauche '+Math.abs(panValue)+' pour cent':'Droite '+panValue+' pour cent');
   el.querySelector('.pan-value').textContent=panLabel;
+  const balanceInput=el.querySelector('[data-stereo-balance]');
+  if(balanceInput){const balanceLabel=audioStereoBalance===0?'C':audioStereoBalance<0?'L '+Math.abs(audioStereoBalance):'R '+audioStereoBalance;balanceInput.value=audioStereoBalance;balanceInput.setAttribute('aria-valuetext',balanceLabel==='C'?'Centre':balanceLabel);balanceInput.title='Balance '+balanceLabel;el.querySelector('.balance-value').textContent=balanceLabel;}
   el.querySelectorAll('[data-aux]').forEach(input=>{
    input.nextElementSibling.textContent=input.value+'%';
    input.setAttribute('aria-valuetext',input.value+' pour cent');
@@ -192,6 +195,7 @@ function makeStrip(index,isMaster=false){
   if(!isMaster)selectChannel(index);
   if(t.matches('[data-volume]'))data.volume=Number(t.value);
   if(t.matches('[data-pan]'))data.pan=Number(t.value);
+  if(t.matches('[data-stereo-balance]')){audioStereoBalance=Number(t.value);document.querySelectorAll('[data-stereo-balance]').forEach(input=>{input.value=audioStereoBalance;input.setAttribute('aria-valuetext',audioStereoBalance===0?'Centre':(audioStereoBalance<0?'Gauche ':'Droite ')+Math.abs(audioStereoBalance)+' pour cent);input.closest('.pan').querySelector('.balance-value').textContent=audioStereoBalance===0?'C':audioStereoBalance<0?'L '+Math.abs(audioStereoBalance):'R '+audioStereoBalance;});}
   if(t.matches('[data-eq]'))data.eq[Number(t.dataset.eq)]=Number(t.value);
   if(t.matches('[data-aux]'))data.aux[Number(t.dataset.aux)]=Number(t.value);
   update();
@@ -217,15 +221,13 @@ function syncLinkedAudioPair(sourceIndex){
  if(syncingAudioPair)return;
  const targetIndex=sourceIndex===13?14:13;
  const source=state[sourceIndex],target=state[targetIndex];
- Object.assign(target,{volume:source.volume,pan:source.pan,eq:[...source.eq],aux:[...source.aux],mute:source.mute,solo:source.solo});
+ Object.assign(target,{volume:source.volume,eq:[...source.eq],aux:[...source.aux],mute:source.mute,solo:source.solo});
  const targetEl=document.querySelector('[data-channel="'+targetIndex+'"]');
  if(!targetEl)return;
  syncingAudioPair=true;
  targetEl.querySelector('[data-volume]').value=target.volume;
  targetEl.querySelector('[data-volume]').dispatchEvent(new Event('input',{bubbles:true}));
- targetEl.querySelector('[data-pan]').value=target.pan;
- targetEl.querySelector('[data-pan]').dispatchEvent(new Event('input',{bubbles:true}));
- targetEl.querySelectorAll('[data-eq]').forEach(input=>{input.value=target.eq[Number(input.dataset.eq)];input.dispatchEvent(new Event('input',{bubbles:true}))});
+  targetEl.querySelectorAll('[data-eq]').forEach(input=>{input.value=target.eq[Number(input.dataset.eq)];input.dispatchEvent(new Event('input',{bubbles:true}))});
  targetEl.querySelectorAll('[data-aux]').forEach(input=>{input.value=target.aux[Number(input.dataset.aux)];input.dispatchEvent(new Event('input',{bubbles:true}))});
  ['mute','solo'].forEach(key=>{const button=targetEl.querySelector('[data-toggle="'+key+'"]');button.classList.toggle('active',target[key]);button.setAttribute('aria-pressed',String(target[key]))});
  targetEl.classList.add('stereo-linked');
@@ -242,7 +244,8 @@ function setAudioStereoLinked(enabled){
  [left,right].forEach((el,i)=>{
   el.classList.toggle('stereo-linked',enabled);
   el.querySelector('.channel-type').textContent=enabled?(i===0?'STÉRÉO · L':'STÉRÉO · R'):(i===0?'14 · AUDIO':'15 · AUDIO');
-  const pan=el.querySelector('[data-pan]');pan.disabled=enabled;pan.title=enabled?'Pan désactivé en mode stéréo lié':'Panoramique mono';pan.setAttribute('aria-label',enabled?'Balance stéréo indisponible pour le moment':'Panoramique Audio In '+(i+1));
+  const pan=el.querySelector('[data-pan]');pan.disabled=enabled;pan.title=enabled?'Pan désactivé en mode stéréo lié':'Panoramique mono';pan.setAttribute('aria-label','Panoramique mono Audio In '+(i+1));
+   const balance=el.querySelector('[data-stereo-balance]');balance.disabled=!enabled;balance.value=audioStereoBalance;balance.setAttribute('aria-valuetext',audioStereoBalance===0?'Centre':(audioStereoBalance<0?'Gauche ':'Droite ')+Math.abs(audioStereoBalance)+' pour cent');el.querySelector('.balance-value').textContent=audioStereoBalance===0?'C':audioStereoBalance<0?'L '+Math.abs(audioStereoBalance):'R '+audioStereoBalance;
  });
  if(enabled)syncLinkedAudioPair(13);
 }
