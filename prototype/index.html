@@ -75,6 +75,19 @@ button{color:inherit;touch-action:manipulation;-webkit-tap-highlight-color:trans
 .bottom .hint{margin-left:auto}
 @media(max-width:650px){.topbar{height:54px;padding:0 9px;gap:7px}.project,.toolbar .optional{display:none}.brand{font-size:13px}.mode{font-size:9px;padding:6px 7px}.bank-status{font-size:8px;padding:5px 6px}.master-dock{width:142px;min-width:142px;padding:8px 7px 8px 0}.strips{padding:8px}.channel{width:168px;min-width:168px}.master-dock .channel{width:100%;min-width:0}.bottom{font-size:9px;padding:0 8px}}
 @media(max-height:650px){.topbar{height:48px}.channel{gap:4px;padding:6px}.block{padding:5px}.band input{height:48px}.fader-area{min-height:80px}.fader{min-height:75px}.bottom{height:27px}}
+@media(max-width:480px){
+ .topbar{gap:5px;padding:0 6px}
+ .brand{font-size:10px;letter-spacing:.015em}
+ .topbar>.mode{display:none}
+ .toolbar{gap:3px}
+ .toolbar .tool{min-height:38px;padding:0 6px;font-size:9px}
+ .bank-status{max-width:72px;padding:4px 5px;font-size:7px;line-height:1.15;white-space:normal;text-align:center}
+ #meterDemo{max-width:76px;white-space:normal;line-height:1.1}
+ #reset{max-width:58px;white-space:normal;line-height:1.1}
+ .bottom{gap:7px;padding:0 7px}
+ .bottom .hint{display:none}
+ .bottom span:not(.hint){min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+}
 </style>
 </head>
 <body>
