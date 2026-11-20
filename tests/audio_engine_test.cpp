@@ -150,6 +150,30 @@ int main() {
     assert(!audioIn.setStereoControls(stereo));
     leftChannel.pan = std::numeric_limits<float>::quiet_NaN();
     assert(!audioIn.setChannel(0, leftChannel));
+    // Rejected controls leave the previous valid state untouched.
+    assert(near(audioIn.stereoControls().gain, 0.5f));
+    assert(audioIn.stereoControls().mute);
+    assert(near(audioIn.channel(0).pan, -1.0f));
+
+    // Linked processing treats missing and non-finite samples as silence.
+    stereo = mpcmixer::AudioInputPair::StereoControls{};
+    assert(audioIn.setStereoControls(stereo));
+    audioIn.setLinked(true);
+    float invalidPair[] = {
+        std::numeric_limits<float>::quiet_NaN(),
+        std::numeric_limits<float>::infinity()
+    };
+    pairL[0] = pairL[1] = 9.0f;
+    pairR[0] = pairR[1] = 9.0f;
+    audioIn.process(invalidPair, nullptr, pairL, pairR, 2);
+    assert(near(pairL[0], 0.0f) && near(pairL[1], 0.0f));
+    assert(near(pairR[0], 0.0f) && near(pairR[1], 0.0f));
+
+    // A zero-frame block is a safe no-op.
+    pairL[0] = 7.0f;
+    pairR[0] = 8.0f;
+    audioIn.process(inputL, inputR, pairL, pairR, 0);
+    assert(near(pairL[0], 7.0f) && near(pairR[0], 8.0f));
 
     std::cout << "Audio engine tests passed\n";
     return 0;
