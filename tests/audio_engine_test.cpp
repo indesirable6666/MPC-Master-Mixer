@@ -280,6 +280,32 @@ int main() {
     eq.reset();
     assert(near(eq.processSample(0.5f), 0.5f));
 
+    // Verify the parametric band's actual steady-state magnitude at its
+    // centre frequency, not merely that an impulse response changes.
+    auto responseBands = mpcmixer::SixBandEq::defaultBandParameters();
+    responseBands[3].frequencyHz = 2300.0f;
+    responseBands[3].q = 2.2f;
+    responseBands[3].gainDb = -4.5f;
+    mpcmixer::SixBandEq responseEq;
+    assert(responseEq.configure(48000.0f, responseBands));
+    double inputEnergy = 0.0;
+    double outputEnergy = 0.0;
+    constexpr int kResponseFrames = 48000;
+    constexpr int kWarmupFrames = 4000;
+    for (int frame = 0; frame < kResponseFrames + kWarmupFrames; ++frame) {
+        const float sample = std::sin(2.0f * 3.14159265358979323846f *
+                                      2300.0f * frame / 48000.0f);
+        const float processed = responseEq.processSample(sample);
+        if (frame >= kWarmupFrames) {
+            inputEnergy += static_cast<double>(sample) * sample;
+            outputEnergy += static_cast<double>(processed) * processed;
+        }
+    }
+    const float measuredRatio = static_cast<float>(
+        std::sqrt(outputEnergy / inputEnergy));
+    const float expectedRatio = std::pow(10.0f, -4.5f / 20.0f);
+    assert(near(measuredRatio, expectedRatio, 0.002f));
+
     // Stereo Aux returns are mixed into the master bus with their own
     // gain, balance and mute, and are not fed back into Aux sends.
     AudioEngine returnEngine;
