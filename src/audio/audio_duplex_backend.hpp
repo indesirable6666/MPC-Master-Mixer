@@ -16,7 +16,7 @@ struct AudioDuplexBuffer {
     std::size_t inputChannelCount = 0, outputChannelCount = 0, frameCount = 0;
 };
 enum class AudioDuplexStatus { Processed, NotPrepared, InvalidBuffer };
-using AudioProcessCallback = void (*)(void*, const AudioDuplexBuffer&) noexcept;
+using AudioProcessCallback = void (*)(void*, const AudioDuplexBuffer&);
 // Lifecycle methods run on the control thread. Implementations must invoke the
 // callback with backend-owned buffers without allocation, locks, logging or waits.
 class AudioDuplexBackend {
