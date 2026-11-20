@@ -49,6 +49,14 @@ jobs:
           arm-linux-gnueabihf-readelf -l build/mpc-arm-probe-cpp | grep interpreter || true
           arm-linux-gnueabihf-readelf --version-info build/mpc-arm-probe-cpp
 
+          echo "=== Dynamic library dependencies (DT_NEEDED) ==="
+          arm-linux-gnueabihf-readelf -d build/mpc-arm-probe-cpp | grep -E 'NEEDED|RPATH|RUNPATH' || true
+
+          echo "=== Cross-toolchain runtime library locations ==="
+          arm-linux-gnueabihf-g++ -print-file-name=libstdc++.so.6
+          arm-linux-gnueabihf-g++ -print-file-name=libgcc_s.so.1
+          arm-linux-gnueabihf-g++ -print-file-name=libc.so.6
+
           echo "=== Reject runtime requirements newer than the MPC ==="
           if arm-linux-gnueabihf-readelf --version-info build/mpc-arm-probe-cpp | \
             grep -E 'GLIBCXX_3\.4\.(29|[3-9][0-9])|GLIBC_2\.(33|[4-9][0-9])'; then
