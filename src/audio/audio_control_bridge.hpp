@@ -77,6 +77,20 @@ public:
                                auxLeft, auxRight, frameCount);
     }
 
+    void processWithAuxAndReturns(
+        const float* const inputs[AudioEngine::kTrackCount],
+        float* outputLeft, float* outputRight,
+        float* const auxLeft[AudioEngine::kAuxBusCount],
+        float* const auxRight[AudioEngine::kAuxBusCount],
+        const float* const returnLeft[AudioEngine::kAuxBusCount],
+        const float* const returnRight[AudioEngine::kAuxBusCount],
+        std::size_t frameCount) noexcept {
+        applyPending();
+        engine_.processWithAuxAndReturns(inputs, outputLeft, outputRight,
+                                         auxLeft, auxRight, returnLeft,
+                                         returnRight, frameCount);
+    }
+
     const AudioEngine& engineOnAudioThread() const noexcept { return engine_; }
 
     std::size_t pendingCountApprox() const noexcept {
