@@ -19,6 +19,25 @@ Implemented on the master bus:
 
 The core ignores non-finite input samples and rejects invalid control values. The stereo float bus is not clipped; a future output stage must define limiting and sample-format conversion. Aux sends are post-fader and post-pan, pre-master; stereo returns are summed into the main bus before master gain/mute and are never fed back into sends. Aux output and return buffers are caller-owned and optional.
 
+## Current signal flow
+
+For each mono track the host DSP path is:
+
+```text
+input buffer -> six-band EQ -> insert slot 1 -> insert slot 2
+            -> track gain -> constant-power pan -> main stereo sum
+                                               -> four post-fader Aux sends
+
+four stereo Aux return buffers -> return gain/balance/mute -> main stereo sum
+main stereo sum -> Master gain/mute -> stereo float output
+```
+
+Mute and Solo are evaluated before the track contributes to the main or Aux
+sends. Aux returns are added only to the main bus, so they cannot recursively
+feed the send buses. The Master control affects the main output but not the
+pre-master Aux sends. The float output can exceed full scale and still needs a
+separate limiter/format-conversion stage before any hardware output.
+
 ## Audio capture boundary
 
 `src/audio/audio_backend.hpp` defines a device-independent `AudioCaptureBackend`
