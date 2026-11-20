@@ -1,0 +1,82 @@
+#pragma once
+
+#include <cstdint>
+#include <vector>
+
+namespace mpcmixer {
+
+struct MidiMessage {
+    std::uint8_t status;
+    std::uint8_t data1;
+    std::uint8_t data2;
+};
+
+class MidiTransport {
+public:
+    virtual ~MidiTransport() = default;
+    virtual bool send(const MidiMessage& message) = 0;
+};
+
+// Deliberately inert transport for UI development and automated tests.
+// It records messages in memory and never opens ALSA or a device.
+class SimulatedMidiTransport final : public MidiTransport {
+public:
+    bool send(const MidiMessage& message) override {
+        messages_.push_back(message);
+        return true;
+    }
+
+    const std::vector<MidiMessage>& messages() const { return messages_; }
+    void clear() { messages_.clear(); }
+
+private:
+    std::vector<MidiMessage> messages_;
+};
+
+struct CcMapping {
+    std::uint8_t channel;    // MIDI channel: 0..15
+    std::uint8_t controller; // CC number: 0..127
+    bool explicitly_verified;
+};
+
+class VolumeMidiAdapter {
+public:
+    explicit VolumeMidiAdapter(MidiTransport& transport)
+        : transport_(transport), mapping_{0, 0, false} {}
+
+    // No mapping is active until the caller supplies one and marks it verified.
+    bool configure(const CcMapping& mapping) {
+        if (!mapping.explicitly_verified ||
+            mapping.channel > 15 || mapping.controller > 127) {
+            mapping_ = CcMapping{0, 0, false};
+            return false;
+        }
+        mapping_ = mapping;
+        return true;
+    }
+
+    void clearMapping() { mapping_ = CcMapping{0, 0, false}; }
+    bool hasVerifiedMapping() const { return mapping_.explicitly_verified; }
+
+    // Normalized UI volume [0,1] becomes a 7-bit CC value.
+    // This sends only through the injected transport; this project currently
+    // provides a simulated transport, not a live ALSA implementation.
+    bool setVolume(float normalized) {
+        if (!hasVerifiedMapping() || normalized < 0.0f || normalized > 1.0f) {
+            return false;
+        }
+        const auto value = static_cast<std::uint8_t>(normalized * 127.0f + 0.5f);
+        const MidiMessage message{
+            static_cast<std::uint8_t>(0xB0u | mapping_.channel),
+            mapping_.controller,
+            value
+        };
+        return transport_.send(message);
+    }
+
+private:
+    MidiTransport& transport_;
+    CcMapping mapping_;
+};
+
+} // namespace mpcmixer
