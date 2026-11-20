@@ -100,6 +100,38 @@ int main() {
     assert(!tracks.hasVerifiedMapping(1));
     assert(trackTransport.messages().size() == 2);
 
+    // Pan is independently mapped per track and remains disabled by default.
+    SimulatedMidiTransport panTransport;
+    TrackPanMidiAdapter pans(panTransport);
+    assert(!pans.hasVerifiedMapping(0));
+    assert(!pans.setTrackPan(0, 0.0f));
+    assert(!pans.configureTrack(16, CcMapping{0, 10, true}));
+    assert(pans.configureTrack(0, CcMapping{1, 10, true}));
+    assert(pans.configureTrack(1, CcMapping{4, 11, true}));
+    assert(pans.setTrackPan(0, -1.0f));
+    assert(pans.setTrackPan(0, 0.0f));
+    assert(pans.setTrackPan(0, 1.0f));
+    assert(pans.setTrackPan(1, 0.0f));
+    assert(!pans.setTrackPan(0, -1.01f));
+    assert(!pans.setTrackPan(0, 1.01f));
+    assert(!pans.setTrackPan(0, std::numeric_limits<float>::quiet_NaN()));
+    const auto& panMessages = panTransport.messages();
+    assert(panMessages.size() == 4);
+    assert(panMessages[0].status == 0xB1 && panMessages[0].data1 == 10 &&
+           panMessages[0].data2 == 0);
+    assert(panMessages[1].status == 0xB1 && panMessages[1].data1 == 10 &&
+           panMessages[1].data2 == 64);
+    assert(panMessages[2].status == 0xB1 && panMessages[2].data1 == 10 &&
+           panMessages[2].data2 == 127);
+    assert(panMessages[3].status == 0xB4 && panMessages[3].data1 == 11 &&
+           panMessages[3].data2 == 64);
+    pans.clearTrack(0);
+    assert(!pans.hasVerifiedMapping(0));
+    assert(pans.hasVerifiedMapping(1));
+    pans.clearAll();
+    assert(!pans.hasVerifiedMapping(1));
+    assert(panTransport.messages().size() == 4);
+
     std::cout << "MIDI adapter tests passed (no ALSA/device access).\n";
     return 0;
 }
