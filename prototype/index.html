@@ -37,17 +37,17 @@ button{color:inherit;touch-action:manipulation;-webkit-tap-highlight-color:trans
 .fx-row{display:flex;gap:5px}
 .fx{flex:1;min-width:0;padding:6px 2px;border:1px solid #3b4654;border-radius:4px;background:#2b3542;color:#cbd4df;text-align:center;font-size:9px;font-weight:750}
 .fx.off{color:#778392;background:#202833}
-.eq{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:2px}
-.band{min-width:0;text-align:center;color:var(--muted);font-size:9px}
-.band input{display:block;width:100%;height:64px;margin:3px auto;accent-color:var(--amber);writing-mode:vertical-lr;direction:rtl}
-.band output{display:block;color:var(--text);font-size:9px;font-variant-numeric:tabular-nums}
+.eq{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:4px}
+.band{min-width:0;text-align:center;color:#c2ccd8;font-size:10px;font-weight:750}
+.band input{display:block;width:100%;height:76px;min-height:36px;margin:4px auto;accent-color:var(--amber);writing-mode:vertical-lr;direction:rtl;touch-action:pan-y}
+.band output{display:block;color:var(--text);font-size:10px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
 .pan{display:flex;align-items:center;gap:7px}
 .pan span{color:var(--muted);font-size:9px;font-weight:800}
 .pan input{width:100%;min-width:0;min-height:30px;accent-color:var(--amber);touch-action:pan-y}
 .aux{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
-.aux label{text-align:center;color:var(--muted);font-size:9px}
-.aux input{display:block;width:100%;min-height:30px;margin:5px 0 1px;accent-color:var(--blue);touch-action:pan-y}
-.aux output{color:var(--text);font-size:9px;font-variant-numeric:tabular-nums}
+.aux label{text-align:center;color:#c2ccd8;font-size:10px;font-weight:750}
+.aux input{display:block;width:100%;min-height:38px;margin:5px 0 2px;accent-color:var(--blue);touch-action:pan-y}
+.aux output{color:var(--text);font-size:10px;font-weight:700;font-variant-numeric:tabular-nums}
 .switches{display:flex;gap:6px}
 .toggle{flex:1;min-height:34px;border:1px solid #414c59;border-radius:5px;background:#252e39;font-size:10px;font-weight:850;letter-spacing:.04em}
 .toggle.active{border-color:var(--amber);background:#574324;color:#ffe0a2}
@@ -74,7 +74,7 @@ button{color:inherit;touch-action:manipulation;-webkit-tap-highlight-color:trans
 .bottom strong{color:#e9c47e;font-weight:750}
 .bottom .hint{margin-left:auto}
 @media(max-width:650px){.topbar{height:54px;padding:0 9px;gap:7px}.project,.toolbar .optional{display:none}.brand{font-size:13px}.mode{font-size:9px;padding:6px 7px}.bank-status{font-size:8px;padding:5px 6px}.master-dock{width:142px;min-width:142px;padding:8px 7px 8px 0}.strips{padding:8px}.channel{width:168px;min-width:168px}.master-dock .channel{width:100%;min-width:0}.bottom{font-size:9px;padding:0 8px}}
-@media(max-height:650px){.topbar{height:48px}.channel{gap:4px;padding:6px}.block{padding:5px}.band input{height:42px}.fader-area{min-height:80px}.fader{min-height:75px}.bottom{height:27px}}
+@media(max-height:650px){.topbar{height:48px}.channel{gap:4px;padding:6px}.block{padding:5px}.band input{height:48px}.fader-area{min-height:80px}.fader{min-height:75px}.bottom{height:27px}}
 </style>
 </head>
 <body>
@@ -124,12 +124,21 @@ function makeStrip(index,isMaster=false){
   ${meter()}
   <div class="fader-area"><div class="scale" aria-hidden="true"><span>+2</span><span>0</span><span>-12</span><span>-∞</span></div><input class="fader" data-volume type="range" min="0" max="127" value="100" aria-label="Volume ${name}" title="Valeur simulée locale — ne modifie pas le son de la MPC"><div class="fader-readout"><output class="db">0.0 dB</output><span class="value">100 / 127</span></div></div>`;
  const update=()=>{
-  el.querySelectorAll('[data-eq]').forEach(input=>{const v=Number(input.value);input.nextElementSibling.textContent=(v>0?'+':'')+v.toFixed(1)});
+  el.querySelectorAll('[data-eq]').forEach(input=>{
+   const v=Number(input.value),text=(v>0?'+':'')+v.toFixed(1);
+   input.nextElementSibling.textContent=text+' dB';
+   input.setAttribute('aria-valuetext',text+' décibels');
+  });
   const panValue=Number(data.pan);
   const panLabel=panValue===0?'C':panValue<0?'L '+Math.abs(panValue):'R '+panValue;
-  el.querySelector('[data-pan]').title='Pan '+panLabel;
+  const panInput=el.querySelector('[data-pan]');
+  panInput.title='Pan '+panLabel;
+  panInput.setAttribute('aria-valuetext',panValue===0?'Centre':panValue<0?'Gauche '+Math.abs(panValue)+' pour cent':'Droite '+panValue+' pour cent');
   el.querySelector('.pan-value').textContent=panLabel;
-  el.querySelectorAll('[data-aux]').forEach(input=>input.nextElementSibling.textContent=input.value);
+  el.querySelectorAll('[data-aux]').forEach(input=>{
+   input.nextElementSibling.textContent=input.value+'%';
+   input.setAttribute('aria-valuetext',input.value+' pour cent');
+  });
   const db=el.querySelector('.db');
   const raw=Number(data.volume);
   const dbText=raw===0?'−∞ dB':(20*Math.log10(raw/100)).toFixed(1)+' dB';
