@@ -126,7 +126,7 @@ public:
     // Backward-compatible main stereo mix without Aux output buffers.
     void process(const float* const inputs[kTrackCount],
                  float* outputLeft, float* outputRight,
-                 std::size_t frameCount) const {
+                 std::size_t frameCount) {
         processWithAux(inputs, outputLeft, outputRight, nullptr, nullptr,
                        frameCount);
     }
