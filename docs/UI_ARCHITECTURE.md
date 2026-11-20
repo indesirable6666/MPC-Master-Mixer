@@ -107,8 +107,10 @@ Les tranches 14 et 15 sont identifiées comme Audio In 1 et Audio In 2. Le bouto
 `LINK AUDIO 1/2` couple visuellement ces deux tranches : le fader, les EQ,
 les Aux Sends, Mute et Solo sont synchronisés depuis la tranche manipulée.
 Les deux tranches restent affichées séparément avec les repères stéréo L/R.
-Le panoramique mono est désactivé pendant le couplage ; un véritable réglage
-Balance stéréo reste à implémenter.
+Le panoramique mono est masqué pendant le couplage ; un réglage Balance
+stéréo partagé devient disponible et agit sur les deux tranches. Le contrôle
+de balance est indépendant des valeurs de pan mono conservées pour le mode
+dissocié.
 
 Ce couplage est une interaction locale de démonstration. Il ne sélectionne pas
 les entrées physiques, ne capture aucun signal et ne modifie pas le routage
