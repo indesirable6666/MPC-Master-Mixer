@@ -121,6 +121,11 @@ int main(int argc, char** argv) {
     using Terminate = EGLBoolean (*)(EGLDisplay);
     using GetError = EGLint (*)();
     using GetString = const unsigned char* (*)(unsigned int);
+    using ClearColor = void (*)(float, float, float, float);
+    using Clear = void (*)(unsigned int);
+    using Finish = void (*)();
+    using ReadPixels = void (*)(int, int, int, int, unsigned int, unsigned int, void*);
+    using GetGlError = unsigned int (*)();
 
     auto getDisplay = symbol<GetDisplay>(egl, "eglGetDisplay");
     auto initialize = symbol<Initialize>(egl, "eglInitialize");
@@ -134,10 +139,16 @@ int main(int argc, char** argv) {
     auto terminate = symbol<Terminate>(egl, "eglTerminate");
     auto getError = symbol<GetError>(egl, "eglGetError");
     auto glGetString = symbol<GetString>(gles, "glGetString");
+    auto glClearColor = symbol<ClearColor>(gles, "glClearColor");
+    auto glClear = symbol<Clear>(gles, "glClear");
+    auto glFinish = symbol<Finish>(gles, "glFinish");
+    auto glReadPixels = symbol<ReadPixels>(gles, "glReadPixels");
+    auto glGetError = symbol<GetGlError>(gles, "glGetError");
 
     if (!getDisplay || !initialize || !chooseConfig || !createPbuffer ||
         !bindAPI || !createContext || !makeCurrent || !destroySurface ||
-        !destroyContext || !terminate || !getError || !glGetString) {
+        !destroyContext || !terminate || !getError || !glGetString ||
+        !glClearColor || !glClear || !glFinish || !glReadPixels || !glGetError) {
         std::fprintf(report, "FAIL: one or more required EGL/GLES entry points are missing.\n");
         dlclose(gles); dlclose(egl);
         if (report != stdout) std::fclose(report);
@@ -213,7 +224,33 @@ int main(int argc, char** argv) {
     std::fprintf(report, "GLES version: %s\n", version ? reinterpret_cast<const char*>(version) : "(null)");
     std::fprintf(report, "GLES renderer: %s\n", renderer ? reinterpret_cast<const char*>(renderer) : "(null)");
     std::fprintf(report, "GLES vendor: %s\n", vendor ? reinterpret_cast<const char*>(vendor) : "(null)");
-    std::fprintf(report, "SUCCESS: EGL ES2 pbuffer context created and made current.\n");
+    // Render a known solid color into the offscreen pbuffer and verify one pixel.
+    // RGBA(0.25, 0.50, 0.75, 1.0) should quantize to approximately (64,128,191,255).
+    glClearColor(0.25f, 0.50f, 0.75f, 1.0f);
+    glClear(0x00004000u); // GL_COLOR_BUFFER_BIT
+    glFinish();
+    unsigned char pixel[4] = {0, 0, 0, 0};
+    glReadPixels(32, 32, 1, 1, 0x1908u, 0x1401u, pixel); // GL_RGBA, GL_UNSIGNED_BYTE
+    const unsigned int glError = glGetError();
+    std::fprintf(report, "Readback center pixel RGBA: %u,%u,%u,%u\n",
+                 pixel[0], pixel[1], pixel[2], pixel[3]);
+    const bool pixelMatches =
+        std::abs(static_cast<int>(pixel[0]) - 64) <= 2 &&
+        std::abs(static_cast<int>(pixel[1]) - 128) <= 2 &&
+        std::abs(static_cast<int>(pixel[2]) - 191) <= 2 &&
+        std::abs(static_cast<int>(pixel[3]) - 255) <= 2;
+    if (glError != 0 || !pixelMatches) {
+        std::fprintf(report, "FAIL: GLES draw/readback check failed; glError=0x%04x\n", glError);
+        makeCurrent(display, nullptr, nullptr, nullptr);
+        destroySurface(display, surface);
+        destroyContext(display, context);
+        terminate(display);
+        dlclose(gles);
+        dlclose(egl);
+        if (report != stdout) std::fclose(report);
+        return 13;
+    }
+    std::fprintf(report, "SUCCESS: EGL pbuffer created; GLES clear and pixel readback verified.\n");
 
     makeCurrent(display, nullptr, nullptr, nullptr);
     destroySurface(display, surface);
