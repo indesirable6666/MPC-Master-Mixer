@@ -132,6 +132,52 @@ int main() {
     assert(!pans.hasVerifiedMapping(1));
     assert(panTransport.messages().size() == 4);
 
+    // Each track/Aux pair has an independent, explicitly verified mapping.
+    SimulatedMidiTransport auxTransport;
+    TrackAuxMidiAdapter auxSends(auxTransport);
+    assert(!auxSends.hasVerifiedMapping(0, 0));
+    assert(!auxSends.setSendLevel(0, 0, 0.5f));
+    assert(!auxSends.configureSend(16, 0, CcMapping{0, 30, true}));
+    assert(!auxSends.configureSend(0, 4, CcMapping{0, 30, true}));
+    assert(auxSends.configureSend(0, 0, CcMapping{2, 30, true}));
+    assert(auxSends.configureSend(0, 1, CcMapping{2, 31, true}));
+    assert(auxSends.configureSend(1, 0, CcMapping{5, 40, true}));
+    assert(auxSends.setSendLevel(0, 0, 0.0f));
+    assert(auxSends.setSendLevel(0, 1, 0.5f));
+    assert(auxSends.setSendLevel(1, 0, 1.0f));
+    assert(!auxSends.setSendLevel(0, 2, 0.5f));
+    assert(!auxSends.setSendLevel(0, 0, -0.01f));
+    assert(!auxSends.setSendLevel(0, 0, 1.01f));
+    assert(!auxSends.setSendLevel(0, 0,
+                                  std::numeric_limits<float>::infinity()));
+    const auto& auxMessages = auxTransport.messages();
+    assert(auxMessages.size() == 3);
+    assert(auxMessages[0].status == 0xB2 && auxMessages[0].data1 == 30 &&
+           auxMessages[0].data2 == 0);
+    assert(auxMessages[1].status == 0xB2 && auxMessages[1].data1 == 31 &&
+           auxMessages[1].data2 == 64);
+    assert(auxMessages[2].status == 0xB5 && auxMessages[2].data1 == 40 &&
+           auxMessages[2].data2 == 127);
+
+    // Invalid reconfiguration and clearing affect only the addressed slots.
+    assert(!auxSends.configureSend(0, 0, CcMapping{16, 30, true}));
+    assert(!auxSends.hasVerifiedMapping(0, 0));
+    assert(auxSends.hasVerifiedMapping(0, 1));
+    assert(auxSends.hasVerifiedMapping(1, 0));
+    assert(!auxSends.setSendLevel(0, 0, 0.25f));
+    auxSends.clearSend(0, 1);
+    assert(!auxSends.hasVerifiedMapping(0, 1));
+    assert(auxSends.hasVerifiedMapping(1, 0));
+    auxSends.clearTrack(1);
+    assert(!auxSends.hasVerifiedMapping(1, 0));
+    assert(auxTransport.messages().size() == 3);
+    assert(auxSends.configureSend(15, 3, CcMapping{15, 127, true}));
+    assert(auxSends.hasVerifiedMapping(15, 3));
+    auxSends.clearAll();
+    assert(!auxSends.hasVerifiedMapping(15, 3));
+    assert(!auxSends.setSendLevel(15, 3, 0.5f));
+    assert(auxTransport.messages().size() == 3);
+
     std::cout << "MIDI adapter tests passed (no ALSA/device access).\n";
     return 0;
 }
