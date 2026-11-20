@@ -1,4 +1,5 @@
 #include "audio_engine.hpp"
+#include "audio_backend.hpp"
 #include "six_band_eq.hpp"
 
 #include <cassert>
@@ -99,6 +100,37 @@ int main() {
     engine.process(badInputs, left, right, 1);
     assert(near(left[0], 0.0f));
     assert(near(right[0], 0.0f));
+
+    // The default capture backend is explicit silence and never touches a device.
+    mpcmixer::SilentAudioCaptureBackend silentBackend;
+    mpcmixer::AudioFormat captureFormat;
+    assert(silentBackend.capture(nullptr, 2, 4) ==
+           mpcmixer::CaptureStatus::NotPrepared);
+    assert(silentBackend.prepare(captureFormat));
+    float captureLeft[] = {1.0f, -1.0f, 0.5f, 0.25f};
+    float captureRight[] = {-0.5f, 0.5f, 1.0f, -1.0f};
+    float* captureBuffers[] = {captureLeft, captureRight};
+    assert(silentBackend.capture(captureBuffers, 2, 4) ==
+           mpcmixer::CaptureStatus::Silence);
+    for (int frame = 0; frame < 4; ++frame) {
+        assert(near(captureLeft[frame], 0.0f));
+        assert(near(captureRight[frame], 0.0f));
+    }
+    assert(silentBackend.capture(captureBuffers, 1, 4) ==
+           mpcmixer::CaptureStatus::InvalidBuffer);
+    assert(silentBackend.capture(captureBuffers, 2, 513) ==
+           mpcmixer::CaptureStatus::InvalidBuffer);
+    float* invalidCaptureBuffers[] = {captureLeft, nullptr};
+    assert(silentBackend.capture(invalidCaptureBuffers, 2, 4) ==
+           mpcmixer::CaptureStatus::InvalidBuffer);
+    mpcmixer::AudioFormat invalidFormat;
+    invalidFormat.sampleRate = 1000;
+    assert(!silentBackend.prepare(invalidFormat));
+    assert(silentBackend.capture(captureBuffers, 2, 4) ==
+           mpcmixer::CaptureStatus::Silence);
+    silentBackend.shutdown();
+    assert(silentBackend.capture(captureBuffers, 2, 4) ==
+           mpcmixer::CaptureStatus::NotPrepared);
 
     // Four independent stereo Aux sends are post-fader/post-pan and pre-master.
     AudioEngine auxEngine;
