@@ -3,12 +3,12 @@
 
 struct LibraryCheck {
     const char* name;
-    const char* symbols[5];
+    const char* symbols[6];
 };
 
 int main() {
     const LibraryCheck checks[] = {
-        {"libEGL.so", {"eglGetDisplay", "eglInitialize", "eglChooseConfig", "eglCreateContext", "eglCreateWindowSurface"}},
+        {"libEGL.so", {"eglGetDisplay", "eglInitialize", "eglChooseConfig", "eglCreateContext", "eglCreateWindowSurface", nullptr}},
         {"libGLESv2.so", {"glGetString", "glClear", "glViewport", "glDrawArrays", nullptr}}
     };
 
