@@ -101,3 +101,25 @@ test('reset restores fader, pan, EQ, aux, mute and solo defaults', () => {
   assert.equal(el.querySelector('[data-toggle="solo"]').getAttribute('aria-pressed'), 'false');
   dom.window.close();
 });
+
+test('meter animation is opt-in and stops when switched off', () => {
+  const dom = loadPrototype();
+  const button = dom.window.document.getElementById('meterDemo');
+  assert.equal(button.getAttribute('aria-pressed'), 'false');
+  assert.equal(button.textContent, 'DÉMO MÈTRES : OFF');
+  button.click();
+  assert.equal(button.getAttribute('aria-pressed'), 'true');
+  assert.equal(button.textContent, 'DÉMO MÈTRES : ON');
+  button.click();
+  assert.equal(button.getAttribute('aria-pressed'), 'false');
+  assert.equal(button.textContent, 'DÉMO MÈTRES : OFF');
+  assert.equal(dom.window.document.querySelector('[data-channel="0"] [data-meter-value="peak"]').textContent, '0%');
+  dom.window.close();
+});
+
+test('touch controls expose practical minimum hit areas', () => {
+  assert.match(html, /\.tool\{min-height:42px;/);
+  assert.match(html, /\.clip\{min-width:42px;min-height:26px;/);
+  assert.match(html, /\.pan input\{[^}]*min-height:30px;/);
+  assert.match(html, /\.aux input\{[^}]*min-height:30px;/);
+});
