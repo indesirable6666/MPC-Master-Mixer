@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <cmath>
 #include <vector>
 
 namespace mpcmixer {
@@ -62,7 +63,8 @@ public:
     // This sends only through the injected transport; this project currently
     // provides a simulated transport, not a live ALSA implementation.
     bool setVolume(float normalized) {
-        if (!hasVerifiedMapping() || normalized < 0.0f || normalized > 1.0f) {
+        if (!hasVerifiedMapping() || !std::isfinite(normalized) ||
+            normalized < 0.0f || normalized > 1.0f) {
             return false;
         }
         const auto value = static_cast<std::uint8_t>(normalized * 127.0f + 0.5f);
