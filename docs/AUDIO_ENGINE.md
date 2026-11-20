@@ -53,7 +53,27 @@ supported capture API, channel mapping, buffer size, sample format, and routing
 are independently established. It must not take ownership of or reconfigure
 the MPC's existing audio device.
 
-## Control-thread to audio-thread updates\n\nThe direct engine setters must not race the audio callback. The new\n`src/audio/audio_control_bridge.hpp` provides a fixed-capacity SPSC command\nqueue so a single host/UI control thread can publish track, Aux return and\nMaster changes for application at the next audio block boundary. Queue-full\nconditions are reported to the producer. EQ coefficient changes and insert\nlifetime management remain outside this command queue. The browser prototype\nis not yet wired to a native host/controller. See\n`docs/AUDIO_CONTROL_BRIDGE.md` for the threading contract.\n\n## What is deliberately not connected
+## Control-thread to audio-thread updates\n\nThe direct engine setters must not race the audio callback. The new\n`src/audio/audio_control_bridge.hpp` provides a fixed-capacity SPSC command\nqueue so a single host/UI control thread can publish track, Aux return and\nMaster changes for application at the next audio block boundary. Queue-full\nconditions are reported to the producer. EQ coefficient changes and insert\nlifetime management remain outside this command queue. The browser prototype\nis not yet wired to a native host/controller. See\n`docs/AUDIO_CONTROL_BRIDGE.md` for the threading contract.\n\n## Duplex engine host
+
+`src/audio/audio_duplex_engine_host.hpp` connects the duplex callback contract
+to the command bridge and mixer. It accepts up to two explicit input channels,
+maps each channel to a selected mono mixer track, and produces stereo output.
+All inputs begin unmapped; no physical MPC/ALSA channel ordering is assumed.
+The routing entries are atomic so the host can change an individual mapping
+without racing the audio callback. Duplicate mappings within one block are
+treated as invalid and produce silence.
+
+The host lifecycle (`prepare`, `start`, `stop`, `shutdown`) belongs to the
+control thread. The backend must stop callbacks before host destruction. A host
+cannot be prepared twice without shutdown. The deterministic offline backend
+tests this complete software route using synthetic planar-float buffers.
+
+This does not create a physical audio connection. There is still no target
+ALSA/JACK/MPC backend, device discovery, hardware channel map, limiter, or
+sample-format conversion. The browser prototype also remains disconnected
+from the native host/controller.
+
+## What is deliberately not connected
 
 This is a DSP block processor, not yet a live audio application. It does not:
 - Add further insert effects (the initial soft-clip insert is implemented)
