@@ -322,6 +322,15 @@ test('Audio In 1 and 2 can be linked as a stereo pair with shared controls', () 
   assert.equal(right.querySelector('.channel-type').textContent, 'STÉRÉO · R');
   assert.equal(left.querySelector('[data-pan]').disabled, true);
   assert.equal(right.querySelector('[data-pan]').disabled, true);
+  const leftBalance = left.querySelector('[data-stereo-balance]');
+  const rightBalance = right.querySelector('[data-stereo-balance]');
+  assert.ok(leftBalance && rightBalance);
+  assert.equal(leftBalance.disabled, false);
+  assert.equal(rightBalance.disabled, false);
+  leftBalance.value = '-35';
+  leftBalance.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+  assert.equal(rightBalance.value, '-35');
+  assert.equal(right.querySelector('.balance-value').textContent, 'L 35');
 
   const leftFader = left.querySelector('[data-volume]');
   const rightFader = right.querySelector('[data-volume]');
@@ -346,6 +355,8 @@ test('Audio In 1 and 2 can be linked as a stereo pair with shared controls', () 
   assert.ok(!right.classList.contains('stereo-linked'));
   assert.equal(left.querySelector('[data-pan]').disabled, false);
   assert.equal(right.querySelector('[data-pan]').disabled, false);
+  assert.equal(leftBalance.disabled, true);
+  assert.equal(rightBalance.disabled, true);
   dom.window.close();
 });
 
