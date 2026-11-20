@@ -42,7 +42,7 @@ static bool mpcProcessPresent() {
         char* end = nullptr;
         std::strtol(entry->d_name, &end, 10);
         if (!end || *end != '\0' || end == entry->d_name) continue;
-        char path[256];
+        char path[512];
         std::snprintf(path, sizeof(path), "/proc/%s/comm", entry->d_name);
         FILE* f = std::fopen(path, "r");
         if (!f) continue;
