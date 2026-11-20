@@ -41,7 +41,10 @@ jobs:
             'MUTE',
             'SOLO',
             'MODE DÉMO',
-            'SIMULATION LOCALE'
+            'SIMULATION LOCALE',
+            'for(let i=0;i<16;i++)',
+            'function makeStrip(index,isMaster=false)',
+            'AUX ${n}'
           ];
 
           for (const token of required) {
@@ -49,6 +52,12 @@ jobs:
               console.error('Missing required prototype feature:', token);
               process.exit(1);
             }
+          }
+
+          const ids = [...html.matchAll(/\\bid="([^"]+)"/g)].map(match => match[1]);
+          if (new Set(ids).size !== ids.length) {
+            console.error('Duplicate static HTML id found.');
+            process.exit(1);
           }
 
           const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/gi)];
@@ -59,5 +68,5 @@ jobs:
 
           fs.writeFileSync('/tmp/mpc-master-mixer-prototype.js', scripts[0][1]);
           cp.execFileSync(process.execPath, ['--check', '/tmp/mpc-master-mixer-prototype.js'], {stdio: 'inherit'});
-          console.log('Prototype structure checks passed; inline JavaScript syntax is valid.');
+          console.log('Prototype structure, unique IDs and inline JavaScript syntax checks passed.');
           NODE
