@@ -22,7 +22,7 @@ button{color:inherit;touch-action:manipulation;-webkit-tap-highlight-color:trans
 .tool{min-height:42px;padding:0 11px;border:1px solid var(--line);border-radius:6px;background:var(--panel-hi);font-size:11px;font-weight:700}
 .tool:active,.toggle:active{transform:translateY(1px)}
 .workspace{display:flex;flex:1;min-height:0;gap:0}
-.scroll-area{flex:1;min-width:0;touch-action:pan-x pan-y;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scrollbar-color:#596575 #1a2029;scrollbar-width:thin}
+.scroll-area{scroll-behavior:smooth;flex:1;min-width:0;touch-action:pan-x pan-y;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scrollbar-color:#596575 #1a2029;scrollbar-width:thin}
 .strips{height:100%;width:max-content;display:flex;gap:8px;padding:10px}
 .channel{width:180px;min-width:180px;height:100%;min-height:0;display:flex;flex-direction:column;gap:7px;padding:8px;background:linear-gradient(180deg,#202731,#191f28);border:1px solid var(--line);border-radius:8px}
 .channel.selected{border-color:var(--amber);box-shadow:inset 0 0 0 1px #e9ad4540}
@@ -84,7 +84,7 @@ button{color:inherit;touch-action:manipulation;-webkit-tap-highlight-color:trans
  <div class="project">SESSION · PROJET DE DÉMONSTRATION</div>
  <div class="top-spacer"></div>
  <div class="mode">MODE DÉMO · HORS LIGNE</div>
- <div class="toolbar"><button class="tool optional" id="prev" type="button">◀ BANQUE</button><button class="tool optional" id="next" type="button">BANQUE ▶</button><button class="tool" id="meterDemo" type="button" aria-pressed="false">DÉMO MÈTRES : OFF</button><button class="tool" id="reset" type="button">RÉINITIALISER</button></div>
+ <div class="toolbar"><button class="tool optional" id="prev" type="button">◀ BANQUE</button><button class="tool optional" id="next" type="button" aria-label="Afficher la banque suivante" disabled>BANQUE ▶</button><span id="bankStatus" class="mode" role="status" aria-live="polite">BANQUE 1/2 · PISTES 1–8</span><button class="tool" id="meterDemo" type="button" aria-pressed="false">DÉMO MÈTRES : OFF</button><button class="tool" id="reset" type="button">RÉINITIALISER</button></div>
 </header>
 <main class="workspace">
  <div class="scroll-area" id="scrollArea" aria-label="Tranches de canaux"><div class="strips" id="strips"></div></div>
@@ -213,8 +213,21 @@ function setMeterDemo(enabled){
  },120);
 }
 meterDemoButton.addEventListener('click',()=>setMeterDemo(!meterDemo));
-document.getElementById('prev').addEventListener('click',()=>document.getElementById('scrollArea').scrollBy({left:-560,behavior:'smooth'}));
-document.getElementById('next').addEventListener('click',()=>document.getElementById('scrollArea').scrollBy({left:560,behavior:'smooth'}));
+let currentBank=0;
+const bankStatus=document.getElementById('bankStatus');
+const prevBank=document.getElementById('prev');
+const nextBank=document.getElementById('next');
+function setBank(bank){
+ currentBank=Math.max(0,Math.min(1,bank));
+ const firstTrack=strips.children[currentBank*8];
+ if(firstTrack)document.getElementById('scrollArea').scrollLeft=firstTrack.offsetLeft;
+ prevBank.disabled=currentBank===0;
+ nextBank.disabled=currentBank===1;
+ bankStatus.textContent='BANQUE '+(currentBank+1)+'/2 · PISTES '+(currentBank*8+1)+'–'+(currentBank*8+8);
+ bankStatus.setAttribute('aria-label','Banque '+(currentBank+1)+' sur 2, pistes '+(currentBank*8+1)+' à '+(currentBank*8+8));
+}
+prevBank.addEventListener('click',()=>setBank(currentBank-1));
+nextBank.addEventListener('click',()=>setBank(currentBank+1));
 document.getElementById('reset').addEventListener('click',()=>{
  setMeterDemo(false);
  state.forEach((s,i)=>Object.assign(s,defaults()));
