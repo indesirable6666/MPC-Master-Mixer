@@ -216,6 +216,19 @@ test('Home and End keys jump to the first and last channel strips', () => {
   dom.window.close();
 });
 
+test('PageUp and PageDown move by one eight-channel bank', () => {
+  const dom = loadPrototype();
+  const fourth = dom.window.document.querySelector('[data-channel="3"]');
+  fourth.focus();
+  fourth.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'PageDown', bubbles: true }));
+  assert.equal(dom.window.document.activeElement.dataset.channel, '11');
+  assert.equal(dom.window.document.getElementById('bankStatus').textContent, 'BANQUE 2/2 · PISTES 9–16');
+  dom.window.document.activeElement.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'PageUp', bubbles: true }));
+  assert.equal(dom.window.document.activeElement.dataset.channel, '3');
+  assert.equal(dom.window.document.getElementById('bankStatus').textContent, 'BANQUE 1/2 · PISTES 1–8');
+  dom.window.close();
+});
+
 test('clicking any channel action also selects that channel', () => {
   const dom = loadPrototype();
   const channel = dom.window.document.querySelector('[data-channel="6"]');
