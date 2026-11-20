@@ -83,7 +83,6 @@ private:
     CcMapping mapping_;
 };
 
-};
 
 // Independent, fail-closed CC mapping for each of the 16 mixer tracks.
 // Track indices are zero-based (0..15); no MIDI assignment is assumed.
