@@ -44,6 +44,7 @@ public:
         return tracks_[index < kTrackCount ? index : 0];
     }
 
+    // Prepare EQ coefficients on the control thread, never from process().
     bool setTrackEq(
         std::size_t index, float sampleRate,
         const std::array<SixBandEq::BandParameters, SixBandEq::kBandCount>& bands) {
@@ -75,6 +76,7 @@ public:
     // Four independent stereo Aux buses. Sends are post-fader and post-pan,
     // but pre-master, so the master fader does not alter monitor/effect sends.
     // Each output is caller-owned; a null Aux output disables only that side/bus.
+    // Audio-thread entry point: caller owns all buffers; no allocation or locks.
     void processWithAux(
         const float* const inputs[kTrackCount],
         float* outputLeft, float* outputRight,
