@@ -13,7 +13,7 @@ namespace mpcmixer {
 // Configure routing and prepare/start/stop the backend on the control thread.
 class AudioDuplexEngineHost {
 public:
-    static constexpr std::size_t kUnmappedTrack = AudioEngine::kTrackCount;
+    enum : std::size_t { kUnmappedTrack = AudioEngine::kTrackCount };
 
     explicit AudioDuplexEngineHost(AudioEngineCommandBridge& bridge) noexcept
         : bridge_(bridge) {
