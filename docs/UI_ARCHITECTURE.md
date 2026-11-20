@@ -19,7 +19,7 @@ Build a touchscreen-first mixer interface for the Akai MPC Live II. The first mi
 - The Master strip has its own level meter and master-volume control.
 - Peak/RMS meters include a peak-hold marker and a latched clip indicator; the demo signal is synthetic and explicitly opt-in.
 - The synthetic meter timer is created only while meter demo is enabled and is cleared immediately when disabled, avoiding idle background work.
-- Touch controls use enlarged minimum hit areas for toolbar actions, pan/Aux sliders, and the Clip reset control. On narrow screens, the toolbar and footer compact while preserving the fixed Master strip and full-width channel touch targets.
+- Touch controls use enlarged minimum hit areas for toolbar actions, pan/Aux sliders, and the Clip reset control. On narrow screens, the toolbar and footer compact while preserving the fixed Master strip and full-width channel touch targets. Long channel names truncate visually inside their strip with an ellipsis; the full name remains available in the title tooltip and selected-track footer.
 - EQ and Aux controls use larger labels, clearer dB/percent readouts, taller touch targets, and accessible value announcements.
 - The 16 channel strips are exposed as two explicit banks of eight; navigation announces the active bank and disables movement beyond either end.
 - Track selection is highlighted and announced through a polite live region; the announcement reads the selected strip's actual title text (including long names even when visually truncated). Keyboard users can move between adjacent strips with the left/right arrows, or jump to the first/last strip with Home/End.
