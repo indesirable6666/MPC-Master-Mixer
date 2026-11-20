@@ -241,10 +241,15 @@ function renderMeter(el,peak,rms){
  const p=Math.max(0,Math.min(1,peak)),r=Math.max(0,Math.min(1,rms)),clipped=p>=0.985;
  const hold=Math.max(Number(el.dataset.peakHold||0),p);
  el.dataset.currentPeak=String(p);el.dataset.currentRms=String(r);el.dataset.peakHold=String(hold);
- const peakPercent=Math.round(p*100),rmsPercent=Math.round(r*100);\n const peakMeter=el.querySelector('[data-meter="peak"]').parentElement;\n peakMeter.setAttribute('aria-valuenow',String(peakPercent));peakMeter.setAttribute('aria-valuetext',peakPercent+' pour cent');\n el.querySelector('[data-meter="peak"]').style.width=(p*100).toFixed(1)+'%';
+ const peakPercent=Math.round(p*100),rmsPercent=Math.round(r*100);
+ const peakMeter=el.querySelector('[data-meter="peak"]').parentElement;
+ peakMeter.setAttribute('aria-valuenow',String(peakPercent));peakMeter.setAttribute('aria-valuetext',peakPercent+' pour cent');
+ el.querySelector('[data-meter="peak"]').style.width=(p*100).toFixed(1)+'%';
  el.querySelector('[data-meter-hold]').style.left=(hold*100).toFixed(1)+'%';
  el.dataset.clipLatched=String(el.dataset.clipLatched==='true'||clipped);
- const rmsMeter=el.querySelector('[data-meter="rms"]').parentElement;\n rmsMeter.setAttribute('aria-valuenow',String(rmsPercent));rmsMeter.setAttribute('aria-valuetext',rmsPercent+' pour cent');\n el.querySelector('[data-meter="rms"]').style.width=(r*100).toFixed(1)+'%';
+ const rmsMeter=el.querySelector('[data-meter="rms"]').parentElement;
+ rmsMeter.setAttribute('aria-valuenow',String(rmsPercent));rmsMeter.setAttribute('aria-valuetext',rmsPercent+' pour cent');
+ el.querySelector('[data-meter="rms"]').style.width=(r*100).toFixed(1)+'%';
  el.querySelector('[data-meter-value="peak"]').textContent=peakPercent+'%';
  el.querySelector('[data-meter-value="rms"]').textContent=rmsPercent+'%';
  const clip=el.querySelector('[data-clip]');const latched=el.dataset.clipLatched==='true';clip.textContent=latched?'CLIP':'OFF';clip.classList.toggle('active',latched);
