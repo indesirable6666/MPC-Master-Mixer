@@ -85,7 +85,7 @@ button{color:inherit;touch-action:manipulation;-webkit-tap-highlight-color:trans
  .toolbar .tool{min-height:38px;padding:0 6px;font-size:9px}
  .bank-status{max-width:72px;padding:4px 5px;font-size:7px;line-height:1.15;white-space:normal;text-align:center}
  #meterDemo{max-width:76px;white-space:normal;line-height:1.1}
- #reset{max-width:58px;white-space:normal;line-height:1.1}
+ #reset{max-width:58px;white-space:normal;line-height:1.1}\n #stereoLink{max-width:76px;padding:0 4px;white-space:normal;line-height:1.1}
  .bottom{gap:7px;padding:0 7px}
  .bottom .hint{display:none}
  .bottom span:not(.hint){min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -233,7 +233,7 @@ function setAudioStereoLinked(enabled){
  const left=document.getElementById('audioIn1'),right=document.getElementById('audioIn2');
  [left,right].forEach((el,i)=>{
   el.classList.toggle('stereo-linked',enabled);
-  el.querySelector('.channel-type').textContent=enabled?(i===0?'STÉRÉO · L':'STÉRÉO · R'):'14 · AUDIO';
+  el.querySelector('.channel-type').textContent=enabled?(i===0?'STÉRÉO · L':'STÉRÉO · R'):(i===0?'14 · AUDIO':'15 · AUDIO');\n  const pan=el.querySelector('[data-pan]');pan.disabled=enabled;pan.title=enabled?'Pan désactivé en mode stéréo lié':'Panoramique mono';pan.setAttribute('aria-label',enabled?'Balance stéréo indisponible pour le moment':'Panoramique Audio In '+(i+1));
  });
  if(enabled)syncLinkedAudioPair(13);
 }
