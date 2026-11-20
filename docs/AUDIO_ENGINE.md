@@ -5,7 +5,7 @@
 `src/audio/audio_engine.hpp` is a platform-independent, allocation-free C++14 mixing core. It accepts up to 16 caller-owned mono floating-point input buffers and writes a caller-owned stereo floating-point output block.
 
 Implemented DSP building blocks:
-- Six-band parametric EQ (`SixBandEq`): RBJ peaking biquads centred at 60, 180, 500, 1.5k, 5k and 12kHz, ±12dB, independent planar channel state
+- Six-band parametric EQ (`SixBandEq`): six RBJ peaking biquads with independently configurable centre frequency (20Hz to Nyquist), Q (0.1–10) and gain (±12dB); default centres are 60, 180, 500, 1.5k, 5k and 12kHz, with independent planar channel state
 
 Implemented per track:
 - Linear gain from 0.0 to 1.0
@@ -57,7 +57,7 @@ The current prototype controls are not wired to this engine. No real-time or har
 
 ## Host tests
 
-The `Audio engine tests` GitHub Actions workflow compiles with C++14, warnings-as-errors, and runs deterministic tests for summing, panning, gain, mute, solo, master controls, four stereo Aux buses, six-band EQ coefficient validation and signal processing, silent capture backend behavior, invalid parameters, and non-finite samples. These tests do not require audio hardware.
+The `Audio engine tests` GitHub Actions workflow compiles with C++14, warnings-as-errors, and runs deterministic tests for summing, panning, gain, mute, solo, master controls, four stereo Aux buses, six-band EQ frequency/Q/gain validation and signal processing, silent capture backend behavior, invalid parameters, and non-finite samples. These tests do not require audio hardware.
 
 
 ## Paire d'entrées Audio In
