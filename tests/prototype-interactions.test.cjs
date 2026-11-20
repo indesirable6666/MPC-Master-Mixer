@@ -210,3 +210,17 @@ test('Home and End keys jump to the first and last channel strips', () => {
   assert.equal(dom.window.document.getElementById('selectionStatus').textContent, 'PISTE 16 · AUDIO 3');
   dom.window.close();
 });
+
+test('clicking any channel action also selects that channel', () => {
+  const dom = loadPrototype();
+  const channel = dom.window.document.querySelector('[data-channel="6"]');
+  const status = dom.window.document.getElementById('selectionStatus');
+  channel.querySelector('.fx').click();
+  assert.equal(status.textContent, 'PISTE 07 · SYNTH 2');
+  assert.equal(channel.getAttribute('aria-current'), 'true');
+  channel.querySelector('[data-clip]').click();
+  assert.equal(status.textContent, 'PISTE 07 · SYNTH 2');
+  channel.querySelector('[data-toggle="mute"]').click();
+  assert.equal(status.textContent, 'PISTE 07 · SYNTH 2');
+  dom.window.close();
+});
