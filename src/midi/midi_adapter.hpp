@@ -204,4 +204,76 @@ private:
     std::array<CcMapping, kTrackCount> mappings_;
 };
 
+
+// Independent CC mappings for four Aux sends on each of the 16 mixer tracks.
+// Track and Aux indices are zero-based. No MIDI assignment is assumed.
+class TrackAuxMidiAdapter {
+public:
+    static constexpr std::size_t kTrackCount = 16;
+    static constexpr std::size_t kAuxCount = 4;
+
+    explicit TrackAuxMidiAdapter(MidiTransport& transport)
+        : transport_(transport), mappings_{} {}
+
+    bool configureSend(std::size_t trackIndex, std::size_t auxIndex,
+                       const CcMapping& mapping) {
+        if (!validSlot(trackIndex, auxIndex)) return false;
+        if (!mapping.explicitly_verified ||
+            mapping.channel > 15 || mapping.controller > 127) {
+            mappings_[trackIndex][auxIndex] = CcMapping{0, 0, false};
+            return false;
+        }
+        mappings_[trackIndex][auxIndex] = mapping;
+        return true;
+    }
+
+    void clearSend(std::size_t trackIndex, std::size_t auxIndex) {
+        if (validSlot(trackIndex, auxIndex))
+            mappings_[trackIndex][auxIndex] = CcMapping{0, 0, false};
+    }
+
+    void clearTrack(std::size_t trackIndex) {
+        if (trackIndex < kTrackCount)
+            for (auto& mapping : mappings_[trackIndex])
+                mapping = CcMapping{0, 0, false};
+    }
+
+    void clearAll() {
+        for (auto& track : mappings_)
+            for (auto& mapping : track)
+                mapping = CcMapping{0, 0, false};
+    }
+
+    bool hasVerifiedMapping(std::size_t trackIndex,
+                            std::size_t auxIndex) const {
+        return validSlot(trackIndex, auxIndex) &&
+               mappings_[trackIndex][auxIndex].explicitly_verified;
+    }
+
+    // Normalized Aux send level [0,1] becomes a 7-bit MIDI CC value.
+    bool setSendLevel(std::size_t trackIndex, std::size_t auxIndex,
+                      float normalized) {
+        if (!hasVerifiedMapping(trackIndex, auxIndex) ||
+            !std::isfinite(normalized) ||
+            normalized < 0.0f || normalized > 1.0f) return false;
+        const CcMapping& mapping = mappings_[trackIndex][auxIndex];
+        const auto value = static_cast<std::uint8_t>(
+            normalized * 127.0f + 0.5f);
+        const MidiMessage message{
+            static_cast<std::uint8_t>(0xB0u | mapping.channel),
+            mapping.controller,
+            value
+        };
+        return transport_.send(message);
+    }
+
+private:
+    static bool validSlot(std::size_t trackIndex, std::size_t auxIndex) {
+        return trackIndex < kTrackCount && auxIndex < kAuxCount;
+    }
+
+    MidiTransport& transport_;
+    std::array<std::array<CcMapping, kAuxCount>, kTrackCount> mappings_;
+};
+
 } // namespace mpcmixer
