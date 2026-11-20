@@ -154,6 +154,22 @@ test('bank navigation switches between channels 1–8 and 9–16', () => {
   dom.window.close();
 });
 
+test('live selection and bank announcements expose atomic status semantics and meters are named groups', () => {
+  const dom = loadPrototype();
+  const selection = dom.window.document.getElementById('selectionStatus');
+  const bank = dom.window.document.getElementById('bankStatus');
+  assert.equal(selection.getAttribute('role'), 'status');
+  assert.equal(selection.getAttribute('aria-live'), 'polite');
+  assert.equal(selection.getAttribute('aria-atomic'), 'true');
+  assert.equal(bank.getAttribute('role'), 'status');
+  assert.equal(bank.getAttribute('aria-atomic'), 'true');
+  for (const meter of dom.window.document.querySelectorAll('.meter-panel')) {
+    assert.equal(meter.getAttribute('role'), 'group');
+    assert.equal(meter.getAttribute('aria-label'), 'Mesures simulées');
+  }
+  dom.window.close();
+});
+
 test('bank navigation buttons expose clear accessible names and controlled regions', () => {
   const dom = loadPrototype();
   const prev = dom.window.document.getElementById('prev');
