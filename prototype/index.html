@@ -179,7 +179,9 @@ function selectChannel(index){
   else el.removeAttribute('aria-current');
  });
  const status=document.getElementById('selectionStatus');
- if(status)status.textContent='PISTE '+String(index+1).padStart(2,'0')+' · '+labels[index];
+ const selectedTrack=document.querySelector('[data-channel="'+index+'"]');
+ const trackName=selectedTrack?.querySelector('.channel-title')?.textContent?.trim()||labels[index];
+ if(status)status.textContent='PISTE '+String(index+1).padStart(2,'0')+' · '+trackName;
 }
 function refreshMixVisibility(){
  const strips=[...document.querySelectorAll('.channel:not([data-channel="master"])')];
