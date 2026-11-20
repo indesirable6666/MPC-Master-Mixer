@@ -50,7 +50,7 @@ assert not missing, f"missing required interface elements: {missing}"
 assert "MPC MASTER MIXER" in source
 assert "MODE DÉMO" in source and "SIMULATION LOCALE" in source
 assert "const labels=[" in source, "channel label data is missing"
-assert "AUX 4" in source and "data-eq" in source and "data-volume" in source
+assert "AUX ${n}" in source and "data-eq" in source and "data-volume" in source
 assert "function makeStrip(index,isMaster=false)" in source
 assert "for(let i=0;i<16;i++)" in source, "prototype must generate 16 channel strips"
 assert len(parser.scripts) == 1, f"expected one inline script, found {len(parser.scripts)}"
