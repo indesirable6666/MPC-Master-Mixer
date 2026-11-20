@@ -50,13 +50,14 @@ button{color:inherit}
 .switches{display:flex;gap:6px}
 .toggle{flex:1;min-height:34px;border:1px solid #414c59;border-radius:5px;background:#252e39;font-size:10px;font-weight:850;letter-spacing:.04em}
 .toggle.active{border-color:var(--amber);background:#574324;color:#ffe0a2}
-.meter-wrap{display:flex;align-items:center;gap:7px;padding:0 2px}
-.meter-label{color:var(--muted);font-size:8px;font-weight:800}
-.meter{height:7px;flex:1;display:flex;gap:2px;overflow:hidden;border-radius:3px;background:#0e141b}
-.meter i{display:block;flex:1;background:#34404c}
-.meter i:nth-child(-n+8){background:#438f6d}
-.meter i:nth-child(n+9):nth-child(-n+11){background:#b18c43}
-.meter i:nth-child(n+12){background:#9b4d50}
+.meter-panel{display:grid;gap:4px;padding:5px 6px;background:#111720;border:1px solid #303a47;border-radius:5px}
+.meter-row{display:grid;grid-template-columns:24px 1fr 25px;align-items:center;gap:5px}
+.meter-label{color:var(--muted);font-size:8px;font-weight:850}
+.meter-track{height:6px;overflow:hidden;border-radius:3px;background:#28323e}
+.meter-fill{display:block;width:0;height:100%;background:linear-gradient(90deg,#438f6d 0 68%,#b18c43 84%,#c75c55 100%);transition:width 100ms linear}
+.meter-value{color:#cbd4df;text-align:right;font-size:8px;font-variant-numeric:tabular-nums}
+.clip{padding:1px 3px;border:1px solid #5b4244;border-radius:3px;color:#778392;text-align:center;font-size:8px;font-weight:900}
+.clip.active{border-color:var(--red);background:#57292c;color:#fff;box-shadow:0 0 7px #e36e7080}
 .fader-area{flex:1;min-height:110px;display:flex;align-items:stretch;justify-content:center;gap:8px;padding:8px 6px 4px;background:var(--well);border:1px solid #303a47;border-radius:6px}
 .scale{display:flex;flex-direction:column;justify-content:space-between;padding:2px 0;color:#8390a0;font-size:8px}
 .fader{height:100%;min-height:100px;width:34px;margin:0;accent-color:var(--amber);writing-mode:vertical-lr;direction:rtl}
@@ -80,7 +81,7 @@ button{color:inherit}
  <div class="project">SESSION · PROJET DE DÉMONSTRATION</div>
  <div class="top-spacer"></div>
  <div class="mode">MODE DÉMO · HORS LIGNE</div>
- <div class="toolbar"><button class="tool optional" id="prev" type="button">◀ BANQUE</button><button class="tool optional" id="next" type="button">BANQUE ▶</button><button class="tool" id="reset" type="button">RÉINITIALISER</button></div>
+ <div class="toolbar"><button class="tool optional" id="prev" type="button">◀ BANQUE</button><button class="tool optional" id="next" type="button">BANQUE ▶</button><button class="tool" id="meterDemo" type="button" aria-pressed="false">DÉMO MÈTRES : OFF</button><button class="tool" id="reset" type="button">RÉINITIALISER</button></div>
 </header>
 <main class="workspace">
  <div class="scroll-area" id="scrollArea" aria-label="Tranches de canaux"><div class="strips" id="strips"></div></div>
@@ -94,7 +95,7 @@ const labels=['KICK','SNARE','HI-HAT','PERC','BASS','SYNTH 1','SYNTH 2','KEYS','
 const defaults=()=>({volume:100,pan:0,eq:[0,0,0,0,0,0],aux:[0,0,0,0],mute:false,solo:false});
 const state=Array.from({length:16},defaults);
 const masterState=defaults();
-function meter(){return '<div class="meter-wrap"><span class="meter-label">LVL</span><div class="meter" aria-label="Vu-mètre inactif">'+Array.from({length:14},()=>'<i></i>').join('')+'</div></div>'}
+function meter(){return '<div class="meter-panel" aria-label="Mesures simulées"><div class="meter-row"><span class="meter-label">PEAK</span><div class="meter-track"><i class="meter-fill" data-meter="peak"></i></div><output class="meter-value" data-meter-value="peak">0%</output></div><div class="meter-row"><span class="meter-label">RMS</span><div class="meter-track"><i class="meter-fill" data-meter="rms"></i></div><output class="meter-value" data-meter-value="rms">0%</output></div><div class="meter-row"><span class="meter-label">CLIP</span><span></span><output class="clip" data-clip aria-label="Écrêtage inactif">OFF</output></div></div>'}
 function makeStrip(index,isMaster=false){
  const data=isMaster?masterState:state[index];
  const name=isMaster?'MASTER':labels[index];
@@ -155,6 +156,33 @@ function makeStrip(index,isMaster=false){
 function selectChannel(index){document.querySelectorAll('.channel').forEach(x=>x.classList.toggle('selected',x.dataset.channel===String(index)))}
 for(let i=0;i<16;i++)strips.appendChild(makeStrip(i));
 document.getElementById('master').appendChild(makeStrip(0,true));
+let meterDemo=false;
+let meterFrame=0;
+const meterDemoButton=document.getElementById('meterDemo');
+function renderMeter(el,peak,rms){
+ const p=Math.max(0,Math.min(1,peak)),r=Math.max(0,Math.min(1,rms)),clipped=p>=0.985;
+ el.querySelector('[data-meter="peak"]').style.width=(p*100).toFixed(1)+'%';
+ el.querySelector('[data-meter="rms"]').style.width=(r*100).toFixed(1)+'%';
+ el.querySelector('[data-meter-value="peak"]').textContent=Math.round(p*100)+'%';
+ el.querySelector('[data-meter-value="rms"]').textContent=Math.round(r*100)+'%';
+ const clip=el.querySelector('[data-clip]');clip.textContent=clipped?'CLIP':'OFF';clip.classList.toggle('active',clipped);
+ clip.setAttribute('aria-label',clipped?'Écrêtage simulé':'Écrêtage inactif');
+}
+function setMeterDemo(enabled){
+ meterDemo=enabled;meterDemoButton.setAttribute('aria-pressed',String(enabled));
+ meterDemoButton.textContent='DÉMO MÈTRES : '+(enabled?'ON':'OFF');
+ if(!enabled)document.querySelectorAll('.channel').forEach(el=>renderMeter(el,0,0));
+}
+meterDemoButton.addEventListener('click',()=>setMeterDemo(!meterDemo));
+setInterval(()=>{
+ if(!meterDemo)return;
+ meterFrame+=0.11;
+ document.querySelectorAll('.channel').forEach((el,i)=>{
+  const peak=0.48+0.49*Math.abs(Math.sin(meterFrame+i*0.73));
+  const rms=peak*(0.48+0.18*Math.abs(Math.sin(meterFrame*0.61+i)));
+  renderMeter(el,peak,rms);
+ });
+},120);
 document.getElementById('prev').addEventListener('click',()=>document.getElementById('scrollArea').scrollBy({left:-560,behavior:'smooth'}));
 document.getElementById('next').addEventListener('click',()=>document.getElementById('scrollArea').scrollBy({left:560,behavior:'smooth'}));
 document.getElementById('reset').addEventListener('click',()=>{
