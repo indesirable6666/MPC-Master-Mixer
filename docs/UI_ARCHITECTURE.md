@@ -99,3 +99,19 @@ The `prototype/index.html` page now contains a more complete touch-first mixer m
 All values and meters are illustrative UI state. The meter display is inactive by default; an explicit demo button animates synthetic values only. Peak Hold and Clip are visual demonstrations, not audio measurements. Insert buttons are accessible visual placeholders, not functioning effects. The prototype does not persist settings and does not communicate with the MPC.
 
 This is a browser UI milestone only. It is not yet an ARM executable and must not be deployed as if it were an integrated MPC application.
+
+
+## Entrées Audio In 1/2 — prototype de couplage stéréo
+
+Les tranches 14 et 15 sont identifiées comme Audio In 1 et Audio In 2. Le bouton
+`LINK AUDIO 1/2` couple visuellement ces deux tranches : le fader, les EQ,
+les Aux Sends, Mute et Solo sont synchronisés depuis la tranche manipulée.
+Les deux tranches restent affichées séparément avec les repères stéréo L/R.
+Le panoramique mono est désactivé pendant le couplage ; un véritable réglage
+Balance stéréo reste à implémenter.
+
+Ce couplage est une interaction locale de démonstration. Il ne sélectionne pas
+les entrées physiques, ne capture aucun signal et ne modifie pas le routage
+audio de la MPC. Le processeur C++ `AudioInputPair` traite des buffers fournis
+par l'appelant, mais son raccordement à un backend audio matériel n'est pas
+encore réalisé.
