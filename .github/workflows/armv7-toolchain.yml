@@ -16,15 +16,15 @@ jobs:
     container:
       image: debian:bullseye
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Install Debian Bullseye ARM hard-float toolchain
         run: |
           apt-get update
           DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-            ca-certificates gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf \
+            gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf \
             binutils-arm-linux-gnueabihf file
-
-      - name: Checkout
-        uses: actions/checkout@v4
 
       - name: Compile ARMv7 C and C++ probes
         run: |
