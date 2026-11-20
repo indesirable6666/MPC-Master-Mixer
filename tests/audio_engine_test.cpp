@@ -1,10 +1,12 @@
 #include "audio_engine.hpp"
+#include "six_band_eq.hpp"
 
 #include <cassert>
 #include <cmath>
 #include <cstddef>
 #include <iostream>
 #include <limits>
+#include <array>
 
 using mpcmixer::AudioEngine;
 
@@ -148,6 +150,35 @@ int main() {
     assert(near(auxEngine.track(0).auxSend[0], 0.5f));
     auxTrack.auxSend[1] = 1.01f;
     assert(!auxEngine.setTrack(0, auxTrack));
+
+    // Six-band parametric EQ: unity response, independent channel state,
+    // bounded configuration, reset, and safe handling of non-finite samples.
+    mpcmixer::SixBandEq eq;
+    std::array<float, mpcmixer::SixBandEq::kBandCount> eqGains{};
+    assert(eq.configure(48000.0f, eqGains));
+    assert(eq.configured());
+    assert(near(eq.processSample(0.75f, 0), 0.75f));
+    assert(near(eq.processSample(-0.25f, 1), -0.25f));
+
+    eqGains[2] = 6.0f;
+    assert(eq.configure(48000.0f, eqGains));
+    float eqLeft[] = {1.0f, 0.0f, 0.0f, 0.0f};
+    float eqRight[] = {0.0f, 0.0f, 0.0f, 0.0f};
+    eq.process(eqLeft, eqRight, 4);
+    assert(std::fabs(eqLeft[0] - 1.0f) > 0.0001f);
+    for (float sample : eqRight) assert(near(sample, 0.0f));
+
+    const auto validEqCoefficients = eq.coefficients(2);
+    eqGains[0] = 13.0f;
+    assert(!eq.configure(48000.0f, eqGains));
+    assert(near(eq.coefficients(2).b0, validEqCoefficients.b0));
+    assert(!eq.configure(7000.0f, std::array<float, 6>{}));
+    eqGains.fill(0.0f);
+    assert(!eq.configure(24000.0f, eqGains)); // 12 kHz is Nyquist.
+    assert(eq.configure(48000.0f, std::array<float, 6>{}));
+    assert(near(eq.processSample(std::numeric_limits<float>::infinity()), 0.0f));
+    eq.reset();
+    assert(near(eq.processSample(0.5f), 0.5f));
 
     // Two Audio In mono channels can be linked without collapsing stereo.
     mpcmixer::AudioInputPair audioIn;
