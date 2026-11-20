@@ -224,3 +224,11 @@ test('clicking any channel action also selects that channel', () => {
   assert.equal(status.textContent, 'PISTE 07 · SYNTH 2');
   dom.window.close();
 });
+
+test('narrow-screen layout compacts the toolbar and footer without shrinking channel controls', () => {
+  assert.match(html, /@media\(max-width:480px\)\{[^}]*\.topbar/);
+  assert.match(html, /\.topbar>\.mode\{display:none\}/);
+  assert.match(html, /\.bank-status\{max-width:72px/);
+  assert.match(html, /\.bottom \.hint\{display:none\}/);
+  assert.match(html, /\.channel\{width:168px;min-width:168px\}/);
+});
