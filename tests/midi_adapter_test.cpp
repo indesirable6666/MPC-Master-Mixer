@@ -178,6 +178,64 @@ int main() {
     assert(!auxSends.setSendLevel(15, 3, 0.5f));
     assert(auxTransport.messages().size() == 3);
 
+
+    // Mute and Solo use separate, opt-in mappings for each track.
+    SimulatedMidiTransport switchTransport;
+    TrackMuteSoloMidiAdapter switches(switchTransport);
+    assert(!switches.hasMuteMapping(0));
+    assert(!switches.hasSoloMapping(0));
+    assert(!switches.setMuted(0, true));
+    assert(!switches.setSolo(0, true));
+    assert(!switches.configureMute(16, CcMapping{0, 50, true}));
+    assert(!switches.configureSolo(0, CcMapping{0, 51, false}));
+    assert(switches.configureMute(0, CcMapping{1, 50, true}));
+    assert(switches.configureSolo(0, CcMapping{1, 51, true}));
+    assert(switches.configureMute(1, CcMapping{3, 60, true}));
+    assert(switches.setMuted(0, true));
+    assert(switches.setMuted(0, false));
+    assert(switches.setSolo(0, true));
+    assert(switches.setSolo(0, false));
+    assert(switches.setMuted(1, true));
+    assert(!switches.setSolo(1, true));
+    const auto& switchMessages = switchTransport.messages();
+    assert(switchMessages.size() == 5);
+    assert(switchMessages[0].status == 0xB1 && switchMessages[0].data1 == 50 &&
+           switchMessages[0].data2 == 127);
+    assert(switchMessages[1].status == 0xB1 && switchMessages[1].data1 == 50 &&
+           switchMessages[1].data2 == 0);
+    assert(switchMessages[2].status == 0xB1 && switchMessages[2].data1 == 51 &&
+           switchMessages[2].data2 == 127);
+    assert(switchMessages[3].status == 0xB1 && switchMessages[3].data1 == 51 &&
+           switchMessages[3].data2 == 0);
+    assert(switchMessages[4].status == 0xB3 && switchMessages[4].data1 == 60 &&
+           switchMessages[4].data2 == 127);
+
+    // Invalid reconfiguration clears only the addressed switch mapping.
+    assert(!switches.configureMute(0, CcMapping{16, 50, true}));
+    assert(!switches.hasMuteMapping(0));
+    assert(switches.hasSoloMapping(0));
+    assert(switches.hasMuteMapping(1));
+    assert(!switches.setMuted(0, true));
+    switches.clearSolo(0);
+    assert(!switches.hasSoloMapping(0));
+    assert(switches.hasMuteMapping(1));
+    switches.clearTrack(1);
+    assert(!switches.hasMuteMapping(1));
+    assert(switches.configureMute(15, CcMapping{15, 127, true}));
+    assert(switches.configureSolo(15, CcMapping{15, 126, true}));
+    switches.clearAll();
+    assert(!switches.hasMuteMapping(15));
+    assert(!switches.hasSoloMapping(15));
+    assert(!switches.setMuted(15, false));
+    assert(switchTransport.messages().size() == 5);
+
+    // A transport failure is propagated for switch messages as well.
+    RejectingMidiTransport rejectingSwitchTransport;
+    TrackMuteSoloMidiAdapter rejectingSwitches(rejectingSwitchTransport);
+    assert(rejectingSwitches.configureMute(0, CcMapping{0, 70, true}));
+    assert(!rejectingSwitches.setMuted(0, true));
+    assert(rejectingSwitchTransport.attempts == 1);
+
     std::cout << "MIDI adapter tests passed (no ALSA/device access).\n";
     return 0;
 }
