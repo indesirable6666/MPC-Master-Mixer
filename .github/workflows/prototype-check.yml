@@ -5,6 +5,7 @@ on:
   push:
     paths:
       - "prototype/**"
+      - "tests/**"
       - ".github/workflows/prototype-check.yml"
   pull_request:
     paths:
