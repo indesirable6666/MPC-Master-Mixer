@@ -6,6 +6,15 @@
 
 using namespace mpcmixer;
 
+class RejectingMidiTransport final : public MidiTransport {
+public:
+    bool send(const MidiMessage&) override {
+        ++attempts;
+        return false;
+    }
+    unsigned attempts = 0;
+};
+
 int main() {
     SimulatedMidiTransport transport;
     VolumeMidiAdapter adapter(transport);
@@ -43,6 +52,20 @@ int main() {
     assert(!adapter.hasVerifiedMapping());
     assert(!adapter.setVolume(0.75f));
     assert(transport.messages().size() == 3);
+
+    // A failed reconfiguration clears the previous mapping: no stale CC is sent.
+    assert(adapter.configure(CcMapping{1, 10, true}));
+    assert(!adapter.configure(CcMapping{16, 10, true}));
+    assert(!adapter.hasVerifiedMapping());
+    assert(!adapter.setVolume(0.25f));
+    assert(transport.messages().size() == 3);
+
+    // Transport errors are propagated to the caller.
+    RejectingMidiTransport rejectingTransport;
+    VolumeMidiAdapter rejectingAdapter(rejectingTransport);
+    assert(rejectingAdapter.configure(CcMapping{0, 7, true}));
+    assert(!rejectingAdapter.setVolume(0.5f));
+    assert(rejectingTransport.attempts == 1);
 
     std::cout << "MIDI adapter tests passed (no ALSA/device access).\n";
     return 0;
