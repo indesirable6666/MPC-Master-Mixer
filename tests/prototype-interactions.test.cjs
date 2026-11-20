@@ -123,3 +123,23 @@ test('touch controls expose practical minimum hit areas', () => {
   assert.match(html, /\.pan input\{[^}]*min-height:30px;/);
   assert.match(html, /\.aux input\{[^}]*min-height:30px;/);
 });
+
+test('bank navigation switches between channels 1–8 and 9–16', () => {
+  const dom = loadPrototype();
+  const prev = dom.window.document.getElementById('prev');
+  const next = dom.window.document.getElementById('next');
+  const status = dom.window.document.getElementById('bankStatus');
+  assert.equal(status.textContent, 'BANQUE 1/2 · PISTES 1–8');
+  assert.equal(prev.disabled, true);
+  assert.equal(next.disabled, false);
+  next.click();
+  assert.equal(status.textContent, 'BANQUE 2/2 · PISTES 9–16');
+  assert.equal(prev.disabled, false);
+  assert.equal(next.disabled, true);
+  assert.equal(status.getAttribute('aria-label'), 'Banque 2 sur 2, pistes 9 à 16');
+  prev.click();
+  assert.equal(status.textContent, 'BANQUE 1/2 · PISTES 1–8');
+  assert.equal(prev.disabled, true);
+  assert.equal(next.disabled, false);
+  dom.window.close();
+});
