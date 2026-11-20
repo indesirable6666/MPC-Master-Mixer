@@ -97,7 +97,7 @@ button{color:inherit;touch-action:manipulation;-webkit-tap-highlight-color:trans
  <div class="project">SESSION · PROJET DE DÉMONSTRATION</div>
  <div class="top-spacer"></div>
  <div class="mode">MODE DÉMO · HORS LIGNE</div>
- <div class="toolbar"><button class="tool optional" id="prev" type="button">◀ BANQUE</button><button class="tool optional" id="next" type="button" aria-label="Afficher la banque suivante" disabled>BANQUE ▶</button><span id="bankStatus" class="mode bank-status" role="status" aria-live="polite">BANQUE 1/2 · PISTES 1–8</span><button class="tool" id="meterDemo" type="button" aria-pressed="false">DÉMO MÈTRES : OFF</button><button class="tool" id="reset" type="button">RÉINITIALISER</button></div>
+ <div class="toolbar"><button class="tool optional" id="prev" type="button" aria-label="Afficher la banque précédente" aria-controls="scrollArea bankStatus">◀ BANQUE</button><button class="tool optional" id="next" type="button" aria-label="Afficher la banque suivante" aria-controls="scrollArea bankStatus" disabled>BANQUE ▶</button><span id="bankStatus" class="mode bank-status" role="status" aria-live="polite">BANQUE 1/2 · PISTES 1–8</span><button class="tool" id="meterDemo" type="button" aria-pressed="false">DÉMO MÈTRES : OFF</button><button class="tool" id="reset" type="button">RÉINITIALISER</button></div>
 </header>
 <main class="workspace">
  <div class="scroll-area" id="scrollArea" aria-label="Tranches de canaux"><div class="strips" id="strips"></div></div>
