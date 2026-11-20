@@ -236,6 +236,60 @@ int main() {
     assert(!rejectingSwitches.setMuted(0, true));
     assert(rejectingSwitchTransport.attempts == 1);
 
+
+    // Master bus has independent, opt-in Volume and Mute mappings.
+    SimulatedMidiTransport masterTransport;
+    MasterMidiAdapter master(masterTransport);
+    assert(!master.hasVolumeMapping());
+    assert(!master.hasMuteMapping());
+    assert(!master.setVolume(0.5f));
+    assert(!master.setMuted(true));
+    assert(!master.configureVolume(CcMapping{0, 80, false}));
+    assert(!master.configureMute(CcMapping{16, 81, true}));
+    assert(masterTransport.messages().empty());
+    assert(master.configureVolume(CcMapping{2, 80, true}));
+    assert(master.configureMute(CcMapping{2, 81, true}));
+    assert(master.setVolume(0.0f));
+    assert(master.setVolume(0.5f));
+    assert(master.setVolume(1.0f));
+    assert(!master.setVolume(-0.1f));
+    assert(!master.setVolume(std::numeric_limits<float>::quiet_NaN()));
+    assert(master.setMuted(true));
+    assert(master.setMuted(false));
+    const auto& masterMessages = masterTransport.messages();
+    assert(masterMessages.size() == 5);
+    assert(masterMessages[0].status == 0xB2 && masterMessages[0].data1 == 80 &&
+           masterMessages[0].data2 == 0);
+    assert(masterMessages[1].status == 0xB2 && masterMessages[1].data1 == 80 &&
+           masterMessages[1].data2 == 64);
+    assert(masterMessages[2].status == 0xB2 && masterMessages[2].data1 == 80 &&
+           masterMessages[2].data2 == 127);
+    assert(masterMessages[3].status == 0xB2 && masterMessages[3].data1 == 81 &&
+           masterMessages[3].data2 == 127);
+    assert(masterMessages[4].status == 0xB2 && masterMessages[4].data1 == 81 &&
+           masterMessages[4].data2 == 0);
+
+    // Clearing or invalidating one Master control leaves the other independent.
+    assert(!master.configureVolume(CcMapping{16, 80, true}));
+    assert(!master.hasVolumeMapping());
+    assert(master.hasMuteMapping());
+    assert(!master.setVolume(0.75f));
+    assert(master.setMuted(true));
+    master.clearMute();
+    assert(!master.hasMuteMapping());
+    assert(master.configureVolume(CcMapping{1, 82, true}));
+    master.clearAll();
+    assert(!master.hasVolumeMapping());
+    assert(!master.hasMuteMapping());
+    assert(!master.setVolume(0.5f));
+    assert(masterTransport.messages().size() == 6);
+
+    // Master transport errors are propagated.
+    RejectingMidiTransport rejectingMasterTransport;
+    MasterMidiAdapter rejectingMaster(rejectingMasterTransport);
+    assert(rejectingMaster.configureVolume(CcMapping{0, 90, true}));
+    assert(!rejectingMaster.setVolume(0.5f));
+
     std::cout << "MIDI adapter tests passed (no ALSA/device access).\n";
     return 0;
 }
