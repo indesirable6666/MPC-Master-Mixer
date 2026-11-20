@@ -5,23 +5,40 @@ The browser prototype remains a separate, offline-only UI.
 
 Current audio components:
 
-- `audio/audio_control_bridge.hpp` — fixed-capacity SPSC control queue that applies UI/host parameter updates at audio block boundaries.\n- `audio/audio_engine.hpp` — 16-track stereo summing, track/master gain,
+- `audio/audio_engine.hpp` — 16-track stereo summing, track/master gain,
   pan, Mute/Solo, six-band EQ, two insert slots per track, four stereo Aux
-  sends and returns, and the linked Audio In pair processor.
+  sends and returns, and the standalone linked Audio In pair processor.
+- `audio/audio_control_bridge.hpp` — fixed-capacity SPSC control queue that
+  applies UI/host parameter updates at audio block boundaries.
+- `audio/audio_duplex_backend.hpp` — device-independent full-duplex callback
+  contract and deterministic offline callback driver.
+- `audio/audio_duplex_engine_host.hpp` — explicit input-channel-to-track
+  routing and connection from duplex buffers through the mixer to stereo output.
+- `audio/audio_backend.hpp` — legacy capture-only interface and explicit
+  silent offline backend.
 - `audio/six_band_eq.hpp` — allocation-free six-band parametric EQ with
   per-band frequency, Q and gain controls.
 - `audio/insert_effects.hpp` — non-owning two-slot insert chain and initial
   soft-clip processor.
-- `audio/audio_backend.hpp` — device-independent capture interface and an
-  explicit silent offline backend.
 - `mixer/meter_model.hpp` — peak/RMS/clip state model.
 - `midi/midi_adapter.hpp` — opt-in MIDI adapter interfaces with no assumed
   MPC CC mappings.
 
 DSP configuration methods belong on a control thread and must not race audio
-block processing. The core does not open ALSA or any device and does not read
-or write MPC parameters. The default capture backend only returns silence.
+block processing. The command bridge is single-producer/single-consumer; the
+duplex host's per-input routes are atomic. The host requires an explicit
+channel-to-track mapping and defaults all inputs to unmapped.
 
-The browser prototype is still not wired to the C++ bridge; a native host/controller adapter is required. See `docs/AUDIO_CONTROL_BRIDGE.md`.\n\nThe target UI framework and live device backend remain undecided until the
+The offline duplex backend only forwards synthetic/caller-owned buffers. No
+ALSA, JACK, MPC device capture, or hardware playback backend is implemented.
+The stereo float output still needs a target output stage for limiting and
+sample-format conversion.
+
+The browser prototype is not wired to the C++ bridge; a native host/controller
+adapter is still required. See `docs/AUDIO_CONTROL_BRIDGE.md`,
+`docs/AUDIO_DUPLEX_BACKEND.md`, and
+`docs/AUDIO_DUPLEX_ENGINE_HOST.md`.
+
+The target UI framework and live device backend remain undecided until the
 Buildroot SDK, graphics/input runtime, audio API, and safe launch model are
 verified. See `docs/ARMV7_BUILD.md` and `docs/AUDIO_ENGINE.md`.
