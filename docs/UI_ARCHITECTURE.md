@@ -75,3 +75,19 @@ Do not select a UI framework or claim native app compatibility until the target 
 ## Current status
 
 The UI direction is agreed: horizontal scrolling for the 16 channel strips, finger-friendly controls, and a Master strip fixed at the right. The first test mode will be touchscreen-only. External MIDI hardware may be connected later as an optional control surface.
+
+
+## Prototype implementation status (2026-11)
+
+The `prototype/index.html` page now contains a more complete touch-first mixer mock-up:
+
+- 16 named channel strips in a horizontally scrollable bank.
+- A fixed Master strip docked to the right.
+- Six EQ controls, pan, four Aux Sends, insert placeholders, Mute/Solo and volume controls per strip.
+- Local interaction for faders, EQ, pan, Aux, Mute/Solo and insert placeholder toggles.
+- Bank navigation buttons and a reset action.
+- Explicit offline/demo labeling; no network, MIDI, ALSA, audio-engine or device access.
+
+All values and meters are illustrative UI state. The meter display is intentionally inactive. Insert buttons are placeholders, not functioning effects. The prototype does not persist settings and does not communicate with the MPC.
+
+This is a browser UI milestone only. It is not yet an ARM executable and must not be deployed as if it were an integrated MPC application.
