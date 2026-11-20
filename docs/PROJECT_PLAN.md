@@ -23,6 +23,22 @@ Develop a touchscreen mixer companion for the Akai MPC Live II running MPC OS 2.
 5. **Packaging and launch** — build for the MPC's ARM/Linux environment and investigate a reversible home-menu entry.
 6. **Testing and release** — test on MPC OS 2.15, document installation, rollback and known limitations.
 
+## Software implementation status
+
+The current branch contains a browser-only touch prototype, a platform-independent
+C++14 stereo mixing core, four post-fader/post-pan stereo Aux sends, a standalone
+six-band parametric EQ DSP stage (frequency, Q and gain per band), a stereo
+Audio In pair processor, and a device-independent audio-capture interface with
+an explicit silent offline backend. Host-side CI exercises these building
+blocks; none of them is yet connected to live MPC audio.
+
+The next software milestones are to compose the DSP stages into a defined
+per-channel signal chain, add insert/effect routing and Aux return processing,
+connect the UI to an explicit local engine model, and cross-compile the complete
+host-tested core for the audited ARMv7 ABI. Target capture, live MIDI mapping,
+graphics/runtime selection, launcher integration and device validation remain
+separate gated activities.
+
 ## Important constraints
 
 - The MPC root filesystem was observed mounted read-only and almost full. Do not install files into the root filesystem.
