@@ -89,3 +89,16 @@ Le processeur est sans allocation et reçoit des buffers fournis par l'appelant.
 Il ne capture aucun signal physique et n'ouvre aucun périphérique audio. La
 connexion à l'entrée matérielle MPC et l'intégration dans le bus principal
 restent des étapes séparées, à valider sur la cible avec autorisation explicite.
+
+
+## Full-duplex backend contract
+
+`src/audio/audio_duplex_backend.hpp` defines a future host boundary for
+simultaneous planar-float capture and playback. The format carries sample rate,
+input/output channel counts and maximum block size. Lifecycle operations belong
+to the control thread; the realtime callback contract forbids allocation,
+locks, logging and blocking. `OfflineAudioDuplexBackend` is a deterministic
+callback test driver only: it forwards caller-owned buffers and never opens a
+device. Its tests establish callback plumbing and validation, not hardware
+timing, latency or MPC routing. The earlier `AudioCaptureBackend` remains a
+capture-only legacy interface; actual target audio integration is still absent.
