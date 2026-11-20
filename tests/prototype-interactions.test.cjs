@@ -89,6 +89,7 @@ test('reset restores fader, pan, EQ, aux, mute and solo defaults', () => {
   assert.equal(el.querySelector('[data-eq="1"]').value, '0');
   assert.equal(el.querySelector('[data-aux="2"]').value, '0');
   assert.equal(el.querySelector('.pan-value').textContent, 'C');
+  assert.equal(el.querySelector('[data-pan]').title, 'Pan C');
   assert.equal(el.querySelector('[data-toggle="mute"]').getAttribute('aria-pressed'), 'false');
   assert.equal(el.querySelector('[data-toggle="solo"]').getAttribute('aria-pressed'), 'false');
   dom.window.close();
