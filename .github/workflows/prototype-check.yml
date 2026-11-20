@@ -37,8 +37,9 @@ jobs:
             'data-pan',
             'data-eq',
             'data-aux',
-            'data-toggle="mute"',
-            'data-toggle="solo"',
+            'data-toggle="',
+            'MUTE',
+            'SOLO',
             'MODE DÉMO',
             'SIMULATION LOCALE'
           ];
