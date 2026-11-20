@@ -41,6 +41,10 @@ jobs:
             tools/arm-probe/graphics-load-probe.cpp -ldl \
             -o build/mpc-arm-graphics-probe-v2
 
+          arm-linux-gnueabihf-g++ $COMMON_FLAGS -std=c++14 \
+            tools/arm-probe/egl-client-extension-probe.cpp -ldl \
+            -o build/mpc-arm-egl-client-extension-probe
+
           echo "=== C executable ==="
           file build/mpc-arm-probe-c
           arm-linux-gnueabihf-readelf -h build/mpc-arm-probe-c
@@ -60,13 +64,20 @@ jobs:
           arm-linux-gnueabihf-readelf -d build/mpc-arm-graphics-probe-v2 | grep -E 'NEEDED|RPATH|RUNPATH' || true
           arm-linux-gnueabihf-readelf --version-info build/mpc-arm-graphics-probe-v2
 
+          echo "=== EGL client extension probe ==="
+          file build/mpc-arm-egl-client-extension-probe
+          arm-linux-gnueabihf-readelf -h build/mpc-arm-egl-client-extension-probe
+          arm-linux-gnueabihf-readelf -l build/mpc-arm-egl-client-extension-probe | grep interpreter || true
+          arm-linux-gnueabihf-readelf -d build/mpc-arm-egl-client-extension-probe | grep -E 'NEEDED|RPATH|RUNPATH' || true
+          arm-linux-gnueabihf-readelf --version-info build/mpc-arm-egl-client-extension-probe
+
           echo "=== Cross-toolchain runtime library locations ==="
           arm-linux-gnueabihf-g++ -print-file-name=libstdc++.so.6
           arm-linux-gnueabihf-g++ -print-file-name=libgcc_s.so.1
           arm-linux-gnueabihf-g++ -print-file-name=libc.so.6
 
           echo "=== Reject runtime requirements newer than the MPC ==="
-          for binary in build/mpc-arm-probe-cpp build/mpc-arm-graphics-probe-v2; do
+          for binary in build/mpc-arm-probe-cpp build/mpc-arm-graphics-probe-v2 build/mpc-arm-egl-client-extension-probe; do
             if arm-linux-gnueabihf-readelf --version-info "$binary" | \
               grep -E 'GLIBCXX_3\.4\.(29|[3-9][0-9])|GLIBC_2\.(33|[4-9][0-9])'; then
               echo "ERROR: $binary requires a newer runtime than the MPC audit found."
@@ -80,4 +91,11 @@ jobs:
         with:
           name: mpc-armv7-graphics-probe-v2
           path: build/mpc-arm-graphics-probe-v2
+          if-no-files-found: error
+
+      - name: Upload EGL client extension probe
+        uses: actions/upload-artifact@v4
+        with:
+          name: mpc-armv7-egl-client-extension-probe
+          path: build/mpc-arm-egl-client-extension-probe
           if-no-files-found: error
