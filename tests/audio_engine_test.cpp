@@ -98,6 +98,59 @@ int main() {
     assert(near(left[0], 0.0f));
     assert(near(right[0], 0.0f));
 
+    // Two Audio In mono channels can be linked without collapsing stereo.
+    mpcmixer::AudioInputPair audioIn;
+    float inputL[] = {1.0f, 0.5f};
+    float inputR[] = {-0.25f, 0.75f};
+    float pairL[2] = {};
+    float pairR[2] = {};
+    audioIn.setLinked(true);
+    audioIn.process(inputL, inputR, pairL, pairR, 2);
+    assert(near(pairL[0], 1.0f));
+    assert(near(pairR[0], -0.25f));
+    assert(near(pairL[1], 0.5f));
+    assert(near(pairR[1], 0.75f));
+
+    mpcmixer::AudioInputPair::StereoControls stereo;
+    stereo.gain = 0.5f;
+    stereo.balance = 1.0f;
+    assert(audioIn.setStereoControls(stereo));
+    audioIn.process(inputL, inputR, pairL, pairR, 2);
+    assert(near(pairL[0], 0.0f));
+    assert(near(pairR[0], -0.125f));
+    assert(near(pairL[1], 0.0f));
+    assert(near(pairR[1], 0.375f));
+
+    stereo.balance = 0.0f;
+    stereo.mute = true;
+    assert(audioIn.setStereoControls(stereo));
+    audioIn.process(inputL, inputR, pairL, pairR, 2);
+    assert(near(pairL[0], 0.0f) && near(pairR[0], 0.0f));
+
+    // Unlinked mode restores two independently pannable mono inputs.
+    audioIn.setLinked(false);
+    mpcmixer::AudioInputPair::Channel leftChannel;
+    leftChannel.pan = -1.0f;
+    leftChannel.gain = 0.5f;
+    mpcmixer::AudioInputPair::Channel rightChannel;
+    rightChannel.pan = 1.0f;
+    rightChannel.gain = 0.25f;
+    assert(audioIn.setChannel(0, leftChannel));
+    assert(audioIn.setChannel(1, rightChannel));
+    audioIn.process(inputL, inputR, pairL, pairR, 2);
+    assert(near(pairL[0], 0.5f));
+    assert(near(pairR[0], -0.0625f));
+    leftChannel.solo = true;
+    assert(audioIn.setChannel(0, leftChannel));
+    audioIn.process(inputL, inputR, pairL, pairR, 2);
+    assert(near(pairR[0], 0.0f));
+
+    // Invalid stereo controls and channel values are rejected.
+    stereo.gain = 2.0f;
+    assert(!audioIn.setStereoControls(stereo));
+    leftChannel.pan = std::numeric_limits<float>::quiet_NaN();
+    assert(!audioIn.setChannel(0, leftChannel));
+
     std::cout << "Audio engine tests passed\n";
     return 0;
 }
