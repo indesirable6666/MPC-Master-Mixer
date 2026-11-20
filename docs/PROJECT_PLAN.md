@@ -25,19 +25,31 @@ Develop a touchscreen mixer companion for the Akai MPC Live II running MPC OS 2.
 
 ## Software implementation status
 
-The current branch contains a browser-only touch prototype, a platform-independent
-C++14 stereo mixing core, four post-fader/post-pan stereo Aux sends, a standalone
-six-band parametric EQ DSP stage (frequency, Q and gain per band), a stereo
-Audio In pair processor, and a device-independent audio-capture interface with
-an explicit silent offline backend. Host-side CI exercises these building
-blocks; none of them is yet connected to live MPC audio.
+The current branch contains a browser-only touch prototype and a portable,
+allocation-free C++14 stereo DSP core with:
+- Per-track six-band parametric EQ (frequency, Q and gain per band)
+- Two insert slots per track, including an initial soft-clip effect
+- Track gain, pan, Mute and Solo
+- Four stereo Aux send buses and independently controlled stereo returns
+- A linked/unlinked Audio In pair processor
+- A device-independent capture interface whose default backend supplies
+  explicit silence and never opens a device
 
-The next software milestones are to compose the DSP stages into a defined
-per-channel signal chain, add insert/effect routing and Aux return processing,
-connect the UI to an explicit local engine model, and cross-compile the complete
-host-tested core for the audited ARMv7 ABI. Target capture, live MIDI mapping,
-graphics/runtime selection, launcher integration and device validation remain
-separate gated activities.
+Host CI tests the DSP behavior. The ARMv7 workflow also cross-compiles the
+audio-engine tests for the audited hard-float instruction set and checks
+runtime symbol versions. This is a cross-toolchain compatibility check, not
+proof that the binary runs on the MPC or that the Debian sysroot exactly
+matches its Buildroot image. See `docs/ARMV7_BUILD.md`.
+
+The browser prototype still stores local demo state and is not yet connected
+to the C++ engine. No live MPC audio, MIDI feedback, or device routing is
+claimed.
+
+Next software milestones: add more useful insert effects, establish host
+block-processing performance, implement a verified UI-to-engine controller,
+and investigate a matching Buildroot SDK/sysroot. Target audio capture, live
+MIDI mappings, graphics/runtime selection, launcher integration and device
+validation remain separate gated activities.
 
 ## Important constraints
 
