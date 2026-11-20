@@ -109,14 +109,17 @@ function makeStrip(index,isMaster=false){
   <div class="channel-head"><span class="channel-title">${name}</span><span class="channel-type">${isMaster?'STEREO':'<span class="channel-number">'+String(index+1).padStart(2,'0')+'</span> · AUDIO'}</span></div>
   <div class="block"><div class="block-title">Inserts · effets</div><div class="fx-row"><button class="fx" type="button">INSERT 1</button><button class="fx off" type="button">INSERT 2</button></div></div>
   <div class="block"><div class="block-title">EQ paramétrique · 6 bandes</div><div class="eq">${['LF','LM','M1','M2','HM','HF'].map((band,i)=>`<label class="band">${band}<input data-eq="${i}" type="range" min="-12" max="12" step="0.5" value="0" aria-label="EQ ${band} ${name}"><output>0.0</output></label>`).join('')}</div></div>
-  <div class="block"><div class="block-title">Panoramique</div><div class="pan"><span>L</span><input data-pan type="range" min="-100" max="100" value="0" aria-label="Panoramique ${name}"><span>R</span></div></div>
+  <div class="block"><div class="block-title">Panoramique</div><div class="pan"><span>L</span><input data-pan type="range" min="-100" max="100" value="0" aria-label="Panoramique ${name}"><span>R</span><output class="pan-value" aria-live="polite">C</output></div></div>
   <div class="block"><div class="block-title">Aux sends</div><div class="aux">${[1,2,3,4].map((n)=>`<label>AUX ${n}<input data-aux="${n-1}" type="range" min="0" max="100" value="0" aria-label="Aux ${n} ${name}"><output>0</output></label>`).join('')}</div></div>
   <div class="switches"><button class="toggle" data-toggle="mute" type="button" aria-pressed="false">MUTE</button><button class="toggle" data-toggle="solo" type="button" aria-pressed="false">SOLO</button></div>
   ${meter()}
   <div class="fader-area"><div class="scale"><span>+6</span><span>0</span><span>-12</span><span>-∞</span></div><input class="fader" data-volume type="range" min="0" max="127" value="100" aria-label="Volume ${name}"><div class="fader-readout"><output class="db">0.0 dB</output><span class="value">100 / 127</span></div></div>`;
  const update=()=>{
   el.querySelectorAll('[data-eq]').forEach(input=>{const v=Number(input.value);input.nextElementSibling.textContent=(v>0?'+':'')+v.toFixed(1)});
-  el.querySelector('[data-pan]').title='Pan '+data.pan;
+  const panValue=Number(data.pan);
+  const panLabel=panValue===0?'C':panValue<0?'L '+Math.abs(panValue):'R '+panValue;
+  el.querySelector('[data-pan]').title='Pan '+panLabel;
+  el.querySelector('.pan-value').textContent=panLabel;
   el.querySelectorAll('[data-aux]').forEach(input=>input.nextElementSibling.textContent=input.value);
   const db=el.querySelector('.db');
   const raw=Number(data.volume);
@@ -126,6 +129,7 @@ function makeStrip(index,isMaster=false){
  };
  el.addEventListener('input',e=>{
   const t=e.target;
+  if(!isMaster)selectChannel(index);
   if(t.matches('[data-volume]'))data.volume=Number(t.value);
   if(t.matches('[data-pan]'))data.pan=Number(t.value);
   if(t.matches('[data-eq]'))data.eq[Number(t.dataset.eq)]=Number(t.value);
@@ -134,7 +138,7 @@ function makeStrip(index,isMaster=false){
  });
  el.addEventListener('click',e=>{
   const toggle=e.target.closest('[data-toggle]');
-  if(toggle){const key=toggle.dataset.toggle;data[key]=!data[key];update();return}
+  if(toggle){if(!isMaster)selectChannel(index);const key=toggle.dataset.toggle;data[key]=!data[key];update();return}
   const fx=e.target.closest('.fx');if(fx){fx.classList.toggle('off');return}
   if(!isMaster&&!e.target.closest('input,button'))selectChannel(index);
  });
