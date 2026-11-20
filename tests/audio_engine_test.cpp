@@ -450,6 +450,25 @@ int main() {
     assert(!bridge.enqueueMasterGain(std::numeric_limits<float>::quiet_NaN()));
     bridgeTrack.pan = 2.0f;
     assert(!bridge.enqueueTrack(0, bridgeTrack));
+    mpcmixer::AudioEngineCommandBridge returnBridge;
+    mpcmixer::AudioEngine::AuxReturn bridgeReturn;
+    bridgeReturn.gain = 0.5f;
+    bridgeReturn.balance = 1.0f;
+    assert(returnBridge.enqueueAuxReturn(0, bridgeReturn));
+    float bridgeReturnL[] = {1.0f};
+    float bridgeReturnR[] = {1.0f};
+    const float* bridgeReturnsL[AudioEngine::kAuxBusCount] = {
+        bridgeReturnL, nullptr, nullptr, nullptr
+    };
+    const float* bridgeReturnsR[AudioEngine::kAuxBusCount] = {
+        bridgeReturnR, nullptr, nullptr, nullptr
+    };
+    returnBridge.processWithAuxAndReturns(
+        nullptr, bridgeLeft, bridgeRight, nullptr, nullptr,
+        bridgeReturnsL, bridgeReturnsR, 1);
+    assert(near(bridgeLeft[0], 0.0f));
+    assert(near(bridgeRight[0], 0.5f));
+
     mpcmixer::AudioEngineCommandBridge fullBridge;
     for (std::size_t i = 0; i < mpcmixer::AudioEngineCommandBridge::kQueueCapacity; ++i)
         assert(fullBridge.enqueueMasterMute((i % 2) != 0));
