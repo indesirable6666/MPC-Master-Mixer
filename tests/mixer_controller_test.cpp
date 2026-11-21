@@ -77,5 +77,46 @@ int main() {
     assert(fullController.desiredMasterMute() == previousDesiredMute);
     assert(fullBridge.pendingCountApprox() == mpcmixer::AudioEngineCommandBridge::kQueueCapacity);
 
+    // Insert pointer handoff is acknowledged only after the consumer has
+    // applied the replacement at a block boundary. The old object remains
+    // alive and a second handoff for the same slot is rejected meanwhile.
+    mpcmixer::AudioEngineCommandBridge insertBridge;
+    mpcmixer::MixerController insertController(insertBridge);
+    mpcmixer::GainInsert firstInsert;
+    assert(firstInsert.setGain(2.0f));
+    firstInsert.setEnabled(true);
+    mpcmixer::GainInsert secondInsert;
+    assert(secondInsert.setGain(0.5f));
+    secondInsert.setEnabled(true);
+    std::uint32_t firstTicket = 0;
+    std::uint32_t secondTicket = 0;
+    assert(insertController.setTrackInsert(0, 0, &firstInsert, firstTicket));
+    assert(!insertController.isInsertUpdateApplied(firstTicket));
+    assert(!insertController.setTrackInsert(0, 0, &secondInsert, secondTicket));
+    assert(insertController.desiredStateSnapshot().tracks[0].inserts[0] == &firstInsert);
+
+    const float insertInputSample[1] = {0.25f};
+    const float* insertInputs[mpcmixer::AudioEngine::kTrackCount]{};
+    insertInputs[0] = insertInputSample;
+    float insertLeft[1]{};
+    float insertRight[1]{};
+    insertBridge.process(insertInputs, insertLeft, insertRight, 1);
+    assert(insertController.isInsertUpdateApplied(firstTicket));
+    assert(std::fabs(insertLeft[0] - 0.25f * 2.0f * std::sqrt(0.5f)) < 0.0001f);
+
+    assert(insertController.setTrackInsert(0, 0, &secondInsert, secondTicket));
+    assert(!insertController.isInsertUpdateApplied(secondTicket));
+    insertBridge.process(insertInputs, insertLeft, insertRight, 1);
+    assert(insertController.isInsertUpdateApplied(secondTicket));
+    assert(std::fabs(insertLeft[0] - 0.25f * 0.5f * std::sqrt(0.5f)) < 0.0001f);
+    assert(insertController.desiredStateSnapshot().tracks[0].inserts[0] == &secondInsert);
+
+    // Clearing a slot uses the same acknowledged non-owning handoff.
+    assert(insertController.setTrackInsert(0, 0, nullptr, firstTicket));
+    insertBridge.process(insertInputs, insertLeft, insertRight, 1);
+    assert(insertController.isInsertUpdateApplied(firstTicket));
+    assert(insertController.desiredStateSnapshot().tracks[0].inserts[0] == nullptr);
+    assert(std::fabs(insertLeft[0] - 0.25f * std::sqrt(0.5f)) < 0.0001f);
+
     return 0;
 }
