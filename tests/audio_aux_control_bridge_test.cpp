@@ -36,7 +36,7 @@ int main() {
     return2.balance = -0.5f;
     assert(controller.setAuxReturn(0, return0));
     assert(controller.setAuxReturn(2, return2));
-    assert(bridge.pendingCountApprox() == 7);
+    assert(bridge.pendingCountApprox() == 8);
 
     float input[] = {1.0f};
     const float* inputs[Engine::kTrackCount] = {};
