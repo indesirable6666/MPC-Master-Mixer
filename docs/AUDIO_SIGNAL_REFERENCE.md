@@ -114,3 +114,18 @@ enqueue must not update the controller's desired return state; after the queue
 drains, the same update can be published and is applied by the next block.
 All buffers are synthetic and processed offline; this does not test device
 I/O, external effects hardware, or MPC routing.
+
+
+## Mixer controller rapid-edit validation
+
+`tests/mixer_controller_state_sequence_test.cpp` submits rapid interleaved
+fader, pan, mute, solo, and four-bus send edits on two tracks. It verifies that
+each full-track command preserves the previously edited fields, that the
+presentation snapshot reflects the latest desired state, and that the audio
+consumer applies the queued snapshots in order at the next block boundary.
+
+The same test fills the command queue and confirms that rejected fader, pan,
+mute, solo, and send edits do not partially mutate the controller's desired
+state or its presentation snapshot. Invalid ranges are also rejected without
+consuming queue capacity. This is a deterministic host-side control/DSP test;
+it does not exercise the touchscreen, device audio, or physical MPC.
