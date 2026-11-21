@@ -137,6 +137,8 @@ let audioStereoBalance=0;
 let syncingAudioPair=false;
 const state=Array.from({length:16},defaults);
 const masterState=defaults();
+// Audio demo state is initialized before the first channel selection callback.
+let audioContext=null,audioOscillator=null,audioChannelGain=null,audioPanner=null,audioMasterGain=null;
 function meter(){return '<div class="meter-panel" role="group" aria-label="Mesures simulées"><div class="meter-row"><span class="meter-label">PEAK</span><div class="meter-track" role="meter" aria-label="Peak simulé" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="0 pour cent"><i class="meter-fill" data-meter="peak"></i><i class="meter-hold" data-meter-hold aria-hidden="true"></i></div><output class="meter-value" data-meter-value="peak">0%</output></div><div class="meter-row"><span class="meter-label">RMS</span><div class="meter-track" role="meter" aria-label="RMS simulé" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="0 pour cent"><i class="meter-fill" data-meter="rms"></i></div><output class="meter-value" data-meter-value="rms">0%</output></div><div class="meter-row"><span class="meter-label">CLIP</span><span></span><button class="clip" data-clip type="button" aria-label="Écrêtage inactif" title="Effacer Clip et Peak Hold">OFF</button></div></div>'}
 function makeStrip(index,isMaster=false){
  const data=isMaster?masterState:state[index];
@@ -346,7 +348,6 @@ meterDemoButton.addEventListener('click',()=>setMeterDemo(!meterDemo));
 // Browser-only audible test signal. It deliberately does not connect to the
 // MPC, native audio engine, ALSA, or any external device.
 const audioDemoButton=document.getElementById('audioDemo');
-let audioContext=null,audioOscillator=null,audioChannelGain=null,audioPanner=null,audioMasterGain=null;
 function updateAudioDemoParameters(){
  if(!audioContext||!audioChannelGain||!audioPanner||!audioMasterGain)return;
  const selected=document.querySelector('.channel.selected');
