@@ -122,6 +122,9 @@ int main() {
     // Audio In link/unlink is one atomic queue command. A full queue must
     // leave the producer snapshot untouched, and a retry followed by a rapid
     // unlink must reach the audio side in FIFO order.
+    const float* pairNoTrackInputs[Engine::kTrackCount]{};
+    float pairTransitionOutputLeft[1]{};
+    float pairTransitionOutputRight[1]{};
     Bridge pairBackpressureBridge;
     mpcmixer::MixerController pairBackpressureController(pairBackpressureBridge);
     assert(pairBackpressureController.setAudioInputPairChannelGain(0, 40));
@@ -145,7 +148,7 @@ int main() {
     assert(pairBackpressureBridge.pendingCountApprox() ==
            Bridge::kQueueCapacity);
 
-    pairBackpressureBridge.process(noTrackInputs, pairOutputLeft, pairOutputRight, 1);
+    pairBackpressureBridge.process(pairNoTrackInputs, pairTransitionOutputLeft, pairTransitionOutputRight, 1);
     assert(pairBackpressureController.setAudioInputPairLinked(true));
     assert(pairBackpressureController.setAudioInputPairLinked(false));
     const auto rapidPairTransitions =
@@ -158,11 +161,11 @@ int main() {
     const float pairBackpressureLeft[1] = {1.0f};
     const float pairBackpressureRight[1] = {1.0f};
     pairBackpressureBridge.processWithAudioInputPair(
-        noTrackInputs, pairBackpressureLeft, pairBackpressureRight,
-        pairOutputLeft, pairOutputRight, 1);
-    assert(near(pairOutputLeft[0],
+        pairNoTrackInputs, pairBackpressureLeft, pairBackpressureRight,
+        pairTransitionOutputLeft, pairTransitionOutputRight, 1);
+    assert(near(pairTransitionOutputLeft[0],
                 0.4f * std::sqrt(0.5f) + 0.4f * 0.5f));
-    assert(near(pairOutputRight[0],
+    assert(near(pairTransitionOutputRight[0],
                 0.4f * std::sqrt(0.5f) + 0.4f * std::sqrt(0.75f)));
 
     return 0;
