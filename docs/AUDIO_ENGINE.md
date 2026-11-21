@@ -9,7 +9,7 @@ Implemented per track:
 - Linear gain from 0.0 to 1.27 (+2.1 dB), matching the prototype's 0–127 fader range
 - Constant-power pan from hard left to hard right
 - Mute and solo
-- Two non-owning insert slots per track, with tested utility gain, cubic soft-clip and stateful one-pole low-pass effects
+- Two non-owning insert slots per track, with tested utility gain, cubic soft-clip and stateful one-pole low-pass and high-pass effects
 - Four independent stereo Aux buses with per-track send levels and stereo returns (gain, balance, mute)
 - Null input as silence
 
@@ -109,7 +109,7 @@ The browser prototype controls are not yet wired to this engine. Host-side DSP t
 
 ## Host tests
 
-The `Audio engine tests` GitHub Actions workflow compiles with C++14, warnings-as-errors, and runs deterministic tests for summing, panning, gain, mute, solo, master controls, four stereo Aux sends and returns, six-band EQ frequency/Q/gain validation and signal processing, two-slot insert chains and soft clipping, silent capture backend behavior, invalid parameters, and non-finite samples. These tests do not require audio hardware.
+The `Audio engine tests` GitHub Actions workflow compiles with C++14, warnings-as-errors, and runs deterministic tests for summing, panning, gain, mute, solo, master controls, four stereo Aux sends and returns, six-band EQ frequency/Q/gain validation and signal processing, two-slot insert chains, soft clipping, and one-pole filter response, silent capture backend behavior, invalid parameters, and non-finite samples. These tests do not require audio hardware.
 
 
 ## Paire d'entrées Audio In
