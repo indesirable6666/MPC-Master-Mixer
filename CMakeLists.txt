@@ -24,6 +24,7 @@ target_include_directories(audio_engine_test PRIVATE src/audio)
 mpc_add_host_test(audio_block_meter_test tests/audio_block_meter_test.cpp)
 mpc_add_host_test(audio_meter_snapshot_bridge_test tests/audio_meter_snapshot_bridge_test.cpp)
 mpc_add_host_test(audio_duplex_meter_tap_test tests/audio_duplex_meter_tap_test.cpp)
+mpc_add_host_test(audio_input_pair_host_test tests/audio_input_pair_host_test.cpp)
 mpc_add_host_test(audio_meter_ui_consumer_test tests/audio_meter_ui_consumer_test.cpp)
 mpc_add_host_test(meter_presentation_adapter_test tests/meter_presentation_adapter_test.cpp)
 
