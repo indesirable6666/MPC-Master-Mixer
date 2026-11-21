@@ -2,6 +2,7 @@
 #include "audio_duplex_backend.hpp"
 #include "audio_duplex_engine_host.hpp"
 #include "audio_control_bridge.hpp"
+#include "mixer_controller.hpp"
 #include "audio_backend.hpp"
 #include "six_band_eq.hpp"
 
@@ -523,6 +524,40 @@ int main() {
            mpcmixer::AudioEngineCommandBridge::kQueueCapacity);
     fullBridge.process(nullptr, bridgeLeft, bridgeRight, 0);
     assert(fullBridge.pendingCountApprox() == 0);
+
+    // Native UI controller maps integer mixer controls to validated DSP state.
+    mpcmixer::AudioEngineCommandBridge controllerBridge;
+    mpcmixer::MixerController controller(controllerBridge);
+    assert(controller.setTrackFader(2, 127));
+    assert(controller.setTrackPan(2, -50));
+    assert(controller.setTrackMute(2, true));
+    assert(controller.setTrackSolo(2, true));
+    assert(controller.setTrackAuxSend(2, 3, 75));
+    assert(!controller.setTrackFader(2, 128));
+    assert(!controller.setTrackPan(2, 101));
+    assert(!controller.setTrackAuxSend(2, 4, 101));
+    assert(!controller.setTrackAuxSend(16, 0, 50));
+    assert(controller.setMasterFader(100));
+    assert(controller.setMasterMute(true));
+    float controllerInput[] = {1.0f};
+    const float* controllerInputs[AudioEngine::kTrackCount] = {};
+    controllerInputs[2] = controllerInput;
+    float controllerLeft[1] = {}, controllerRight[1] = {};
+    controllerBridge.process(controllerInputs, controllerLeft, controllerRight, 1);
+    const auto& controlled = controllerBridge.engineOnAudioThread().track(2);
+    assert(near(controlled.gain, 1.27f));
+    assert(near(controlled.pan, -0.5f));
+    assert(controlled.mute && controlled.solo);
+    assert(near(controlled.auxSend[3], 0.75f));
+    assert(near(controllerBridge.engineOnAudioThread().masterGain(), 1.0f));
+    assert(controllerBridge.engineOnAudioThread().masterMuted());
+    // A full queue does not advance the controller's cached desired state.
+    mpcmixer::AudioEngineCommandBridge controllerFullBridge;
+    mpcmixer::MixerController fullController(controllerFullBridge);
+    for (std::size_t i = 0; i < mpcmixer::AudioEngineCommandBridge::kQueueCapacity; ++i)
+        assert(controllerFullBridge.enqueueMasterMute((i % 2) != 0));
+    assert(!fullController.setTrackFader(0, 80));
+    assert(near(fullController.desiredTrack(0).gain, 1.0f));
 
     // The duplex host maps physical inputs only through explicit routes.
     mpcmixer::AudioEngineCommandBridge hostedBridge;
