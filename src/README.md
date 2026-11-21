@@ -20,8 +20,8 @@ Current audio components:
   silent offline backend.
 - `audio/six_band_eq.hpp` — allocation-free six-band parametric EQ with
   per-band frequency, Q and gain controls.
-- `audio/insert_effects.hpp` — non-owning two-slot insert chain and initial
-  soft-clip processor.
+- `audio/insert_effects.hpp` — non-owning two-slot insert chain with utility
+  gain and soft-clip processors.
 - `mixer/meter_model.hpp` — peak/RMS/clip state model.
 - `mixer/mixer_controller.hpp` — framework-neutral native UI adapter for track, per-band EQ, insert-slot replacement with acknowledgement tickets, Aux, and Master controls; exposes a complete producer-side desired-state snapshot for UI rendering.
 - `midi/midi_adapter.hpp` — opt-in MIDI adapter interfaces with no assumed
