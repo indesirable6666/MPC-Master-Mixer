@@ -531,6 +531,24 @@ int main() {
     host.processBlock(missingOutputBlock);
     assert(near(hostedOutputL[0], 0.0f));
 
+    // A malformed output-channel count clears every available supported
+    // output plane without indexing beyond the supplied pointer array.
+    float* monoOutput[] = {hostedOutputL};
+    hostedOutputL[0] = 5.0f;
+    mpcmixer::AudioDuplexBuffer monoOutputBlock{
+        hostedInputs, monoOutput, 2, 1, 2};
+    host.processBlock(monoOutputBlock);
+    assert(near(hostedOutputL[0], 0.0f));
+
+    float hostedExtraOutput[2] = {4.0f, 4.0f};
+    float* tripleOutputs[] = {hostedOutputL, hostedOutputR, hostedExtraOutput};
+    hostedOutputL[0] = hostedOutputR[0] = 3.0f;
+    mpcmixer::AudioDuplexBuffer tripleOutputBlock{
+        hostedInputs, tripleOutputs, 2, 3, 2};
+    host.processBlock(tripleOutputBlock);
+    assert(near(hostedOutputL[0], 0.0f) && near(hostedOutputR[0], 0.0f));
+    assert(near(hostedExtraOutput[0], 4.0f));
+
     // A callback with a channel count different from the prepared format is
     // rejected safely and clears valid output planes.
     const float* shortInputs[] = {hostedInputL};
