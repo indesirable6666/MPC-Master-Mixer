@@ -24,7 +24,7 @@ Current audio components:
   gain, soft-clip, one-pole low-pass and one-pole high-pass processors.
 - `mixer/meter_model.hpp` — peak/RMS/clip state model.
 - `mixer/audio_meter_ui_consumer.hpp` — UI-thread drain and peak-hold/decay state for 16 tracks plus Master.
-- `mixer/meter_presentation_adapter.hpp` — framework-neutral owned-value presentation frames and sink interface; host calls `tick()` at its UI cadence.
+- `mixer/meter_presentation_adapter.hpp` — framework-neutral owned-value presentation frames and sink interface; host calls `tick()` at its UI cadence.\n- `tests/audio_meter_end_to_end_test.cpp` — synthetic signal path through the offline duplex host, command bridge, meter snapshot queue, UI consumer, and fake presentation sink.
 - `mixer/mixer_controller.hpp` — framework-neutral native UI adapter for track, per-band EQ, insert-slot replacement with acknowledgement tickets, Aux, and Master controls; exposes a complete producer-side desired-state snapshot for UI rendering.
 - `midi/midi_adapter.hpp` — opt-in MIDI adapter interfaces with no assumed
   MPC CC mappings.
