@@ -17,8 +17,14 @@ The bounded transport now exists in `src/audio/audio_meter_snapshot_bridge.hpp`.
 It carries complete 17-channel snapshots (16 tracks plus Master) from one audio
 producer to one UI/control consumer. Its eight-slot SPSC queue rejects the
 newest frame when full, never waits, and exposes an approximate pending count.
-The prototype UI is still not connected, and no physical signal is currently
-captured.
+`AudioDuplexEngineHost` can optionally publish these snapshots when constructed
+with a meter-bridge pointer. Its current track tap is the explicitly routed
+input signal before EQ and inserts; its Master tap is the post-mix stereo
+output. Master peak is the greater of left/right peaks and RMS is the
+root-mean-square aggregation of the two channel RMS values. The route selected
+for each input is captured once per block and reused for processing and meter
+publication. The prototype UI is still not connected, and no physical signal
+is currently captured.
 
 ## Intended data flow
 
