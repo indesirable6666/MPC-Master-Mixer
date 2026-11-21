@@ -157,6 +157,7 @@ int main() {
     assert(pairController.setAudioInputPairChannelGain(1, 25));
     assert(pairController.setAudioInputPairChannelPan(1, 100));
     assert(pairController.setAudioInputPairChannelMute(1, false));
+    assert(pairController.setAudioInputPairChannelSolo(1, false));
     assert(pairController.setAudioInputPairChannelSolo(0, true));
     pairBridge.processWithAudioInputPair(
         noTrackInputs, pairInputLeft, pairInputRight,
