@@ -183,7 +183,7 @@ int main() {
     highPass.setEnabled(true);
     assert(near(highPass.processSample(1.0f), highPassAlpha));
     assert(near(highPass.processSample(1.0f),
-                highPassAlpha * (highPassAlpha - 1.0f)));
+                highPassAlpha * highPassAlpha));
     float dcResidual = 0.0f;
     for (int i = 0; i < 2000; ++i)
         dcResidual = highPass.processSample(1.0f);
