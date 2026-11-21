@@ -9,7 +9,7 @@ Implemented per track:
 - Linear gain from 0.0 to 1.27 (+2.1 dB), matching the prototype's 0–127 fader range
 - Constant-power pan from hard left to hard right
 - Mute and solo
-- Two non-owning insert slots per track, including a tested soft-clip effect
+- Two non-owning insert slots per track, with tested utility gain, cubic soft-clip and stateful one-pole low-pass effects
 - Four independent stereo Aux buses with per-track send levels and stereo returns (gain, balance, mute)
 - Null input as silence
 
@@ -91,7 +91,7 @@ from the native host/controller.
 ## What is deliberately not connected
 
 This is a DSP block processor, not yet a live audio application. It does not:
-- Add further insert effects (the initial soft-clip insert is implemented)
+- Add further insert effects (utility gain, cubic soft clip and one-pole low-pass are implemented)
 - Open ALSA, JACK, PulseAudio, or any audio device (the capture interface currently uses the silent backend only)
 - Capture or play sound
 - Read or write MPC audio routes
