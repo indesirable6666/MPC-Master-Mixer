@@ -45,44 +45,67 @@ public:
         float a2 = 0.0f;
     };
 
+    struct PreparedConfiguration {
+        std::array<Coefficients, kBandCount> coefficients{};
+        std::array<BandParameters, kBandCount> bands = defaultBandParameters();
+        float sampleRate = 0.0f;
+        bool valid = false;
+    };
+
     SixBandEq() = default;
 
-    bool configure(float sampleRate,
-                   const std::array<BandParameters, kBandCount>& bands) {
+    // Expensive coefficient calculation is performed by the control thread.
+    static bool prepareConfiguration(
+        float sampleRate,
+        const std::array<BandParameters, kBandCount>& bands,
+        PreparedConfiguration& prepared) {
         if (!std::isfinite(sampleRate) || sampleRate < 8000.0f ||
-            sampleRate > 192000.0f) {
-            return false;
-        }
+            sampleRate > 192000.0f) return false;
         for (const BandParameters& band : bands) {
             if (!std::isfinite(band.frequencyHz) ||
                 !std::isfinite(band.q) || !std::isfinite(band.gainDb) ||
                 band.frequencyHz < kMinFrequencyHz ||
                 band.frequencyHz >= sampleRate * 0.5f ||
                 band.q < kMinQ || band.q > kMaxQ ||
-                band.gainDb < kMinGainDb || band.gainDb > kMaxGainDb) {
+                band.gainDb < kMinGainDb || band.gainDb > kMaxGainDb)
                 return false;
-            }
         }
-
-        std::array<Coefficients, kBandCount> next{};
+        PreparedConfiguration next;
         for (std::size_t band = 0; band < kBandCount; ++band) {
             const float amplitude = std::pow(10.0f, bands[band].gainDb / 40.0f);
             const float omega = 2.0f * kPi * bands[band].frequencyHz / sampleRate;
             const float cosine = std::cos(omega);
             const float alpha = std::sin(omega) / (2.0f * bands[band].q);
             const float a0 = 1.0f + alpha / amplitude;
-            next[band].b0 = (1.0f + alpha * amplitude) / a0;
-            next[band].b1 = (-2.0f * cosine) / a0;
-            next[band].b2 = (1.0f - alpha * amplitude) / a0;
-            next[band].a1 = (-2.0f * cosine) / a0;
-            next[band].a2 = (1.0f - alpha / amplitude) / a0;
+            next.coefficients[band].b0 = (1.0f + alpha * amplitude) / a0;
+            next.coefficients[band].b1 = (-2.0f * cosine) / a0;
+            next.coefficients[band].b2 = (1.0f - alpha * amplitude) / a0;
+            next.coefficients[band].a1 = (-2.0f * cosine) / a0;
+            next.coefficients[band].a2 = (1.0f - alpha / amplitude) / a0;
         }
-        coefficients_ = next;
-        bands_ = bands;
-        sampleRate_ = sampleRate;
+        next.bands = bands;
+        next.sampleRate = sampleRate;
+        next.valid = true;
+        prepared = next;
+        return true;
+    }
+
+    // Bounded copy/reset only: safe to apply at an audio block boundary.
+    bool applyPrepared(const PreparedConfiguration& prepared) noexcept {
+        if (!prepared.valid) return false;
+        coefficients_ = prepared.coefficients;
+        bands_ = prepared.bands;
+        sampleRate_ = prepared.sampleRate;
         configured_ = true;
         reset();
         return true;
+    }
+
+    bool configure(float sampleRate,
+                   const std::array<BandParameters, kBandCount>& bands) {
+        PreparedConfiguration prepared;
+        return prepareConfiguration(sampleRate, bands, prepared) &&
+               applyPrepared(prepared);
     }
 
     // Convenience overload for the six gain controls using the documented
