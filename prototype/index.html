@@ -354,7 +354,7 @@ function updateAudioDemoParameters(){
  const track=state[index]||state[0];
  const anySolo=state.some(item=>item.solo);
  const audible=!track.mute&&(!anySolo||track.solo)&&!masterState.mute;
- audioChannelGain.gain.value=audible?track.volume/100:0;
+ audioChannelGain.gain.value=audible?0.15*track.volume/100:0;
  audioPanner.pan.value=track.pan/100;
  audioMasterGain.gain.value=masterState.volume/100;
 }
