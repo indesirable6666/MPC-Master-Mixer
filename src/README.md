@@ -22,7 +22,7 @@ Current audio components:
   per-band frequency, Q and gain controls.
 - `audio/insert_effects.hpp` — non-owning two-slot insert chain and initial
   soft-clip processor.
-- `mixer/meter_model.hpp` — peak/RMS/clip state model.
+- `mixer/meter_model.hpp` — peak/RMS/clip state model.\n- `mixer/mixer_controller.hpp` — framework-neutral native UI adapter that maps integer fader/pan/Aux/Mute/Solo controls to the SPSC bridge.
 - `midi/midi_adapter.hpp` — opt-in MIDI adapter interfaces with no assumed
   MPC CC mappings.
 
