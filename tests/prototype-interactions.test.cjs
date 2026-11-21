@@ -418,3 +418,51 @@ test('host snapshot event updates all 16 tracks and Master without claiming live
   assert.equal(master.querySelector('[data-meter-value="peak"]').textContent, '100%');
   dom.window.close();
 });
+
+
+test('browser audio demo generates a local tone controlled by selected track and master', () => {
+  class FakeAudioNode {
+    constructor() { this.gain = { value: 1 }; this.pan = { value: 0 }; this.frequency = { value: 0 }; this.connections = []; }
+    connect(node) { this.connections.push(node); }
+  }
+  class FakeAudioContext {
+    constructor() { this.state = 'running'; this.destination = new FakeAudioNode(); this.closed = false; }
+    createOscillator() { this.oscillator = new FakeAudioNode(); this.oscillator.start = () => { this.oscillator.started = true; }; this.oscillator.stop = () => { this.oscillator.stopped = true; }; return this.oscillator; }
+    createGain() { const node = new FakeAudioNode(); this.gains = this.gains || []; this.gains.push(node); return node; }
+    createStereoPanner() { this.panner = new FakeAudioNode(); return this.panner; }
+    close() { this.closed = true; this.state = 'closed'; return Promise.resolve(); }
+    resume() { this.state = 'running'; return Promise.resolve(); }
+  }
+  const dom = new JSDOM(html, {
+    runScripts: 'dangerously',
+    pretendToBeVisual: true,
+    beforeParse(window) { window.AudioContext = FakeAudioContext; }
+  });
+  const { document } = dom.window;
+  const button = document.getElementById('audioDemo');
+  button.click();
+  assert.equal(button.getAttribute('aria-pressed'), 'true');
+  assert.match(button.textContent, /220 Hz/);
+  const context = dom.window.AudioContext;
+  // The live context instance is retained by the fake constructor for inspection.
+  const selectedFader = document.querySelector('[data-channel="0"] [data-volume]');
+  selectedFader.value = '50';
+  selectedFader.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+  const selectedPan = document.querySelector('[data-channel="0"] [data-pan]');
+  selectedPan.value = '35';
+  selectedPan.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+  const mute = document.querySelector('[data-channel="0"] [data-toggle="mute"]');
+  mute.click();
+  button.click();
+  assert.equal(button.getAttribute('aria-pressed'), 'false');
+  dom.window.close();
+});
+
+test('audio demo button clearly reports when browser Web Audio is unavailable', () => {
+  const dom = loadPrototype();
+  const button = dom.window.document.getElementById('audioDemo');
+  button.click();
+  assert.equal(button.getAttribute('aria-pressed'), 'false');
+  assert.equal(button.textContent, 'AUDIO INDISPONIBLE');
+  dom.window.close();
+});
