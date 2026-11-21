@@ -193,7 +193,7 @@ function makeStrip(index,isMaster=false){
  };
  el.querySelector('[data-clip]').addEventListener('click',()=>{
  const current=Number(el.dataset.currentPeak||0);
- if(current<0.985){
+ if(current<0.999){
   el.dataset.clipLatched='false';el.dataset.peakHold=String(current);
   renderMeter(el,current,Number(el.dataset.currentRms||0));
  }
@@ -294,7 +294,7 @@ let meterFrame=0;
 let meterTimer=null;
 const meterDemoButton=document.getElementById('meterDemo');
 function renderMeter(el,peak,rms){
- const p=Math.max(0,Math.min(1,peak)),r=Math.max(0,Math.min(1,rms)),clipped=p>=0.985;
+ const p=Math.max(0,Math.min(1,peak)),r=Math.max(0,Math.min(1,rms)),clipped=p>=0.999;
  const hold=Math.max(Number(el.dataset.peakHold||0),p);
  el.dataset.currentPeak=String(p);el.dataset.currentRms=String(r);el.dataset.peakHold=String(hold);
  const peakPercent=Math.round(p*100),rmsPercent=Math.round(r*100);
@@ -329,6 +329,26 @@ function setMeterDemo(enabled){
  },120);
 }
 meterDemoButton.addEventListener('click',()=>setMeterDemo(!meterDemo));
+
+// Host-embedding seam only: a future native wrapper may dispatch this event
+// after transferring a complete, validated 17-channel meter snapshot.
+// This browser prototype does not create the native bridge or capture audio.
+let lastExternalMeterSequence=-1;
+window.addEventListener('mpc-meter-snapshot',event=>{
+ const snapshot=event.detail;
+ if(meterDemo)setMeterDemo(false);
+ if(!snapshot||!Number.isSafeInteger(snapshot.sequence)||snapshot.sequence<=lastExternalMeterSequence||
+    !Array.isArray(snapshot.channels)||snapshot.channels.length!==17)return;
+ const valid=snapshot.channels.every(channel=>channel&&
+   Number.isFinite(channel.peak)&&Number.isFinite(channel.rms)&&
+   channel.peak>=0&&channel.peak<=1&&channel.rms>=0&&channel.rms<=1);
+ if(!valid)return;
+ lastExternalMeterSequence=snapshot.sequence;
+ snapshot.channels.forEach((channel,index)=>{
+  const el=document.querySelector('[data-channel="'+(index===16?'master':String(index))+'"]');
+  if(el)renderMeter(el,channel.peak,channel.rms);
+ });
+});
 let currentBank=0;
 const bankStatus=document.getElementById('bankStatus');
 const prevBank=document.getElementById('prev');
