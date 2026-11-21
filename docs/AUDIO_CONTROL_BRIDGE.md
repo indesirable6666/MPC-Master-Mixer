@@ -12,8 +12,9 @@ The framework-neutral `src/mixer/mixer_controller.hpp` maps native UI
 operations to the bridge: track faders, pan, Mute/Solo, four Aux sends, six-band
 EQ, Aux returns, and Master gain/mute. Its integer controls are range-checked
 before conversion. It keeps producer-side desired-state snapshots for
-all 16 tracks, four Aux returns, and Master gain/mute. Changing one track
-control preserves the other cached track controls. Each snapshot advances
+all 16 tracks, their six-band EQ settings, four Aux returns, and Master gain/mute. Changing one track
+control preserves the other cached track controls; accepted EQ changes update
+the corresponding six-band snapshot only after enqueue succeeds. Each snapshot advances
 only after its command is successfully enqueued; a full queue therefore leaves
 the previous desired state intact. The controller and bridge must be called
 from the same serialized producer thread. This adapter is not yet connected
