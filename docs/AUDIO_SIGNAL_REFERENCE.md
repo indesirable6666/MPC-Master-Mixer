@@ -60,3 +60,13 @@ subsequent fader/pan stages together.
 
 These tests are deterministic host-side DSP checks. They do not render through
 a browser, open a device, or establish the sound of a physical MPC output.
+
+
+## Insert chain ordering and bypass validation
+
+`tests/audio_insert_chain_test.cpp` drives the real `AudioEngine` track path
+with two active inserts. A nonlinear soft clip followed by a gain trim verifies
+that slot order is preserved. The test then bypasses each slot independently,
+checks the both-bypassed unity path, and verifies that an empty slot is
+transparent and an out-of-range slot is rejected. The test runs in both CTest
+and the native host CI workflow.
