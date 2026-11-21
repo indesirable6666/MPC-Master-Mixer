@@ -13,8 +13,12 @@ pieces:
   and clip-latch state. It is not thread-safe and must be owned and updated by
   one UI/control thread.
 
-There is not yet a live audio-to-UI meter transport. No physical signal is
-currently captured, and the prototype UI is not connected to either component.
+The bounded transport now exists in `src/audio/audio_meter_snapshot_bridge.hpp`.
+It carries complete 17-channel snapshots (16 tracks plus Master) from one audio
+producer to one UI/control consumer. Its eight-slot SPSC queue rejects the
+newest frame when full, never waits, and exposes an approximate pending count.
+The prototype UI is still not connected, and no physical signal is currently
+captured.
 
 ## Intended data flow
 
@@ -43,7 +47,7 @@ meter transport must be separate from the existing control-to-audio command
 bridge: the latter has a single control-thread producer and audio-thread
 consumer, whereas meter data flows in the opposite direction.
 
-A future transport should:
+The current transport and any future extensions must preserve these rules:
 
 - Have one audio-thread producer and one UI/control-thread consumer, or
   explicitly serialize any additional producers/consumers.
@@ -84,10 +88,11 @@ that decrement from elapsed time rather than assume a fixed frame rate.
 
 ## Verification gates before UI or hardware integration
 
-1. Add and test the dedicated audio-to-UI snapshot transport without changing
-   the existing control-to-audio SPSC contract.
-2. Test snapshot integrity, ordering, queue overflow, stale-frame handling,
-   and thread ownership on the host.
+1. **Completed:** add the dedicated audio-to-UI snapshot transport without
+   changing the existing control-to-audio SPSC contract.
+2. **Completed in host tests:** verify empty/full behavior, accepted-frame
+   integrity, FIFO ordering, and repeated ring-index wraparound. The test is
+   part of host CI and is cross-compiled for ARMv7.
 3. Add explicit meter tap points to the offline duplex host and test expected
    values with synthetic signals.
 4. Connect the native UI to the UI-thread consumer and verify refresh/decay
