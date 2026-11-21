@@ -13,7 +13,7 @@ No native application host/runtime or application build system is currently pres
 - `tools/arm-probe/`: ARMv7 loader and graphics capability probes.
 - GitHub Actions workflows: CI compile/test commands, including ARMv7 cross-compilation.
 
-The repository tree has no root or nested `CMakeLists.txt`, `Makefile`, Meson build definition, qmake project, `package.json`, application manifest, native UI entry point, or checked-in target SDK/sysroot.
+The repository now has a root `CMakeLists.txt`, but it is explicitly a host-side validation harness only. It builds the C++ test executables and optional benchmark; it does not define an application, renderer, window host, install target, or target-device toolchain. There is still no native application build definition, qmake/Meson project, `package.json`, application manifest, native UI entry point, or checked-in target SDK/sysroot.
 
 The ARMv7 workflow uses Debian Bullseye's hard-float cross compiler for standalone probes and test executables. Its latest recorded run (44873091575) completed successfully, including the ARMv7 meter-presentation adapter test artifact upload. This is a cross-compile check, not a deployable mixer application build and not the MPC's exact Buildroot SDK/sysroot.
 
@@ -74,3 +74,16 @@ Keep the framework-neutral sink contract. The next useful step is to collect doc
 ## JUCE follow-up
 
 The reported JUCE lock-file clue is assessed separately in [JUCE_FEASIBILITY.md](JUCE_FEASIBILITY.md). JUCE remains an unselected candidate until its exact version, independent SDK, target build configuration, license suitability, launch path, cooperative display integration, and touch-input path are established.
+
+
+## Reproducible host test build
+
+A root CMake project was added solely to make the existing C++ host tests reproducible outside CI. Configure with assertions enabled, build the test targets, then run CTest:
+
+```sh
+cmake -S . -B build/host -DCMAKE_BUILD_TYPE=Debug
+cmake --build build/host --parallel
+ctest --test-dir build/host --output-on-failure
+```
+
+The test programs use `assert`, so a Release configuration that defines `NDEBUG` would disable their checks. The CI validation therefore uses Debug for tests. The optional host benchmark is a separate non-gating target. This CMake project must not be mistaken for an MPC application or exact Buildroot cross-build.
