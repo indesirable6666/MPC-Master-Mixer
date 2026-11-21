@@ -138,3 +138,9 @@ device. Its tests establish callback plumbing and validation, not hardware
 timing, latency or MPC routing. The earlier `AudioCaptureBackend` remains a
 capture-only legacy interface; actual target audio integration is still absent.
 \n\n## Block-level meter measurement\n\n`src/audio/audio_block_meter.hpp` provides a stateless, allocation-free helper to measure peak and RMS from a contiguous mono float block. It rejects null/empty blocks and any non-finite sample without modifying the caller's previous reading, and clamps display amplitudes to [0,1]. The helper does not capture audio, publish across threads, or connect the browser prototype to the DSP engine; callers must provide valid buffers and transfer readings through an explicitly synchronized path.\n
+
+The `audio_engine_solo_arbitration_test` regression covers all 16 strips:
+when Solo is active, only soloed and non-muted tracks contribute; Mute takes
+precedence over Solo; clearing the final Solo restores all non-muted tracks;
+and multiple Solo tracks remain active independently when one is cleared.
+This is a deterministic host DSP test, not a physical-device validation.
