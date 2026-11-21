@@ -138,7 +138,7 @@ let syncingAudioPair=false;
 const state=Array.from({length:16},defaults);
 const masterState=defaults();
 // Audio demo state is initialized before the first channel selection callback.
-let audioContext=null,audioOscillator=null,audioChannelGain=null,audioPanner=null,audioMasterGain=null;
+let audioContext=null,audioOscillator=null,audioChannelGain=null,audioPanner=null,audioMasterGain=null,audioAnalyser=null,audioMeterBuffer=null,audioMeterTimer=null;
 function meter(){return '<div class="meter-panel" role="group" aria-label="Mesures simulées"><div class="meter-row"><span class="meter-label">PEAK</span><div class="meter-track" role="meter" aria-label="Peak simulé" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="0 pour cent"><i class="meter-fill" data-meter="peak"></i><i class="meter-hold" data-meter-hold aria-hidden="true"></i></div><output class="meter-value" data-meter-value="peak">0%</output></div><div class="meter-row"><span class="meter-label">RMS</span><div class="meter-track" role="meter" aria-label="RMS simulé" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="0 pour cent"><i class="meter-fill" data-meter="rms"></i></div><output class="meter-value" data-meter-value="rms">0%</output></div><div class="meter-row"><span class="meter-label">CLIP</span><span></span><button class="clip" data-clip type="button" aria-label="Écrêtage inactif" title="Effacer Clip et Peak Hold">OFF</button></div></div>'}
 function makeStrip(index,isMaster=false){
  const data=isMaster?masterState:state[index];
@@ -348,6 +348,27 @@ meterDemoButton.addEventListener('click',()=>setMeterDemo(!meterDemo));
 // Browser-only audible test signal. It deliberately does not connect to the
 // MPC, native audio engine, ALSA, or any external device.
 const audioDemoButton=document.getElementById('audioDemo');
+function updateBrowserAudioMeters(){
+ if(!audioAnalyser||!audioMeterBuffer)return;
+ audioAnalyser.getFloatTimeDomainData(audioMeterBuffer);
+ let peak=0,sumSquares=0;
+ for(let i=0;i<audioMeterBuffer.length;i++){
+  const sample=Math.max(-1,Math.min(1,audioMeterBuffer[i]));
+  const magnitude=Math.abs(sample);
+  if(magnitude>peak)peak=magnitude;
+  sumSquares+=sample*sample;
+ }
+ const rms=Math.sqrt(sumSquares/audioMeterBuffer.length);
+ const selected=document.querySelector('.channel.selected');
+ const selectedIndex=selected?Number(selected.dataset.channel):0;
+ const trackEl=document.querySelector('[data-channel="'+selectedIndex+'"]');
+ const masterEl=document.querySelector('[data-channel="master"]');
+ if(trackEl)renderMeter(trackEl,peak,rms);
+ if(masterEl){
+  const masterGain=masterState.mute?0:masterState.volume/100;
+  renderMeter(masterEl,Math.min(1,peak*masterGain),rms*masterGain);
+ }
+}
 function updateAudioDemoParameters(){
  if(!audioContext||!audioChannelGain||!audioPanner||!audioMasterGain)return;
  const selected=document.querySelector('.channel.selected');
@@ -357,12 +378,14 @@ function updateAudioDemoParameters(){
  const audible=!track.mute&&(!anySolo||track.solo)&&!masterState.mute;
  audioChannelGain.gain.value=audible?0.15*track.volume/100:0;
  audioPanner.pan.value=track.pan/100;
- audioMasterGain.gain.value=masterState.volume/100;
+ audioMasterGain.gain.value=masterState.mute?0:masterState.volume/100;
 }
 function stopAudioDemo(){
  if(audioOscillator){try{audioOscillator.stop()}catch(error){}}
  if(audioContext){try{audioContext.close()}catch(error){}}
- audioContext=null;audioOscillator=null;audioChannelGain=null;audioPanner=null;audioMasterGain=null;
+ if(audioMeterTimer!==null){clearInterval(audioMeterTimer);audioMeterTimer=null;}
+ audioContext=null;audioOscillator=null;audioChannelGain=null;audioPanner=null;audioMasterGain=null;audioAnalyser=null;audioMeterBuffer=null;
+ document.querySelectorAll('.channel').forEach(el=>{el.dataset.peakHold='0';el.dataset.clipLatched='false';renderMeter(el,0,0)});
  audioDemoButton.setAttribute('aria-pressed','false');
  audioDemoButton.textContent='SIGNAL AUDIO : OFF';
 }
@@ -378,14 +401,19 @@ function startAudioDemo(){
   audioChannelGain=audioContext.createGain();
   audioPanner=audioContext.createStereoPanner();
   audioMasterGain=audioContext.createGain();
+  audioAnalyser=audioContext.createAnalyser();
+  audioAnalyser.fftSize=2048;
+  audioMeterBuffer=new Float32Array(audioAnalyser.fftSize);
   audioOscillator.type='sine';
   audioOscillator.frequency.value=220;
   audioOscillator.connect(audioChannelGain);
   audioChannelGain.connect(audioPanner);
   audioPanner.connect(audioMasterGain);
-  audioMasterGain.connect(audioContext.destination);
+  audioMasterGain.connect(audioAnalyser);
+  audioAnalyser.connect(audioContext.destination);
   updateAudioDemoParameters();
   audioOscillator.start();
+  audioMeterTimer=setInterval(updateBrowserAudioMeters,50);
   if(audioContext.state==='suspended'&&audioContext.resume)audioContext.resume();
   audioDemoButton.setAttribute('aria-pressed','true');
   audioDemoButton.textContent='SIGNAL AUDIO : ON · 220 Hz';
