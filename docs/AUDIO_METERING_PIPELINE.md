@@ -103,8 +103,9 @@ that decrement from elapsed time rather than assume a fixed frame rate.
    values with synthetic signals.
 4. Connect the native UI to the UI-thread consumer and verify refresh/decay
    behavior without blocking DSP.
-5. Only after a separate, authorized hardware phase, validate actual capture,
+6. Only after a separate, authorized hardware phase, validate actual capture,
    routing, latency, and meter calibration on the MPC.
 
 Until those gates are completed, meters are software models and helpers only.
 They must not be described as live MPC input/output meters.
+\nThe UI consumer is `src/mixer/audio_meter_ui_consumer.hpp`. Its `tick()`\nmethod is intended for the serialized UI/control thread; it never runs on the\naudio callback. The default peak decay is 2.5 normalized amplitude units per\nsecond and can be configured at construction. RMS follows the newest accepted\nsnapshot, while peak hold observes every drained snapshot.\n
