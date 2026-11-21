@@ -540,6 +540,12 @@ int main() {
     controllerEq[1].gainDb = 20.0f;
     assert(!controller.setTrackEq(2, 48000.0f, controllerEq));
     assert(near(controller.desiredTrackEq(2)[1].gainDb, 4.0f));
+    auto bandFour = controller.desiredTrackEq(2)[4];
+    bandFour.gainDb = 2.5f;
+    assert(controller.setTrackEqBand(2, 4, 48000.0f, bandFour));
+    assert(!controller.setTrackEqBand(2, 6, 48000.0f, bandFour));
+    assert(near(controller.desiredTrackEq(2)[1].gainDb, 4.0f));
+    assert(near(controller.desiredTrackEq(2)[4].gainDb, 2.5f));
     mpcmixer::AudioEngine::AuxReturn controllerReturn;
     controllerReturn.gain = 0.75f;
     controllerReturn.balance = -0.25f;
@@ -583,6 +589,7 @@ int main() {
     assert(near(controllerBridge.engineOnAudioThread().auxReturn(1).gain, 0.75f));
     assert(near(controllerBridge.engineOnAudioThread().auxReturn(1).balance, -0.25f));
     assert(near(controllerBridge.engineOnAudioThread().trackEq(2).bandParameters(1).gainDb, 4.0f));
+    assert(near(controllerBridge.engineOnAudioThread().trackEq(2).bandParameters(4).gainDb, 2.5f));
     // A full queue does not advance the controller's cached desired state.
     mpcmixer::AudioEngineCommandBridge controllerFullBridge;
     mpcmixer::MixerController fullController(controllerFullBridge);
@@ -599,6 +606,10 @@ int main() {
     auto fullQueueEq = mpcmixer::SixBandEq::defaultBandParameters();
     fullQueueEq[0].gainDb = 3.0f;
     assert(!fullController.setTrackEq(0, 48000.0f, fullQueueEq));
+    assert(near(fullController.desiredTrackEq(0)[0].gainDb, 0.0f));
+    auto fullQueueBand = fullController.desiredTrackEq(0)[0];
+    fullQueueBand.gainDb = 5.0f;
+    assert(!fullController.setTrackEqBand(0, 0, 48000.0f, fullQueueBand));
     assert(near(fullController.desiredTrackEq(0)[0].gainDb, 0.0f));
 
     // The duplex host maps physical inputs only through explicit routes.
