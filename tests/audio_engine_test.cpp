@@ -562,6 +562,12 @@ int main() {
     assert(controller.desiredMasterMute());
     assert(near(controller.desiredAuxReturn(1).gain, 0.75f));
     assert(near(controller.desiredAuxReturn(1).balance, -0.25f));
+    const auto desiredSnapshot = controller.desiredStateSnapshot();
+    assert(near(desiredSnapshot.tracks[2].controls.gain, 1.27f));
+    assert(near(desiredSnapshot.tracks[2].eq[1].gainDb, 4.0f));
+    assert(near(desiredSnapshot.auxReturns[1].gain, 0.75f));
+    assert(near(desiredSnapshot.masterGain, 1.0f));
+    assert(desiredSnapshot.masterMute);
     float controllerInput[] = {1.0f};
     const float* controllerInputs[AudioEngine::kTrackCount] = {};
     controllerInputs[2] = controllerInput;
