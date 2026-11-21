@@ -156,5 +156,51 @@ int main() {
     assert(std::fabs(saturatedController.desiredTrackEq(7)[0].gainDb -
                      oldEq[0].gainDb) < 0.00001f);
 
+    // Insert slots are independent: an unacknowledged handoff in one slot
+    // must not prevent a handoff in another slot or on another track.
+    mpcmixer::AudioEngineCommandBridge independentInsertBridge;
+    mpcmixer::MixerController independentInsertController(independentInsertBridge);
+    mpcmixer::GainInsert slotZeroEffect;
+    mpcmixer::GainInsert slotOneEffect;
+    mpcmixer::GainInsert otherTrackEffect;
+    std::uint32_t slotZeroTicket = 0;
+    std::uint32_t slotOneTicket = 0;
+    std::uint32_t otherTrackTicket = 0;
+    assert(independentInsertController.setTrackInsert(
+        2, 0, &slotZeroEffect, slotZeroTicket));
+    assert(independentInsertController.setTrackInsert(
+        2, 1, &slotOneEffect, slotOneTicket));
+    assert(independentInsertController.setTrackInsert(
+        3, 0, &otherTrackEffect, otherTrackTicket));
+    assert(!independentInsertController.isInsertUpdateApplied(slotZeroTicket));
+    assert(!independentInsertController.isInsertUpdateApplied(slotOneTicket));
+    assert(!independentInsertController.isInsertUpdateApplied(otherTrackTicket));
+    const auto pendingInsertState =
+        independentInsertController.desiredStateSnapshot();
+    assert(pendingInsertState.tracks[2].inserts[0] == &slotZeroEffect);
+    assert(pendingInsertState.tracks[2].inserts[1] == &slotOneEffect);
+    assert(pendingInsertState.tracks[3].inserts[0] == &otherTrackEffect);
+    independentInsertBridge.process(insertInputs, insertLeft, insertRight, 1);
+    assert(independentInsertController.isInsertUpdateApplied(slotZeroTicket));
+    assert(independentInsertController.isInsertUpdateApplied(slotOneTicket));
+    assert(independentInsertController.isInsertUpdateApplied(otherTrackTicket));
+
+    // Invalid insert coordinates and a saturated queue leave both the ticket
+    // output and the desired insert pointer untouched.
+    std::uint32_t untouchedTicket = 0x12345678u;
+    assert(!independentInsertController.setTrackInsert(
+        mpcmixer::AudioEngine::kTrackCount, 0, &slotZeroEffect, untouchedTicket));
+    assert(!independentInsertController.setTrackInsert(
+        2, mpcmixer::InsertChain::kSlotCount, &slotZeroEffect, untouchedTicket));
+    assert(untouchedTicket == 0x12345678u);
+    mpcmixer::AudioEngineCommandBridge fullInsertBridge;
+    mpcmixer::MixerController fullInsertController(fullInsertBridge);
+    for (std::size_t i = 0; i < mpcmixer::AudioEngineCommandBridge::kQueueCapacity; ++i)
+        assert(fullInsertController.setMasterMute((i & 1u) != 0));
+    assert(!fullInsertController.setTrackInsert(
+        5, 0, &slotZeroEffect, untouchedTicket));
+    assert(untouchedTicket == 0x12345678u);
+    assert(fullInsertController.desiredStateSnapshot().tracks[5].inserts[0] == nullptr);
+
     return 0;
 }
