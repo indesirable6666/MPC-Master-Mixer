@@ -25,9 +25,12 @@ handoff.
 
 ## Serialize updates per slot
 
-Allow at most one unacknowledged replacement per insert slot. This keeps the
-ownership handoff unambiguous and avoids accidentally retiring an intermediate
-effect while a later queued command still refers to it. The command bridge is
+The native `MixerController` enforces at most one unacknowledged replacement
+per insert slot: a second call for that slot returns `false` until the first
+ticket is acknowledged. This keeps the ownership handoff unambiguous and avoids
+accidentally retiring an intermediate effect while a later queued command still
+refers to it. Direct users of `AudioEngineCommandBridge` must enforce the same
+rule themselves. The command bridge is
 SPSC: all enqueue and acknowledgement polling for a controller must be
 serialized on its one producer/control thread.
 
