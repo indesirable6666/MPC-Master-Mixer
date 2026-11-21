@@ -157,22 +157,46 @@ public:
     }
 
     bool setAudioInputPairLinked(bool linked) noexcept {
-        if (!bridge_.enqueueAudioInputPairLinked(linked)) return false;
+        if (linked == audioInputLinked_) return true;
+        auto nextStereo = audioInputStereo_;
+        auto nextChannels = audioInputChannels_;
+        if (linked) {
+            // The left strip seeds the shared stereo state when linking.
+            nextStereo.gain = nextChannels[0].gain;
+            nextStereo.mute = nextChannels[0].mute;
+            nextStereo.solo = nextChannels[0].solo;
+            nextChannels[1].gain = nextChannels[0].gain;
+            nextChannels[1].mute = nextChannels[0].mute;
+            nextChannels[1].solo = nextChannels[0].solo;
+        } else {
+            // Unlinking copies shared state to both sides, retaining mono pan.
+            for (auto& channel : nextChannels) {
+                channel.gain = nextStereo.gain;
+                channel.mute = nextStereo.mute;
+                channel.solo = nextStereo.solo;
+            }
+        }
+        if (!bridge_.enqueueAudioInputPairState(linked, nextStereo, nextChannels))
+            return false;
         audioInputLinked_ = linked;
+        audioInputStereo_ = nextStereo;
+        audioInputChannels_ = nextChannels;
         return true;
     }
 
     bool setAudioInputPairStereoGain(int value) noexcept {
-        if (value < 0 || value > kFaderMaximum) return false;
+        if (!audioInputLinked_ || value < 0 || value > kFaderMaximum) return false;
         auto next = audioInputStereo_;
         next.gain = static_cast<float>(value) / 100.0f;
         if (!bridge_.enqueueAudioInputPairStereoControls(next)) return false;
         audioInputStereo_ = next;
+        for (auto& channel : audioInputChannels_) channel.gain = next.gain;
         return true;
     }
 
     bool setAudioInputPairBalance(int value) noexcept {
-        if (value < kPanMinimum || value > kPanMaximum) return false;
+        if (!audioInputLinked_ || value < kPanMinimum || value > kPanMaximum)
+            return false;
         auto next = audioInputStereo_;
         next.balance = static_cast<float>(value) / 100.0f;
         if (!bridge_.enqueueAudioInputPairStereoControls(next)) return false;
@@ -181,24 +205,36 @@ public:
     }
 
     bool setAudioInputPairStereoMute(bool muted) noexcept {
+        if (!audioInputLinked_) return false;
         auto next = audioInputStereo_;
         next.mute = muted;
         if (!bridge_.enqueueAudioInputPairStereoControls(next)) return false;
         audioInputStereo_ = next;
+        for (auto& channel : audioInputChannels_) channel.mute = muted;
         return true;
     }
 
     bool setAudioInputPairChannelGain(std::size_t side, int value) noexcept {
         if (side >= 2 || value < 0 || value > kFaderMaximum) return false;
+        const float gain = static_cast<float>(value) / 100.0f;
+        if (audioInputLinked_) {
+            auto next = audioInputStereo_;
+            next.gain = gain;
+            if (!bridge_.enqueueAudioInputPairStereoControls(next)) return false;
+            audioInputStereo_ = next;
+            for (auto& channel : audioInputChannels_) channel.gain = gain;
+            return true;
+        }
         auto next = audioInputChannels_[side];
-        next.gain = static_cast<float>(value) / 100.0f;
+        next.gain = gain;
         if (!bridge_.enqueueAudioInputPairChannel(side, next)) return false;
         audioInputChannels_[side] = next;
         return true;
     }
 
     bool setAudioInputPairChannelPan(std::size_t side, int value) noexcept {
-        if (side >= 2 || value < kPanMinimum || value > kPanMaximum) return false;
+        if (audioInputLinked_ || side >= 2 ||
+            value < kPanMinimum || value > kPanMaximum) return false;
         auto next = audioInputChannels_[side];
         next.pan = static_cast<float>(value) / 100.0f;
         if (!bridge_.enqueueAudioInputPairChannel(side, next)) return false;
@@ -208,6 +244,14 @@ public:
 
     bool setAudioInputPairChannelMute(std::size_t side, bool muted) noexcept {
         if (side >= 2) return false;
+        if (audioInputLinked_) {
+            auto next = audioInputStereo_;
+            next.mute = muted;
+            if (!bridge_.enqueueAudioInputPairStereoControls(next)) return false;
+            audioInputStereo_ = next;
+            for (auto& channel : audioInputChannels_) channel.mute = muted;
+            return true;
+        }
         auto next = audioInputChannels_[side];
         next.mute = muted;
         if (!bridge_.enqueueAudioInputPairChannel(side, next)) return false;
@@ -217,6 +261,14 @@ public:
 
     bool setAudioInputPairChannelSolo(std::size_t side, bool soloed) noexcept {
         if (side >= 2) return false;
+        if (audioInputLinked_) {
+            auto next = audioInputStereo_;
+            next.solo = soloed;
+            if (!bridge_.enqueueAudioInputPairStereoControls(next)) return false;
+            audioInputStereo_ = next;
+            for (auto& channel : audioInputChannels_) channel.solo = soloed;
+            return true;
+        }
         auto next = audioInputChannels_[side];
         next.solo = soloed;
         if (!bridge_.enqueueAudioInputPairChannel(side, next)) return false;

@@ -66,35 +66,35 @@ int main() {
     command.flag = true;
     assert(dispatcher.dispatch(command).accepted());
     command.sequence = 10;
+    command.type = mpcmixer::MixerUiCommandType::SetAudioInputChannelPan;
+    command.track = 1;
+    command.value = 40;
+    assert(dispatcher.dispatch(command).accepted());
+
+    command.sequence = 11;
     command.type = mpcmixer::MixerUiCommandType::SetAudioInputPairLinked;
     command.flag = true;
     assert(dispatcher.dispatch(command).accepted());
 
-    command.sequence = 11;
+    command.sequence = 12;
     command.type = mpcmixer::MixerUiCommandType::SetAudioInputPairStereoGain;
     command.value = 85;
     assert(dispatcher.dispatch(command).accepted());
 
-    command.sequence = 12;
+    command.sequence = 13;
     command.type = mpcmixer::MixerUiCommandType::SetAudioInputPairBalance;
     command.value = -30;
     assert(dispatcher.dispatch(command).accepted());
 
-    command.sequence = 13;
+    command.sequence = 14;
     command.type = mpcmixer::MixerUiCommandType::SetAudioInputPairStereoMute;
     command.flag = false;
     assert(dispatcher.dispatch(command).accepted());
 
-    command.sequence = 14;
+    command.sequence = 15;
     command.type = mpcmixer::MixerUiCommandType::SetAudioInputChannelGain;
     command.track = 0;
     command.value = 65;
-    assert(dispatcher.dispatch(command).accepted());
-
-    command.sequence = 15;
-    command.type = mpcmixer::MixerUiCommandType::SetAudioInputChannelPan;
-    command.track = 1;
-    command.value = 40;
     assert(dispatcher.dispatch(command).accepted());
 
     command.sequence = 16;
@@ -125,12 +125,16 @@ int main() {
     assert(snapshot.masterFaderValue == 123);
     assert(snapshot.masterMute);
     assert(snapshot.audioInputPair.linked);
-    assert(snapshot.audioInputPair.stereoGainValue == 85);
+    assert(snapshot.audioInputPair.stereoGainValue == 65);
     assert(snapshot.audioInputPair.balancePercent == -30);
-    assert(!snapshot.audioInputPair.stereoMute);
+    assert(snapshot.audioInputPair.stereoMute);
+    assert(snapshot.audioInputPair.stereoSolo);
     assert(snapshot.audioInputPair.channels[0].gainValue == 65);
+    assert(snapshot.audioInputPair.channels[1].gainValue == 65);
     assert(snapshot.audioInputPair.channels[1].panPercent == 40);
+    assert(snapshot.audioInputPair.channels[0].mute);
     assert(snapshot.audioInputPair.channels[1].mute);
+    assert(snapshot.audioInputPair.channels[0].solo);
     assert(snapshot.audioInputPair.channels[1].solo);
 
     // A repeated or older sequence is rejected without mutating state.
@@ -140,6 +144,14 @@ int main() {
     const auto replay = dispatcher.dispatch(command);
     assert(replay.status == mpcmixer::MixerUiCommandStatus::OutOfOrder);
     assert(controller.desiredMasterGain() == 1.23f);
+
+    // Mono pan is disabled while linked and does not consume a sequence.
+    command.sequence = 18;
+    command.type = mpcmixer::MixerUiCommandType::SetAudioInputChannelPan;
+    command.track = 1;
+    command.value = 10;
+    assert(dispatcher.dispatch(command).status ==
+           mpcmixer::MixerUiCommandStatus::Invalid);
 
     // Invalid values and unsupported insert requests do not consume sequence.
     command.sequence = 18;

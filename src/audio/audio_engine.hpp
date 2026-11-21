@@ -107,6 +107,13 @@ public:
     float masterGain() const { return masterGain_; }
     bool masterMute() const { return masterMute_; }
 
+    bool hasSoloedTrack() const noexcept {
+        for (const auto& state : tracks_) {
+            if (state.solo) return true;
+        }
+        return false;
+    }
+
     // Each input is one mono track buffer. A null input is treated as silence.
     // Output buffers are stereo, caller-owned, and overwritten for frameCount.
     // The float bus is intentionally not clipped: downstream output stages
@@ -122,13 +129,10 @@ public:
         float* const auxRight[kAuxBusCount],
         const float* const auxReturnLeft[kAuxBusCount],
         const float* const auxReturnRight[kAuxBusCount],
-        std::size_t frameCount) {
+        std::size_t frameCount, bool externalSolo = false) {
         if (outputLeft == nullptr || outputRight == nullptr) return;
 
-        bool anySolo = false;
-        for (const auto& trackState : tracks_) {
-            anySolo = anySolo || trackState.solo;
-        }
+        const bool anySolo = externalSolo || hasSoloedTrack();
 
         for (std::size_t frame = 0; frame < frameCount; ++frame) {
             float left = 0.0f;
@@ -234,6 +238,7 @@ public:
         float gain = 1.0f; // Linear amplitude, maximum +2.1 dB.
         float balance = 0.0f; // -1 attenuates right; +1 attenuates left.
         bool mute = false;
+        bool solo = false;
     };
 
     bool setChannel(std::size_t side, const Channel& channel) {
@@ -266,12 +271,16 @@ public:
     void setLinked(bool linked) { linked_ = linked; }
     bool linked() const { return linked_; }
 
+    bool hasSolo() const noexcept {
+        return linked_ ? stereo_.solo : (channels_[0].solo || channels_[1].solo);
+    }
+
     // Replaces the supplied output buffers with the pair's stereo signal.
     void process(const float* inputLeft, const float* inputRight,
                  float* outputLeft, float* outputRight,
                  std::size_t frameCount) const {
         processImpl(inputLeft, inputRight, outputLeft, outputRight,
-                    frameCount, false, 1.0f, false);
+                    frameCount, false, 1.0f, false, false);
     }
 
     // Adds the pair to an existing stereo mix. postGain/postMute represent
@@ -279,18 +288,18 @@ public:
     void processAndMix(const float* inputLeft, const float* inputRight,
                        float* outputLeft, float* outputRight,
                        std::size_t frameCount, float postGain,
-                       bool postMute) const {
+                       bool postMute, bool otherSolo = false) const {
         if (!std::isfinite(postGain) || postGain < 0.0f ||
             postGain > AudioEngine::kMaxFaderGain) return;
         processImpl(inputLeft, inputRight, outputLeft, outputRight,
-                    frameCount, true, postGain, postMute);
+                    frameCount, true, postGain, postMute, otherSolo);
     }
 
 private:
     void processImpl(const float* inputLeft, const float* inputRight,
                      float* outputLeft, float* outputRight,
                      std::size_t frameCount, bool add,
-                     float postGain, bool postMute) const {
+                     float postGain, bool postMute, bool otherSolo) const {
         if (outputLeft == nullptr || outputRight == nullptr) return;
 
         if (linked_) {
@@ -298,7 +307,8 @@ private:
                 ? 1.0f - stereo_.balance : 1.0f;
             const float rightBalance = stereo_.balance < 0.0f
                 ? 1.0f + stereo_.balance : 1.0f;
-            const float gain = postMute ? 0.0f : stereo_.gain * postGain;
+            const float gain = (postMute || (otherSolo && !stereo_.solo))
+                ? 0.0f : stereo_.gain * postGain;
             for (std::size_t frame = 0; frame < frameCount; ++frame) {
                 const float left = inputLeft != nullptr &&
                     std::isfinite(inputLeft[frame]) ? inputLeft[frame] : 0.0f;
@@ -323,11 +333,12 @@ private:
         for (std::size_t frame = 0; frame < frameCount; ++frame) {
             float leftOut = 0.0f;
             float rightOut = 0.0f;
-            if (!postMute) {
+            if (!postMute && !(otherSolo && !anySolo)) {
                 for (std::size_t side = 0; side < 2; ++side) {
                     const Channel& state = channels_[side];
                     const float* input = side == 0 ? inputLeft : inputRight;
-                    if (state.mute || (anySolo && !state.solo) || input == nullptr)
+                    if (state.mute || ((anySolo || otherSolo) && !state.solo) ||
+                        input == nullptr)
                         continue;
                     const float sample = std::isfinite(input[frame])
                         ? input[frame] : 0.0f;

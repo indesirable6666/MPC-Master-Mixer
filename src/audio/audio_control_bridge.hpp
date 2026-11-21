@@ -95,10 +95,7 @@ public:
 
     bool enqueueAudioInputPairChannel(
         std::size_t side, const AudioInputPair::Channel& state) noexcept {
-        if (side >= 2 || !std::isfinite(state.gain) ||
-            !std::isfinite(state.pan) || state.gain < 0.0f ||
-            state.gain > AudioEngine::kMaxFaderGain ||
-            state.pan < -1.0f || state.pan > 1.0f) return false;
+        if (!validInputPairChannel(side, state)) return false;
         Command command;
         command.type = CommandType::AudioInputPairChannel;
         command.index = side;
@@ -108,9 +105,7 @@ public:
 
     bool enqueueAudioInputPairStereoControls(
         const AudioInputPair::StereoControls& state) noexcept {
-        if (!std::isfinite(state.gain) || !std::isfinite(state.balance) ||
-            state.gain < 0.0f || state.gain > AudioEngine::kMaxFaderGain ||
-            state.balance < -1.0f || state.balance > 1.0f) return false;
+        if (!validInputPairStereo(state)) return false;
         Command command;
         command.type = CommandType::AudioInputPairStereoControls;
         command.inputPairStereo = state;
@@ -121,6 +116,22 @@ public:
         Command command;
         command.type = CommandType::AudioInputPairLinked;
         command.flag = linked;
+        return enqueue(command);
+    }
+
+    // Publish both channel states and the mode switch as one queue item.
+    // Backpressure cannot leave a partially linked stereo pair.
+    bool enqueueAudioInputPairState(
+        bool linked, const AudioInputPair::StereoControls& stereo,
+        const std::array<AudioInputPair::Channel, 2>& channels) noexcept {
+        if (!validInputPairStereo(stereo) ||
+            !validInputPairChannel(0, channels[0]) ||
+            !validInputPairChannel(1, channels[1])) return false;
+        Command command;
+        command.type = CommandType::AudioInputPairState;
+        command.flag = linked;
+        command.inputPairStereo = stereo;
+        command.inputPairChannels = channels;
         return enqueue(command);
     }
 
@@ -142,10 +153,14 @@ public:
         float* outputLeft, float* outputRight,
         std::size_t frameCount) noexcept {
         applyPending();
-        engine_.process(inputs, outputLeft, outputRight, frameCount);
+        const bool pairSolo = audioInputPair_.hasSolo();
+        engine_.processWithAuxAndReturns(
+            inputs, outputLeft, outputRight, nullptr, nullptr, nullptr, nullptr,
+            frameCount, pairSolo);
         audioInputPair_.processAndMix(
             inputLeft, inputRight, outputLeft, outputRight, frameCount,
-            engine_.masterGain(), engine_.masterMute());
+            engine_.masterGain(), engine_.masterMute(),
+            engine_.hasSoloedTrack());
     }
 
     void processWithAux(
@@ -184,7 +199,8 @@ public:
 private:
     enum class CommandType : std::uint8_t {
         Track, TrackEq, TrackInsert, AuxReturn, MasterGain, MasterMute,
-        AudioInputPairChannel, AudioInputPairStereoControls, AudioInputPairLinked
+        AudioInputPairChannel, AudioInputPairStereoControls, AudioInputPairLinked,
+        AudioInputPairState
     };
 
     struct Command {
@@ -197,10 +213,26 @@ private:
         SixBandEq::PreparedConfiguration eq{};
         AudioEngine::AuxReturn auxReturn{};
         AudioInputPair::Channel inputPairChannel{};
+        std::array<AudioInputPair::Channel, 2> inputPairChannels{};
         AudioInputPair::StereoControls inputPairStereo{};
         float value = 0.0f;
         bool flag = false;
     };
+
+    static bool validInputPairChannel(
+        std::size_t side, const AudioInputPair::Channel& state) noexcept {
+        return side < 2 && std::isfinite(state.gain) &&
+            std::isfinite(state.pan) && state.gain >= 0.0f &&
+            state.gain <= AudioEngine::kMaxFaderGain &&
+            state.pan >= -1.0f && state.pan <= 1.0f;
+    }
+
+    static bool validInputPairStereo(
+        const AudioInputPair::StereoControls& state) noexcept {
+        return std::isfinite(state.gain) && std::isfinite(state.balance) &&
+            state.gain >= 0.0f && state.gain <= AudioEngine::kMaxFaderGain &&
+            state.balance >= -1.0f && state.balance <= 1.0f;
+    }
 
     static bool validTrack(const AudioEngine::Track& state) noexcept {
         if (!std::isfinite(state.gain) || !std::isfinite(state.pan) ||
@@ -268,6 +300,12 @@ private:
                 audioInputPair_.setStereoControls(command.inputPairStereo);
                 break;
             case CommandType::AudioInputPairLinked:
+                audioInputPair_.setLinked(command.flag);
+                break;
+            case CommandType::AudioInputPairState:
+                audioInputPair_.setChannel(0, command.inputPairChannels[0]);
+                audioInputPair_.setChannel(1, command.inputPairChannels[1]);
+                audioInputPair_.setStereoControls(command.inputPairStereo);
                 audioInputPair_.setLinked(command.flag);
                 break;
             }

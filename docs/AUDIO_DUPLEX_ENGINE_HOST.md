@@ -32,11 +32,19 @@ physical input channels 0 and 1, so they cannot also be assigned to ordinary
 mono tracks. Disabling pair mode requires the host to be shut down first.
 
 `AudioEngineCommandBridge` accepts value-only commands for linked mode,
-stereo gain/balance/mute, and independent left/right gain/pan/mute/solo. The
-audio callback applies those commands at the next block boundary. Linked mode
-keeps left and right discrete and balance only attenuates the opposite side;
-unlinked mode uses the two independent mono pan laws. The pair is summed into
-the main stereo output, and Master gain/mute is applied to it as well.
+stereo gain/balance/mute/solo, and independent left/right gain/pan/mute/solo.
+The audio callback applies those commands at the next block boundary. Enabling
+link seeds shared gain/mute/solo from the left strip and mirrors those values to
+the right; disabling link copies shared values to both mono strips while
+preserving independent pan positions. Fader, mute and solo edits through either
+strip update shared state while linked, and mono pan is rejected. A link
+transition is one queue item, so backpressure cannot leave a half-updated pair.
+Linked mode keeps left and right discrete and balance only attenuates the
+opposite side; unlinked mode uses the two independent mono pan laws. Pair solo
+participates in global solo arbitration with ordinary tracks: non-solo sources
+are suppressed, while simultaneously soloed sources continue to sum. The pair
+is summed into the main stereo output, and Master gain/mute is applied to it as
+well.
 
 For meter presentation, the pair's pre-control input readings occupy the
 prototype Audio In 1/2 meter slots (track indices 13 and 14); Master remains

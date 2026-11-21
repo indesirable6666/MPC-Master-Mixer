@@ -154,20 +154,23 @@ public:
             break;
 
         case MixerUiCommandType::SetAudioInputPairStereoGain:
-            if (command.value < 0 ||
+            if (!controller_.desiredAudioInputPairLinked() || command.value < 0 ||
                 command.value > MixerController::kFaderMaximum)
                 return {MixerUiCommandStatus::Invalid, command.sequence};
             accepted = controller_.setAudioInputPairStereoGain(command.value);
             break;
 
         case MixerUiCommandType::SetAudioInputPairBalance:
-            if (command.value < MixerController::kPanMinimum ||
+            if (!controller_.desiredAudioInputPairLinked() ||
+                command.value < MixerController::kPanMinimum ||
                 command.value > MixerController::kPanMaximum)
                 return {MixerUiCommandStatus::Invalid, command.sequence};
             accepted = controller_.setAudioInputPairBalance(command.value);
             break;
 
         case MixerUiCommandType::SetAudioInputPairStereoMute:
+            if (!controller_.desiredAudioInputPairLinked())
+                return {MixerUiCommandStatus::Invalid, command.sequence};
             accepted = controller_.setAudioInputPairStereoMute(command.flag);
             break;
 
@@ -180,7 +183,8 @@ public:
             break;
 
         case MixerUiCommandType::SetAudioInputChannelPan:
-            if (!validAudioInputSide(command.track) ||
+            if (controller_.desiredAudioInputPairLinked() ||
+                !validAudioInputSide(command.track) ||
                 command.value < MixerController::kPanMinimum ||
                 command.value > MixerController::kPanMaximum)
                 return {MixerUiCommandStatus::Invalid, command.sequence};

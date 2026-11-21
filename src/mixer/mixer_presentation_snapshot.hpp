@@ -44,6 +44,7 @@ struct MixerPresentationSnapshot {
         std::uint8_t stereoGainValue = 100;
         std::int16_t balancePercent = 0;
         bool stereoMute = false;
+        bool stereoSolo = false;
         std::array<AudioInputChannel, 2> channels{};
     };
 
@@ -97,6 +98,7 @@ inline MixerPresentationSnapshot makeMixerPresentationSnapshot(
     result.audioInputPair.balancePercent = static_cast<std::int16_t>(
         std::lround(desired.audioInputStereo.balance * 100.0f));
     result.audioInputPair.stereoMute = desired.audioInputStereo.mute;
+    result.audioInputPair.stereoSolo = desired.audioInputStereo.solo;
     for (std::size_t side = 0; side < 2; ++side) {
         const auto& source = desired.audioInputChannels[side];
         auto& target = result.audioInputPair.channels[side];
