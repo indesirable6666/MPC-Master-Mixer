@@ -129,3 +129,10 @@ mute, solo, and send edits do not partially mutate the controller's desired
 state or its presentation snapshot. Invalid ranges are also rejected without
 consuming queue capacity. This is a deterministic host-side control/DSP test;
 it does not exercise the touchscreen, device audio, or physical MPC.
+
+
+## Mixer UI command dispatcher validation
+
+`tests/mixer_ui_command_dispatcher_test.cpp` drives the transport-neutral UI command dispatcher through interleaved track, EQ, Aux return, Master, and stereo Audio In commands. It checks the published presentation snapshot, rejects zero/replayed/out-of-order sequence numbers and invalid command payloads without changing state, and confirms unsupported insert-toggle commands do not consume a sequence.
+
+The queue-saturation case fills the SPSC bridge, verifies that a rejected command leaves both the controller's desired state and presentation snapshot unchanged, drains the queue at an offline block boundary, and retries the exact same sequence successfully. Increasing sequence gaps are accepted; only non-increasing values are rejected. This test is host/offline only and does not create IPC or communicate with an MPC.
