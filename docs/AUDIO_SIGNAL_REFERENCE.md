@@ -26,6 +26,20 @@ The native track meter is intentionally pre-fader; the Master meter is
 post-mix. The fixture currently compares output gain and Master peak, while
 existing browser tests separately verify the analyser's Peak/RMS readout.
 
+## Insert frequency-response validation
+
+`tests/audio_insert_frequency_response_test.cpp` measures steady-state RMS
+ratios using synthetic sine waves at 48 kHz. It checks that the one-pole
+low-pass preserves 100 Hz while attenuating 10 kHz, and that the high-pass
+does the converse, with a 1 kHz cutoff. It also checks soft-clip symmetry and
+bounded output under overload. The test is registered with CTest and run in
+the host CI workflow.
+
+These are broad response bounds for the implemented first-order filters, not
+a claim that they are analogue-modelled EQ curves or a substitute for listening
+tests. The six-band parametric EQ's centre-frequency response is separately
+measured in `audio_engine_test`.
+
 All tests are host/offline only. They do not open audio devices, use ALSA, send
 MIDI, or communicate with an MPC. A target-device build and physical audio
 validation remain separate steps requiring explicit authorization.
