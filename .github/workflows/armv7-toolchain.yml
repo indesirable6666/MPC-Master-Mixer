@@ -64,6 +64,10 @@ jobs:
             -Isrc/audio tests/audio_engine_test.cpp \
             -o build/mpc-audio-engine-test-armv7
 
+          arm-linux-gnueabihf-g++ $COMMON_FLAGS -std=c++14 \\
+            tools/audio-engine-benchmark.cpp \\
+            -o build/mpc-audio-engine-benchmark-armv7
+
           echo "=== C executable ==="
           file build/mpc-arm-probe-c
           arm-linux-gnueabihf-readelf -h build/mpc-arm-probe-c
@@ -117,7 +121,7 @@ jobs:
           arm-linux-gnueabihf-g++ -print-file-name=libc.so.6
 
           echo "=== Reject runtime requirements newer than the MPC ==="
-          for binary in build/mpc-arm-probe-cpp build/mpc-arm-graphics-probe-v2 build/mpc-arm-egl-client-extension-probe build/mpc-arm-egl-gbm-symbol-probe build/mpc-arm-gles2-symbol-probe build/mpc-arm-egl-offscreen-pbuffer-probe build/mpc-audio-engine-test-armv7; do
+          for binary in build/mpc-arm-probe-cpp build/mpc-arm-graphics-probe-v2 build/mpc-arm-egl-client-extension-probe build/mpc-arm-egl-gbm-symbol-probe build/mpc-arm-gles2-symbol-probe build/mpc-arm-egl-offscreen-pbuffer-probe build/mpc-audio-engine-test-armv7 build/mpc-audio-engine-benchmark-armv7; do
             if arm-linux-gnueabihf-readelf --version-info "$binary" | \
               grep -E 'GLIBCXX_3\.4\.(29|[3-9][0-9])|GLIBC_2\.(33|[4-9][0-9])'; then
               echo "ERROR: $binary requires a newer runtime than the MPC audit found."
@@ -126,7 +130,14 @@ jobs:
           done
           echo "No GLIBC newer than 2.32 or GLIBCXX newer than 3.4.28 was found."
 
-      - name: Upload ARMv7 DSP benchmark binary\n        uses: actions/upload-artifact@v4\n        with:\n          name: mpc-armv7-audio-engine-benchmark\n          path: build/mpc-audio-engine-benchmark-armv7\n          if-no-files-found: error\n\n      - name: Upload ARMv7 audio engine host-test binary
+      - name: Upload ARMv7 DSP benchmark binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: mpc-armv7-audio-engine-benchmark
+          path: build/mpc-audio-engine-benchmark-armv7
+          if-no-files-found: error
+
+      - name: Upload ARMv7 audio engine host-test binary
         uses: actions/upload-artifact@v4
         with:
           name: mpc-armv7-audio-engine-test
