@@ -34,7 +34,7 @@ before enqueue, and insert objects remain caller-owned until their replacement
 ticket is acknowledged by the audio consumer. The host requires an explicit
 channel-to-track mapping and defaults all inputs to unmapped.
 
-The offline duplex backend only forwards synthetic/caller-owned buffers. No
+`tools/audio-engine-benchmark.cpp` provides a host-only block-processing\nbenchmark for 16 tracks with EQ, filters and four Aux sends. It is diagnostic\nonly and does not measure or certify MPC hardware performance.\n\nThe offline duplex backend only forwards synthetic/caller-owned buffers. No
 ALSA, JACK, MPC device capture, or hardware playback backend is implemented.
 The stereo float output still needs a target output stage for limiting and
 sample-format conversion.
