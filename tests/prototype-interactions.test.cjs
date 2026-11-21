@@ -445,12 +445,12 @@ test('browser audio demo generates a local tone controlled by selected track and
   assert.match(button.textContent, /220 Hz/);
   const context = FakeAudioContext.last;
   assert.equal(context.oscillator.frequency.value, 220);
-  assert.equal(context.gains[0].gain.value, 1);
+  assert.equal(context.gains[0].gain.value, 0.15);
   assert.equal(context.gains[1].gain.value, 1);
   const selectedFader = document.querySelector('[data-channel="0"] [data-volume]');
   selectedFader.value = '50';
   selectedFader.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
-  assert.equal(context.gains[0].gain.value, 0.5);
+  assert.equal(context.gains[0].gain.value, 0.075);
   const selectedPan = document.querySelector('[data-channel="0"] [data-pan]');
   selectedPan.value = '35';
   selectedPan.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
