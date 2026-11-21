@@ -9,7 +9,7 @@ Current audio components:
   pan, Mute/Solo, six-band EQ, two insert slots per track, four stereo Aux
   sends and returns, and the standalone linked Audio In pair processor.
 - `audio/audio_control_bridge.hpp` — fixed-capacity SPSC control queue that
-  applies UI/host parameter updates at audio block boundaries.
+  applies track, prepared EQ, Aux and Master updates at audio block boundaries.
 - `audio/audio_duplex_backend.hpp` — device-independent full-duplex callback
   contract and deterministic offline callback driver.
 - `audio/audio_duplex_engine_host.hpp` — explicit input-channel-to-track
