@@ -32,11 +32,27 @@ struct MixerPresentationSnapshot {
         bool mute = false;
     };
 
+    struct AudioInputChannel {
+        std::uint8_t gainValue = 100;
+        std::int16_t panPercent = 0;
+        bool mute = false;
+        bool solo = false;
+    };
+
+    struct AudioInputPair {
+        bool linked = false;
+        std::uint8_t stereoGainValue = 100;
+        std::int16_t balancePercent = 0;
+        bool stereoMute = false;
+        std::array<AudioInputChannel, 2> channels{};
+    };
+
     std::uint64_t sequence = 0;
     std::array<Track, kTrackCount> tracks{};
     std::array<AuxReturn, kAuxBusCount> auxReturns{};
     std::uint8_t masterFaderValue = 100;
     bool masterMute = false;
+    AudioInputPair audioInputPair{};
 };
 
 inline MixerPresentationSnapshot makeMixerPresentationSnapshot(
@@ -75,6 +91,22 @@ inline MixerPresentationSnapshot makeMixerPresentationSnapshot(
     result.masterFaderValue = static_cast<std::uint8_t>(
         std::lround(desired.masterGain * 100.0f));
     result.masterMute = desired.masterMute;
+    result.audioInputPair.linked = desired.audioInputLinked;
+    result.audioInputPair.stereoGainValue = static_cast<std::uint8_t>(
+        std::lround(desired.audioInputStereo.gain * 100.0f));
+    result.audioInputPair.balancePercent = static_cast<std::int16_t>(
+        std::lround(desired.audioInputStereo.balance * 100.0f));
+    result.audioInputPair.stereoMute = desired.audioInputStereo.mute;
+    for (std::size_t side = 0; side < 2; ++side) {
+        const auto& source = desired.audioInputChannels[side];
+        auto& target = result.audioInputPair.channels[side];
+        target.gainValue = static_cast<std::uint8_t>(
+            std::lround(source.gain * 100.0f));
+        target.panPercent = static_cast<std::int16_t>(
+            std::lround(source.pan * 100.0f));
+        target.mute = source.mute;
+        target.solo = source.solo;
+    }
     return result;
 }
 
