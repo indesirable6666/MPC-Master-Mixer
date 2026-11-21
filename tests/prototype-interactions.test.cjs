@@ -489,3 +489,27 @@ test('audio demo button clearly reports when browser Web Audio is unavailable', 
   assert.equal(button.textContent, 'AUDIO INDISPONIBLE');
   dom.window.close();
 });
+
+test('shared audio reference fixture defines browser/native equal-power expectations', () => {
+  const fixture = fs.readFileSync('tests/fixtures/audio_signal_reference.csv', 'utf8').trim().split(/\\r?\\n/);
+  assert.equal(fixture[0], 'scenario,track_gain,pan,master_gain,track_mute,master_mute,expected_left_gain,expected_right_gain,expected_master_peak');
+  const scenarios = fixture.slice(1).map(line => {
+    const [name, trackGain, pan, masterGain, trackMute, masterMute,
+      expectedLeft, expectedRight, expectedPeak] = line.split(',');
+    const gain = Number(trackGain);
+    const position = Number(pan);
+    const master = Number(masterGain);
+    const silent = Number(trackMute) !== 0 || Number(masterMute) !== 0;
+    const left = silent ? 0 : gain * Math.sqrt((1 - position) / 2) * master;
+    const right = silent ? 0 : gain * Math.sqrt((1 + position) / 2) * master;
+    const peak = 0.5 * Math.max(left, right);
+    return { name, left, right, peak, expectedLeft: Number(expectedLeft),
+      expectedRight: Number(expectedRight), expectedPeak: Number(expectedPeak) };
+  });
+  assert.equal(scenarios.length, 5);
+  for (const scenario of scenarios) {
+    assert.ok(Math.abs(scenario.left - scenario.expectedLeft) < 0.00001, scenario.name + ' left gain');
+    assert.ok(Math.abs(scenario.right - scenario.expectedRight) < 0.00001, scenario.name + ' right gain');
+    assert.ok(Math.abs(scenario.peak - scenario.expectedPeak) < 0.00001, scenario.name + ' master peak');
+  }
+});
