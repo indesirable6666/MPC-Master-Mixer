@@ -15,6 +15,8 @@ on:
       - "tests/meter_presentation_adapter_test.cpp"
       - "tests/audio_meter_end_to_end_test.cpp"
       - "tests/audio_native_signal_scenarios_test.cpp"
+      - "tests/audio_signal_reference_test.cpp"
+      - "tests/fixtures/audio_signal_reference.csv"
       - "tests/mixer_controller_test.cpp"
       - "tests/mixer_presentation_snapshot_test.cpp"
       - "tests/mixer_ui_command_dispatcher_test.cpp"
