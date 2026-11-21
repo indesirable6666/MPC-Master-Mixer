@@ -28,7 +28,7 @@ int main() {
         state.solo = (i == 2 || i == 8);
         state.mute = (i == 4 || i == 8); // Mute takes precedence over Solo.
         assert(engine.setTrack(i, state));
-        if (i != 4) expectedAll += samples[i][0];
+        if (i != 4 && i != 8) expectedAll += samples[i][0];
     }
 
     // With any Solo active, only soloed and non-muted strips contribute.
