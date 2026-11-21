@@ -11,6 +11,7 @@ on:
       - "tests/audio_meter_snapshot_bridge_test.cpp"
       - "tests/audio_duplex_meter_tap_test.cpp"
       - "tests/audio_meter_ui_consumer_test.cpp"
+      - "tests/meter_presentation_adapter_test.cpp"
       - "tests/mixer_controller_test.cpp"
       - "tools/audio-engine-benchmark.cpp"
       - ".github/workflows/audio-engine-tests.yml"
@@ -54,6 +55,10 @@ jobs:
         run: g++ -std=c++14 -Wall -Wextra -Werror -pedantic tests/audio_meter_ui_consumer_test.cpp -o audio-meter-ui-consumer-test
       - name: Run UI meter consumer tests
         run: ./audio-meter-ui-consumer-test
+      - name: Compile meter presentation adapter tests
+        run: g++ -std=c++14 -Wall -Wextra -Werror -pedantic tests/meter_presentation_adapter_test.cpp -o meter-presentation-adapter-test
+      - name: Run meter presentation adapter tests
+        run: ./meter-presentation-adapter-test
       - name: Compile meter model tests
         run: g++ -std=c++14 -Wall -Wextra -Werror -pedantic tests/meter_model_test.cpp -o meter-model-test
       - name: Run meter model tests
