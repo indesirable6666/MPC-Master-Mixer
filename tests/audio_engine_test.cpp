@@ -577,6 +577,12 @@ int main() {
     assert(controller.setTrackInsert(2, 1, &controllerInsert, controllerInsertTicket));
     assert(!controller.isInsertUpdateApplied(controllerInsertTicket));
     assert(!controller.setTrackInsert(2, 2, &controllerInsert, controllerInsertTicket));
+    // A second replacement of the same slot is rejected until the callback
+    // acknowledges the first pointer swap.
+    mpcmixer::GainInsert prematureReplacement;
+    assert(prematureReplacement.setGain(1.25f));
+    std::uint32_t prematureTicket = 0;
+    assert(!controller.setTrackInsert(2, 1, &prematureReplacement, prematureTicket));
     assert(controller.setMasterFader(100));
     assert(controller.setMasterMute(true));
     assert(near(controller.desiredMasterGain(), 1.0f));
@@ -607,6 +613,15 @@ int main() {
     assert(near(controllerBridge.engineOnAudioThread().trackEq(2).bandParameters(1).gainDb, 4.0f));
     assert(near(controllerBridge.engineOnAudioThread().trackEq(2).bandParameters(4).gainDb, 2.5f));
     assert(controller.isInsertUpdateApplied(controllerInsertTicket));
+    // Once acknowledged, a replacement may be queued. The old object remains
+    // alive through this second handoff as well.
+    std::uint32_t replacementControllerTicket = 0;
+    assert(controller.setTrackInsert(2, 1, &prematureReplacement,
+                                     replacementControllerTicket));
+    assert(!controller.isInsertUpdateApplied(replacementControllerTicket));
+    controllerBridge.process(controllerInputs, controllerLeft, controllerRight, 1);
+    assert(controller.isInsertUpdateApplied(replacementControllerTicket));
+    assert(controllerBridge.engineOnAudioThread().track(2).gain == 1.27f);
     // A null replacement explicitly removes/bypasses the insert. The desired
     // snapshot changes when queued, but the old object must remain alive until
     // the audio callback acknowledges the pointer swap.
