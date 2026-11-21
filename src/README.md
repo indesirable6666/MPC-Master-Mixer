@@ -40,7 +40,9 @@ The stereo float output still needs a target output stage for limiting and
 sample-format conversion.
 
 The browser prototype is not wired to the C++ bridge; a native host/controller
-adapter is still required. See `docs/AUDIO_CONTROL_BRIDGE.md` and
+adapter is still required. The meter presentation boundary and transport
+selection gates are documented in `docs/METER_SNAPSHOT_HOST_ADAPTER.md`.
+See `docs/AUDIO_CONTROL_BRIDGE.md` and
 `docs/INSERT_EFFECT_LIFECYCLE.md` for the insert ownership/acknowledgement
 contract,
 `docs/AUDIO_DUPLEX_BACKEND.md`, and
