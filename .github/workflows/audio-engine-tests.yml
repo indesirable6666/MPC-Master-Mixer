@@ -24,6 +24,7 @@ on:
       - "tests/audio_duplex_meter_tap_test.cpp"
       - "tests/audio_input_pair_host_test.cpp"
       - "tests/audio_meter_ui_consumer_test.cpp"
+      - "tests/audio_meter_clip_reset_test.cpp"
       - "tests/meter_presentation_adapter_test.cpp"
       - "tests/audio_meter_end_to_end_test.cpp"
       - "tests/audio_native_signal_scenarios_test.cpp"
@@ -131,6 +132,10 @@ jobs:
         run: g++ -std=c++14 -Wall -Wextra -Werror -pedantic tests/audio_meter_ui_consumer_test.cpp -o audio-meter-ui-consumer-test
       - name: Run UI meter consumer tests
         run: ./audio-meter-ui-consumer-test
+      - name: Compile meter clip reset tests
+        run: g++ -std=c++14 -Wall -Wextra -Werror -pedantic tests/audio_meter_clip_reset_test.cpp -o audio-meter-clip-reset-test
+      - name: Run meter clip reset tests
+        run: ./audio-meter-clip-reset-test
       - name: Compile meter presentation adapter tests
         run: g++ -std=c++14 -Wall -Wextra -Werror -pedantic tests/meter_presentation_adapter_test.cpp -o meter-presentation-adapter-test
       - name: Run meter presentation adapter tests
