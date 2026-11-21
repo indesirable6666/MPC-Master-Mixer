@@ -8,6 +8,15 @@ a UI thread while the audio callback is processing would create a C++ data
 race. The browser prototype is not connected to the C++ engine, so it must not
 call this class directly; a native host/controller will own the bridge.
 
+The framework-neutral `src/mixer/mixer_controller.hpp` maps native UI
+operations to the bridge: track faders, pan, Mute/Solo, four Aux sends, six-band
+EQ, Aux returns, and Master gain/mute. Its integer controls are range-checked
+before conversion. It keeps a producer-side track snapshot so changing one
+control preserves the others, and advances that snapshot only after a
+successful enqueue. The controller and bridge must be called from the same
+serialized producer thread. This adapter is not yet connected to a widget
+toolkit or to the browser prototype.
+
 ## Contract
 
 `src/audio/audio_control_bridge.hpp` provides a fixed-capacity,
