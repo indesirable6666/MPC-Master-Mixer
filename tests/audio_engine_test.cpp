@@ -2,7 +2,7 @@
 #include "audio_duplex_backend.hpp"
 #include "audio_duplex_engine_host.hpp"
 #include "audio_control_bridge.hpp"
-#include "mixer_controller.hpp"
+#include "../src/mixer/mixer_controller.hpp"
 #include "audio_backend.hpp"
 #include "six_band_eq.hpp"
 
