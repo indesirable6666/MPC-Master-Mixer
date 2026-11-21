@@ -568,6 +568,7 @@ int main() {
     mpcmixer::OfflineAudioDuplexBackend duplex;
     mpcmixer::AudioDuplexFormat duplexFormat;
     assert(duplex.prepare(duplexFormat, duplexCallback, &duplexProbe));
+    assert(!duplex.prepare(duplexFormat, duplexCallback, &duplexProbe));
     assert(duplex.start());
     float duplexInL[] = {0.25f, -0.5f}, duplexInR[] = {-0.75f, 1.0f};
     float duplexOutL[2] = {}, duplexOutR[2] = {};
