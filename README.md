@@ -1,2 +1,45 @@
-# MPC-Master-Mixer
-Touchscreen mixer for Akai MPC Live II
+# MPC Master Mixer
+
+Touchscreen mixer project for the Akai MPC Live II.
+
+## Current state
+
+- Browser-based tactile UI prototype in `prototype/index.html` (local demo state only).
+- Portable C++14 DSP and mixer-control core with host tests.
+- Native audio meter snapshot, UI consumer and framework-neutral presentation adapter.
+- ARMv7 hard-float cross-compilation probes and test binaries in GitHub Actions.
+
+The prototype is **not connected to the C++ engine or to live MPC audio/MIDI**. A native UI host, supported display integration, target SDK/sysroot and safe launch path have not yet been established. Do not treat CI cross-compilation as a deployable MPC application.
+
+## Run the host C++ tests
+
+Requires CMake 3.16+ and a C++14 compiler:
+
+```sh
+cmake -S . -B build/host -DCMAKE_BUILD_TYPE=Debug
+cmake --build build/host --parallel
+ctest --test-dir build/host --output-on-failure
+```
+
+Use Debug (or another configuration with assertions enabled): the current test programs use `assert`. The optional host-only DSP benchmark is built as a separate target:
+
+```sh
+./build/host/audio_engine_benchmark
+```
+
+The benchmark is diagnostic for the build machine only; it is not an MPC performance guarantee.
+
+## Architecture and integration notes
+
+- [Project plan](docs/PROJECT_PLAN.md)
+- [UI architecture and parameter contract](docs/UI_ARCHITECTURE.md)
+- [Host runtime discovery](docs/HOST_RUNTIME_DISCOVERY.md)
+- [JUCE feasibility assessment](docs/JUCE_FEASIBILITY.md)
+- [Graphics probe status](docs/GRAPHICS_PROBE_STATUS.md)
+- [ARMv7 build notes](docs/ARMV7_BUILD.md)
+- [Audio metering pipeline](docs/AUDIO_METERING_PIPELINE.md)
+- [Meter presentation adapter contract](docs/METER_SNAPSHOT_HOST_ADAPTER.md)
+
+## Safety boundary
+
+The current work is repository-side. No changes to the stock MPC executable, system services, activation/licensing, audio routing, DRM ownership, framebuffer, touch devices, or root filesystem are part of this project workflow. Hardware validation requires separate explicit authorization.
