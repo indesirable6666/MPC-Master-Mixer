@@ -551,8 +551,16 @@ int main() {
     assert(!controller.setTrackAuxSend(2, 4, 101));
     assert(!controller.setTrackAuxSend(2, 0, -1));
     assert(!controller.setTrackAuxSend(16, 0, 50));
+    assert(near(controller.desiredTrack(2).gain, 1.27f));
+    assert(near(controller.desiredTrack(2).pan, -0.5f));
+    assert(controller.desiredTrack(2).mute && controller.desiredTrack(2).solo);
+    assert(near(controller.desiredTrack(2).auxSend[3], 0.75f));
     assert(controller.setMasterFader(100));
     assert(controller.setMasterMute(true));
+    assert(near(controller.desiredMasterGain(), 1.0f));
+    assert(controller.desiredMasterMute());
+    assert(near(controller.desiredAuxReturn(1).gain, 0.75f));
+    assert(near(controller.desiredAuxReturn(1).balance, -0.25f));
     float controllerInput[] = {1.0f};
     const float* controllerInputs[AudioEngine::kTrackCount] = {};
     controllerInputs[2] = controllerInput;
@@ -575,6 +583,12 @@ int main() {
         assert(controllerFullBridge.enqueueMasterMute((i % 2) != 0));
     assert(!fullController.setTrackFader(0, 80));
     assert(near(fullController.desiredTrack(0).gain, 1.0f));
+    assert(!fullController.setAuxReturn(0, controllerReturn));
+    assert(near(fullController.desiredAuxReturn(0).gain, 1.0f));
+    assert(!fullController.setMasterFader(80));
+    assert(near(fullController.desiredMasterGain(), 1.0f));
+    assert(!fullController.setMasterMute(true));
+    assert(!fullController.desiredMasterMute());
 
     // The duplex host maps physical inputs only through explicit routes.
     mpcmixer::AudioEngineCommandBridge hostedBridge;
