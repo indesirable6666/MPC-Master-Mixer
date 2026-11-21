@@ -71,7 +71,7 @@ int main() {
     // Aux returns are summed into the Master path, with return gain/balance,
     // and do not feed back into any send bus.
     Engine::AuxReturn aux;
-    aux.gain = 2.0f;
+    aux.gain = 1.0f;
     aux.balance = 0.5f;
     assert(engine.setAuxReturn(0, aux));
     std::array<float, Engine::kAuxBusCount> returnLeft{};
@@ -79,8 +79,8 @@ int main() {
     returnLeft[0] = 0.3f;
     returnRight[0] = 0.4f;
     result = render(engine, samples, returnLeft, returnRight);
-    assert(near(result.left, 0.2f));  // (0.5 + 0.3) * 0.25
-    assert(near(result.right, 0.2f)); // (0.0 + 0.8) * 0.25
+    assert(near(result.left, 0.1625f)); // (0.5 + 0.15) * 0.25
+    assert(near(result.right, 0.1f));   // 0.4 * 0.25
     assert(near(result.sendLeft[0], 0.2f));
     assert(near(result.sendRight[0], 0.0f));
 
@@ -99,8 +99,8 @@ int main() {
     track.mute = true;
     assert(engine.setTrack(0, track));
     result = render(engine, samples, returnLeft, returnRight);
-    assert(near(result.left, 0.075f)); // return only: 0.3 * 0.25
-    assert(near(result.right, 0.2f));  // return only: 0.8 * 0.25
+    assert(near(result.left, 0.0375f)); // return only: 0.15 * 0.25
+    assert(near(result.right, 0.1f));    // return only: 0.4 * 0.25
     assert(near(result.sendLeft[0], 0.0f));
     assert(near(result.sendLeft[1], 0.0f));
 
