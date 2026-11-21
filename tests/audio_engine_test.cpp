@@ -452,6 +452,21 @@ int main() {
     assert(!bridge.enqueueMasterGain(std::numeric_limits<float>::quiet_NaN()));
     bridgeTrack.pan = 2.0f;
     assert(!bridge.enqueueTrack(0, bridgeTrack));
+    // EQ coefficients are prepared on the producer thread, queued by value,
+    // and copied/reset at the next audio block without coefficient trig work.
+    mpcmixer::AudioEngineCommandBridge eqBridge;
+    auto queuedEqBands = mpcmixer::SixBandEq::defaultBandParameters();
+    queuedEqBands[2].gainDb = 6.0f;
+    assert(eqBridge.enqueueTrackEq(0, 48000.0f, queuedEqBands));
+    float queuedEqImpulse[] = {1.0f};
+    const float* queuedEqInputs[AudioEngine::kTrackCount] = {};
+    queuedEqInputs[0] = queuedEqImpulse;
+    float queuedEqLeft[1] = {}, queuedEqRight[1] = {};
+    eqBridge.process(queuedEqInputs, queuedEqLeft, queuedEqRight, 1);
+    assert(queuedEqLeft[0] > std::sqrt(0.5f));
+    assert(near(queuedEqLeft[0], queuedEqRight[0]));
+    assert(!eqBridge.enqueueTrackEq(0, 48000.0f, std::array<mpcmixer::SixBandEq::BandParameters, 6>{}));
+
     mpcmixer::AudioEngineCommandBridge returnBridge;
     mpcmixer::AudioEngine::AuxReturn bridgeReturn;
     bridgeReturn.gain = 0.5f;
