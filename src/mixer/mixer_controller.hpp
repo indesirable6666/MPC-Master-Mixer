@@ -54,7 +54,8 @@ public:
     bool setTrackAuxSend(std::size_t track, std::size_t bus,
                          int percent) noexcept {
         if (track >= AudioEngine::kTrackCount ||
-            bus >= AudioEngine::kAuxBusCount || percent > kAuxMaximum)
+            bus >= AudioEngine::kAuxBusCount || percent < 0 ||
+            percent > kAuxMaximum)
             return false;
         AudioEngine::Track next = tracks_[track];
         next.auxSend[bus] = static_cast<float>(percent) / 100.0f;
@@ -71,21 +72,35 @@ public:
     bool setAuxReturn(std::size_t bus,
                       const AudioEngine::AuxReturn& state) noexcept {
         if (bus >= AudioEngine::kAuxBusCount) return false;
-        return bridge_.enqueueAuxReturn(bus, state);
+        if (!bridge_.enqueueAuxReturn(bus, state)) return false;
+        auxReturns_[bus] = state;
+        return true;
     }
 
     bool setMasterFader(int value) noexcept {
         if (value < 0 || value > kFaderMaximum) return false;
-        return bridge_.enqueueMasterGain(static_cast<float>(value) / 100.0f);
+        const float gain = static_cast<float>(value) / 100.0f;
+        if (!bridge_.enqueueMasterGain(gain)) return false;
+        masterGain_ = gain;
+        return true;
     }
 
     bool setMasterMute(bool muted) noexcept {
-        return bridge_.enqueueMasterMute(muted);
+        if (!bridge_.enqueueMasterMute(muted)) return false;
+        masterMute_ = muted;
+        return true;
     }
 
     const AudioEngine::Track& desiredTrack(std::size_t track) const noexcept {
         return tracks_[track < AudioEngine::kTrackCount ? track : 0];
     }
+
+    const AudioEngine::AuxReturn& desiredAuxReturn(std::size_t bus) const noexcept {
+        return auxReturns_[bus < AudioEngine::kAuxBusCount ? bus : 0];
+    }
+
+    float desiredMasterGain() const noexcept { return masterGain_; }
+    bool desiredMasterMute() const noexcept { return masterMute_; }
 
 private:
     bool publishTrack(std::size_t index,
@@ -97,6 +112,9 @@ private:
 
     AudioEngineCommandBridge& bridge_;
     std::array<AudioEngine::Track, AudioEngine::kTrackCount> tracks_{};
+    std::array<AudioEngine::AuxReturn, AudioEngine::kAuxBusCount> auxReturns_{};
+    float masterGain_ = 1.0f;
+    bool masterMute_ = false;
 };
 
 } // namespace mpcmixer
