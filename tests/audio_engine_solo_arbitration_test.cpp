@@ -39,6 +39,10 @@ int main() {
     assert(near(right[0], samples[2][0] * centerPan));
 
     // Clearing the last Solo restores every non-muted strip.
+    Engine::Track firstSoloOff;
+    firstSoloOff.gain = 1.0f;
+    firstSoloOff.pan = 0.0f;
+    assert(engine.setTrack(2, firstSoloOff));
     Engine::Track soloOff;
     soloOff.gain = 1.0f;
     soloOff.pan = 0.0f;
