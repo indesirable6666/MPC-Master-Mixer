@@ -19,6 +19,14 @@ enum class MixerUiCommandType : std::uint8_t {
     SetAuxReturn,
     SetMasterFader,
     SetMasterMute,
+    SetAudioInputPairLinked,
+    SetAudioInputPairStereoGain,
+    SetAudioInputPairBalance,
+    SetAudioInputPairStereoMute,
+    SetAudioInputChannelGain,
+    SetAudioInputChannelPan,
+    SetAudioInputChannelMute,
+    SetAudioInputChannelSolo,
     SetInsertEnabled
 };
 
@@ -141,6 +149,59 @@ public:
             accepted = controller_.setMasterMute(command.flag);
             break;
 
+        case MixerUiCommandType::SetAudioInputPairLinked:
+            accepted = controller_.setAudioInputPairLinked(command.flag);
+            break;
+
+        case MixerUiCommandType::SetAudioInputPairStereoGain:
+            if (command.value < 0 ||
+                command.value > MixerController::kFaderMaximum)
+                return {MixerUiCommandStatus::Invalid, command.sequence};
+            accepted = controller_.setAudioInputPairStereoGain(command.value);
+            break;
+
+        case MixerUiCommandType::SetAudioInputPairBalance:
+            if (command.value < MixerController::kPanMinimum ||
+                command.value > MixerController::kPanMaximum)
+                return {MixerUiCommandStatus::Invalid, command.sequence};
+            accepted = controller_.setAudioInputPairBalance(command.value);
+            break;
+
+        case MixerUiCommandType::SetAudioInputPairStereoMute:
+            accepted = controller_.setAudioInputPairStereoMute(command.flag);
+            break;
+
+        case MixerUiCommandType::SetAudioInputChannelGain:
+            if (!validAudioInputSide(command.track) || command.value < 0 ||
+                command.value > MixerController::kFaderMaximum)
+                return {MixerUiCommandStatus::Invalid, command.sequence};
+            accepted = controller_.setAudioInputPairChannelGain(
+                command.track, command.value);
+            break;
+
+        case MixerUiCommandType::SetAudioInputChannelPan:
+            if (!validAudioInputSide(command.track) ||
+                command.value < MixerController::kPanMinimum ||
+                command.value > MixerController::kPanMaximum)
+                return {MixerUiCommandStatus::Invalid, command.sequence};
+            accepted = controller_.setAudioInputPairChannelPan(
+                command.track, command.value);
+            break;
+
+        case MixerUiCommandType::SetAudioInputChannelMute:
+            if (!validAudioInputSide(command.track))
+                return {MixerUiCommandStatus::Invalid, command.sequence};
+            accepted = controller_.setAudioInputPairChannelMute(
+                command.track, command.flag);
+            break;
+
+        case MixerUiCommandType::SetAudioInputChannelSolo:
+            if (!validAudioInputSide(command.track))
+                return {MixerUiCommandStatus::Invalid, command.sequence};
+            accepted = controller_.setAudioInputPairChannelSolo(
+                command.track, command.flag);
+            break;
+
         case MixerUiCommandType::SetInsertEnabled:
             // Effect construction and lifetime are native-host responsibilities.
             // A UI boolean must never be translated into an arbitrary effect pointer.
@@ -164,6 +225,10 @@ public:
 private:
     static bool validTrack(std::size_t track) noexcept {
         return track < AudioEngine::kTrackCount;
+    }
+
+    static bool validAudioInputSide(std::size_t side) noexcept {
+        return side < 2;
     }
 
     MixerController& controller_;
