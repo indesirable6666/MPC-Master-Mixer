@@ -101,9 +101,11 @@ public:
         }
 
         std::array<const float*, AudioEngine::kTrackCount> trackInputs{};
+        std::array<std::size_t, 2> blockRoutes{{kUnmappedTrack, kUnmappedTrack}};
         for (std::size_t channel = 0; channel < block.inputChannelCount; ++channel) {
             const std::size_t track =
                 inputTrack_[channel].load(std::memory_order_acquire);
+            blockRoutes[channel] = track;
             if (track == kUnmappedTrack) continue;
             if (block.inputChannels[channel] == nullptr) {
                 silence(block);
@@ -125,8 +127,7 @@ public:
             snapshot.blockSequence = ++meterBlockSequence_;
             bool valid = true;
             for (std::size_t channel = 0; channel < block.inputChannelCount; ++channel) {
-                const std::size_t track =
-                    inputTrack_[channel].load(std::memory_order_acquire);
+                const std::size_t track = blockRoutes[channel];
                 if (track == kUnmappedTrack) continue;
                 if (!AudioBlockMeter::measure(
                         block.inputChannels[channel], block.frameCount,
