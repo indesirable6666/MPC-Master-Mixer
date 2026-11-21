@@ -211,3 +211,8 @@ copy: it is not proof that the audio callback has applied the command, and it
 is not hardware feedback. The dedicated duplex pair path currently bypasses
 per-track EQ, inserts and Aux sends; see
 `docs/AUDIO_DUPLEX_ENGINE_HOST.md` for that explicit limitation.
+
+
+## All-track presentation consistency
+
+The `mixer_presentation_all_tracks_test` host test assigns distinct fader and pan values to all 16 strips and exercises independent Mute/Solo combinations. It verifies that each indexed strip is preserved in the presentation snapshot and that Master fader/mute remain separate from track 16. A second snapshot confirms that a later edit to one strip does not mutate the earlier value copy or alter neighboring strip states. This validates the controller's desired-state presentation contract, not applied engine state or physical MPC feedback.
