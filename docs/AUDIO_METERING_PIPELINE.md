@@ -99,16 +99,23 @@ that decrement from elapsed time rather than assume a fixed frame rate.
 2. **Completed in host tests:** verify empty/full behavior, accepted-frame
    integrity, FIFO ordering, and repeated ring-index wraparound. The test is
    wired into host CI and the ARMv7 cross-compile workflow.
-3. Add explicit meter tap points to the offline duplex host and test expected
-   values with synthetic signals.
-4. Connect the native UI to the UI-thread consumer and verify refresh/decay
-   behavior without blocking DSP.
+3. **Completed in host tests:** add explicit meter tap points to the offline
+   duplex host and verify expected values with synthetic signals.
+4. **Completed in host tests:** exercise the offline duplex host, command
+   bridge, snapshot queue, UI consumer, and fake presentation sink as one
+   synthetic-signal path. Verify pre-fader track taps, post-mix Master levels,
+   and decay-only presentation frames.
+5. Connect a selected native UI host to the UI-thread consumer and verify
+   refresh/decay behavior without blocking DSP.
 6. Only after a separate, authorized hardware phase, validate actual capture,
    routing, latency, and meter calibration on the MPC.
 
 Until those gates are completed, meters are software models and helpers only.
 They must not be described as live MPC input/output meters.
-\nThe UI consumer is `src/mixer/audio_meter_ui_consumer.hpp`. Its `tick()`\nmethod is intended for the serialized UI/control thread; it never runs on the\naudio callback. The default peak decay is 2.5 normalized amplitude units per\nsecond and can be configured at construction. RMS follows the newest accepted\nsnapshot, while peak hold observes every drained snapshot.\n
+
+The UI consumer is `src/mixer/audio_meter_ui_consumer.hpp`. Its `tick()`\nmethod is intended for the serialized UI/control thread; it never runs on the
+audio callback. The default peak decay is 2.5 normalized amplitude units per
+second and can be configured at construction. RMS follows the newest accepted\nsnapshot, while peak hold observes every drained snapshot.\n
 ## Browser prototype presentation seam
 
 `prototype/index.html` accepts a host-embedding event named
