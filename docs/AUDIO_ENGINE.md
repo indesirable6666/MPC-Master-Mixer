@@ -61,8 +61,10 @@ queue so a single host/UI control thread can publish track, prepared EQ, Aux
 return and Master changes for application at the next audio block boundary.
 EQ coefficients are calculated on the producer thread and copied/reset by the
 audio thread without trigonometric work. Queue-full conditions are reported
-to the producer. Insert pointer replacement and effect lifetime management
-remain outside this queue and require a separate safe-retirement protocol. The browser prototype
+to the producer. Insert-slot replacements can also be queued as non-owning
+pointers; the producer must retain old and new effect objects until the
+corresponding ticket is acknowledged with `hasApplied()`, then retire the
+old object off the audio thread. The browser prototype
 is not yet wired to a native host/controller. See
 `docs/AUDIO_CONTROL_BRIDGE.md` for the threading contract.
 
