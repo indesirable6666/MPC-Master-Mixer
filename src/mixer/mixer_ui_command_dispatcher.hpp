@@ -145,6 +145,9 @@ public:
             // Effect construction and lifetime are native-host responsibilities.
             // A UI boolean must never be translated into an arbitrary effect pointer.
             return {MixerUiCommandStatus::Unsupported, command.sequence};
+
+        default:
+            return {MixerUiCommandStatus::Invalid, command.sequence};
         }
 
         if (!accepted)
