@@ -531,6 +531,23 @@ int main() {
     host.processBlock(missingOutputBlock);
     assert(near(hostedOutputL[0], 0.0f));
 
+    // A callback with a channel count different from the prepared format is
+    // rejected safely and clears valid output planes.
+    const float* shortInputs[] = {hostedInputL};
+    hostedOutputL[0] = hostedOutputR[0] = 8.0f;
+    mpcmixer::AudioDuplexBuffer wrongInputCount{
+        shortInputs, hostedOutputs, 1, 2, 2};
+    host.processBlock(wrongInputCount);
+    assert(near(hostedOutputL[0], 0.0f) && near(hostedOutputR[0], 0.0f));
+
+    // Oversized blocks are ignored: the host cannot assume the backing buffers
+    // are as large as an invalid frameCount claims.
+    hostedOutputL[0] = hostedOutputR[0] = 6.0f;
+    mpcmixer::AudioDuplexBuffer oversizedHostedBlock{
+        hostedInputs, hostedOutputs, 2, 2, hostedFormat.maxFramesPerBlock + 1};
+    host.processBlock(oversizedHostedBlock);
+    assert(near(hostedOutputL[0], 6.0f) && near(hostedOutputR[0], 6.0f));
+
     host.stop();
     host.shutdown();
 
