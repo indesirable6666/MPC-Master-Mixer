@@ -45,6 +45,28 @@ public:
         return enqueue(command);
     }
 
+    // The caller retains both old and new effect objects until the returned
+    // ticket is acknowledged by hasApplied(). Destruction stays on control thread.
+    bool enqueueTrackInsert(std::size_t trackIndex, std::size_t slot,
+                            AudioInsert* effect, std::uint32_t& ticket) noexcept {
+        if (trackIndex >= AudioEngine::kTrackCount ||
+            slot >= InsertChain::kSlotCount) return false;
+        Command command;
+        command.type = CommandType::TrackInsert;
+        command.index = trackIndex;
+        command.slot = slot;
+        command.effect = effect;
+        return enqueue(command, &ticket);
+    }
+
+    // Control-thread query. Once true, the audio thread has replaced the slot
+    // and will not dereference the previous effect again.
+    bool hasApplied(std::uint32_t ticket) const noexcept {
+        const std::uint32_t applied =
+            appliedSequence_.load(std::memory_order_acquire);
+        return static_cast<std::int32_t>(applied - ticket) >= 0;
+    }
+
     bool enqueueAuxReturn(std::size_t index,
                           const AudioEngine::AuxReturn& state) noexcept {
         if (index >= AudioEngine::kAuxBusCount || !validReturn(state)) return false;
@@ -115,12 +137,15 @@ public:
 
 private:
     enum class CommandType : std::uint8_t {
-        Track, TrackEq, AuxReturn, MasterGain, MasterMute
+        Track, TrackEq, TrackInsert, AuxReturn, MasterGain, MasterMute
     };
 
     struct Command {
         CommandType type = CommandType::MasterMute;
         std::size_t index = 0;
+        std::uint32_t sequence = 0;
+        std::size_t slot = 0;
+        AudioInsert* effect = nullptr;
         AudioEngine::Track track{};
         SixBandEq::PreparedConfiguration eq{};
         AudioEngine::AuxReturn auxReturn{};
@@ -144,12 +169,15 @@ private:
             state.balance >= -1.0f && state.balance <= 1.0f;
     }
 
-    bool enqueue(const Command& command) noexcept {
+    bool enqueue(const Command& command, std::uint32_t* ticket = nullptr) noexcept {
         const std::uint32_t head = head_.load(std::memory_order_relaxed);
         const std::uint32_t tail = tail_.load(std::memory_order_acquire);
         if (head - tail >= kQueueCapacity) return false;
-        commands_[head % kQueueCapacity] = command;
+        Command queued = command;
+        queued.sequence = head + 1;
+        commands_[head % kQueueCapacity] = queued;
         head_.store(head + 1, std::memory_order_release);
+        if (ticket != nullptr) *ticket = queued.sequence;
         return true;
     }
 
@@ -172,6 +200,9 @@ private:
             case CommandType::TrackEq:
                 engine_.setTrackEqPrepared(command.index, command.eq);
                 break;
+            case CommandType::TrackInsert:
+                engine_.setTrackInsert(command.index, command.slot, command.effect);
+                break;
             case CommandType::AuxReturn:
                 engine_.setAuxReturn(command.index, command.auxReturn);
                 break;
@@ -182,6 +213,7 @@ private:
                 engine_.setMasterMute(command.flag);
                 break;
             }
+            appliedSequence_.store(command.sequence, std::memory_order_release);
         }
     }
 
@@ -190,6 +222,7 @@ private:
     std::array<Command, kQueueCapacity> commands_{};
     alignas(64) std::atomic<std::uint32_t> head_{0};
     alignas(64) std::atomic<std::uint32_t> tail_{0};
+    alignas(64) std::atomic<std::uint32_t> appliedSequence_{UINT32_MAX};
     AudioEngine engine_{};
 };
 
