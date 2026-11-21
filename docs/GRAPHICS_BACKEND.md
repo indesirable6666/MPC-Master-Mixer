@@ -51,4 +51,4 @@ This is not yet a display solution. Surfaceless rendering alone does not put pix
 
 ## Next engineering task
 
-Build a harmless symbol-resolution probe that uses `dlsym` and `eglGetProcAddress` to verify the actual GLES2 shader, buffer and draw entry points. It must not call EGL initialization, request a display, create a context, open DRM, access touch, or send MIDI/audio. This validates the function surface only; it does not validate rendering.
+The ARMv7 `gles2-symbol-probe.cpp` now checks a minimal shader/program lifecycle, vertex-buffer setup, attribute binding, draw, viewport, clear, and diagnostic entry points through `dlsym`/`eglGetProcAddress`. It performs address lookups only: it does not invoke GL functions, initialize EGL, request a display, create a context, open DRM, access touch, or send MIDI/audio. This validates the function surface only; it does not validate rendering or display presentation.
