@@ -118,6 +118,52 @@ int main() {
     assert(insertController.desiredStateSnapshot().tracks[0].inserts[0] == nullptr);
     assert(std::fabs(insertLeft[0] - 0.25f * std::sqrt(0.5f)) < 0.0001f);
 
+    // Stereo Audio In controls use the same block-boundary bridge as tracks.
+    mpcmixer::AudioEngineCommandBridge pairBridge;
+    mpcmixer::MixerController pairController(pairBridge);
+    assert(pairController.setAudioInputPairLinked(true));
+    assert(pairController.setAudioInputPairStereoGain(50));
+    assert(pairController.setAudioInputPairBalance(25));
+    assert(pairController.setAudioInputPairStereoMute(false));
+    assert(pairController.setAudioInputPairChannelGain(0, 60));
+    assert(pairController.setAudioInputPairChannelPan(1, 40));
+    assert(pairController.setAudioInputPairChannelMute(1, true));
+    assert(pairController.setAudioInputPairChannelSolo(1, true));
+    assert(!pairController.setAudioInputPairStereoGain(128));
+    assert(!pairController.setAudioInputPairBalance(101));
+    assert(!pairController.setAudioInputPairChannelGain(2, 50));
+    assert(!pairController.setAudioInputPairChannelPan(0, -101));
+    const auto pairDesired = pairController.desiredStateSnapshot();
+    assert(pairDesired.audioInputLinked);
+    assert(std::fabs(pairDesired.audioInputStereo.gain - 0.5f) < 0.00001f);
+    assert(std::fabs(pairDesired.audioInputStereo.balance - 0.25f) < 0.00001f);
+    assert(pairDesired.audioInputChannels[1].mute);
+    assert(pairDesired.audioInputChannels[1].solo);
+
+    const float* noTrackInputs[mpcmixer::AudioEngine::kTrackCount]{};
+    const float pairInputLeft[1] = {1.0f};
+    const float pairInputRight[1] = {-0.5f};
+    float pairOutputLeft[1]{};
+    float pairOutputRight[1]{};
+    pairBridge.processWithAudioInputPair(
+        noTrackInputs, pairInputLeft, pairInputRight,
+        pairOutputLeft, pairOutputRight, 1);
+    assert(std::fabs(pairOutputLeft[0] - 0.375f) < 0.0001f);
+    assert(std::fabs(pairOutputRight[0] + 0.25f) < 0.0001f);
+
+    assert(pairController.setAudioInputPairLinked(false));
+    assert(pairController.setAudioInputPairChannelGain(0, 50));
+    assert(pairController.setAudioInputPairChannelPan(0, -100));
+    assert(pairController.setAudioInputPairChannelGain(1, 25));
+    assert(pairController.setAudioInputPairChannelPan(1, 100));
+    assert(pairController.setAudioInputPairChannelMute(1, false));
+    assert(pairController.setAudioInputPairChannelSolo(0, true));
+    pairBridge.processWithAudioInputPair(
+        noTrackInputs, pairInputLeft, pairInputRight,
+        pairOutputLeft, pairOutputRight, 1);
+    assert(std::fabs(pairOutputLeft[0] - 0.5f) < 0.0001f);
+    assert(std::fabs(pairOutputRight[0]) < 0.0001f);
+
     // Track edits are isolated: changing one strip must not overwrite another.
     assert(controller.setTrackFader(4, 55));
     assert(controller.setTrackPan(4, 25));
