@@ -11,9 +11,9 @@ int main() {
 
     const auto initial = publisher.publish();
     assert(initial.sequence == 1);
-    assert(initial.masterFaderPercent == 100);
+    assert(initial.masterFaderValue == 100);
     assert(!initial.masterMute);
-    assert(initial.tracks[0].faderPercent == 100);
+    assert(initial.tracks[0].faderValue == 100);
     assert(initial.tracks[0].panPercent == 0);
     assert(!initial.tracks[0].mute);
     assert(!initial.tracks[0].solo);
@@ -45,7 +45,7 @@ int main() {
     const auto changed = publisher.publish();
     assert(changed.sequence == 2);
     assert(publisher.lastSequence() == 2);
-    assert(changed.tracks[5].faderPercent == 73);
+    assert(changed.tracks[5].faderValue == 73);
     assert(changed.tracks[5].panPercent == -35);
     assert(changed.tracks[5].mute);
     assert(changed.tracks[5].solo);
@@ -54,10 +54,10 @@ int main() {
     assert(std::fabs(changed.tracks[5].eq[2].gainDb - 5.5f) < 0.001f);
     assert(changed.tracks[5].hasInsert[1]);
     assert(!changed.tracks[5].hasInsert[0]);
-    assert(changed.auxReturns[2].levelPercent == 64);
+    assert(changed.auxReturns[2].levelValue == 64);
     assert(changed.auxReturns[2].balancePercent == -30);
     assert(changed.auxReturns[2].mute);
-    assert(changed.masterFaderPercent == 88);
+    assert(changed.masterFaderValue == 88);
     assert(changed.masterMute);
 
     // Presentation is a copy: later edits do not mutate a previously
@@ -69,12 +69,12 @@ int main() {
     bridge.process(inputs, outputLeft, outputRight, 1);
     assert(controller.isInsertUpdateApplied(ticket));
     assert(controller.setTrackInsert(5, 1, nullptr, ticket));
-    assert(changed.tracks[5].faderPercent == 73);
+    assert(changed.tracks[5].faderValue == 73);
     assert(changed.tracks[5].hasInsert[1]);
 
     const auto later = publisher.publish();
     assert(later.sequence == 3);
-    assert(later.tracks[5].faderPercent == 50);
+    assert(later.tracks[5].faderValue == 50);
     assert(!later.tracks[5].hasInsert[1]);
 
     // A failed enqueue must not alter desired state or the next presentation.
@@ -88,6 +88,6 @@ int main() {
     assert(!fullController.setTrackFader(1, 65));
     const auto afterRejectedEdit = fullPublisher.publish();
     assert(afterRejectedEdit.sequence == beforeRejectedEdit.sequence + 1);
-    assert(afterRejectedEdit.tracks[1].faderPercent ==
-           beforeRejectedEdit.tracks[1].faderPercent);
+    assert(afterRejectedEdit.tracks[1].faderValue ==
+           beforeRejectedEdit.tracks[1].faderValue);
 }
