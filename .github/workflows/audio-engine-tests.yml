@@ -3,6 +3,7 @@ name: Audio engine tests
 on:
   push:
     paths:
+      - "CMakeLists.txt"
       - "src/audio/**"
       - "src/mixer/**"
       - "tests/audio_engine_test.cpp"
@@ -41,6 +42,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Configure host CMake validation harness
+        run: cmake -S . -B build/host -DCMAKE_BUILD_TYPE=Release
+      - name: Build host tests and benchmark
+        run: cmake --build build/host --parallel 2
+      - name: Run C++ host tests through CTest
+        run: ctest --test-dir build/host --output-on-failure
       - name: Compile audio engine tests
         run: g++ -std=c++14 -Wall -Wextra -Werror -pedantic -Isrc/audio tests/audio_engine_test.cpp -o audio-engine-test
       - name: Run audio engine tests
