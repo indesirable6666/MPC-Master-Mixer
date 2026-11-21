@@ -17,7 +17,7 @@ struct MixerPresentationSnapshot {
     static constexpr std::size_t kInsertSlotCount = InsertChain::kSlotCount;
 
     struct Track {
-        std::uint8_t faderPercent = 100;
+        std::uint8_t faderValue = 100;
         std::int16_t panPercent = 0;
         bool mute = false;
         bool solo = false;
@@ -27,7 +27,7 @@ struct MixerPresentationSnapshot {
     };
 
     struct AuxReturn {
-        std::uint8_t levelPercent = 100;
+        std::uint8_t levelValue = 100;
         std::int16_t balancePercent = 0;
         bool mute = false;
     };
@@ -35,7 +35,7 @@ struct MixerPresentationSnapshot {
     std::uint64_t sequence = 0;
     std::array<Track, kTrackCount> tracks{};
     std::array<AuxReturn, kAuxBusCount> auxReturns{};
-    std::uint8_t masterFaderPercent = 100;
+    std::uint8_t masterFaderValue = 100;
     bool masterMute = false;
 };
 
@@ -48,7 +48,7 @@ inline MixerPresentationSnapshot makeMixerPresentationSnapshot(
     for (std::size_t index = 0; index < AudioEngine::kTrackCount; ++index) {
         const auto& source = desired.tracks[index];
         auto& target = result.tracks[index];
-        target.faderPercent = static_cast<std::uint8_t>(
+        target.faderValue = static_cast<std::uint8_t>(
             std::lround(source.controls.gain * 100.0f));
         target.panPercent = static_cast<std::int16_t>(
             std::lround(source.controls.pan * 100.0f));
@@ -66,13 +66,13 @@ inline MixerPresentationSnapshot makeMixerPresentationSnapshot(
     for (std::size_t bus = 0; bus < AudioEngine::kAuxBusCount; ++bus) {
         const auto& source = desired.auxReturns[bus];
         auto& target = result.auxReturns[bus];
-        target.levelPercent = static_cast<std::uint8_t>(
+        target.levelValue = static_cast<std::uint8_t>(
             std::lround(source.gain * 100.0f));
         target.balancePercent = static_cast<std::int16_t>(
             std::lround(source.balance * 100.0f));
         target.mute = source.mute;
     }
-    result.masterFaderPercent = static_cast<std::uint8_t>(
+    result.masterFaderValue = static_cast<std::uint8_t>(
         std::lround(desired.masterGain * 100.0f));
     result.masterMute = desired.masterMute;
     return result;
