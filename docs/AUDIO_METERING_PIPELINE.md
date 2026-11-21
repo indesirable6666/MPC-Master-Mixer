@@ -92,7 +92,7 @@ that decrement from elapsed time rather than assume a fixed frame rate.
    changing the existing control-to-audio SPSC contract.
 2. **Completed in host tests:** verify empty/full behavior, accepted-frame
    integrity, FIFO ordering, and repeated ring-index wraparound. The test is
-   part of host CI and is cross-compiled for ARMv7.
+   wired into host CI and the ARMv7 cross-compile workflow.
 3. Add explicit meter tap points to the offline duplex host and test expected
    values with synthetic signals.
 4. Connect the native UI to the UI-thread consumer and verify refresh/decay
