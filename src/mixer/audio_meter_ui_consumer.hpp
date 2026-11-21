@@ -54,6 +54,17 @@ public:
         return received;
     }
 
+    // Clip reset is UI-thread-only, like tick(). Returns false for an invalid channel.
+    bool resetClip(std::size_t channel) noexcept {
+        if (channel >= kChannelCount) return false;
+        meters_[channel].resetClip();
+        return true;
+    }
+
+    void resetAllClips() noexcept {
+        for (auto& meter : meters_) meter.resetClip();
+    }
+
     const MeterModel& meter(std::size_t channel) const noexcept {
         return meters_[channel < kChannelCount ? channel : 0];
     }
