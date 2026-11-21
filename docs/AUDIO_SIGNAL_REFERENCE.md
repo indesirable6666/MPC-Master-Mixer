@@ -70,3 +70,15 @@ that slot order is preserved. The test then bypasses each slot independently,
 checks the both-bypassed unity path, and verifies that an empty slot is
 transparent and an out-of-range slot is rejected. The test runs in both CTest
 and the native host CI workflow.
+
+
+## Combined EQ and insert-chain validation
+
+`tests/audio_eq_insert_chain_test.cpp` measures the combined `AudioEngine`
+track path with a +6 dB boost at 500 Hz, a 3 kHz one-pole low-pass in insert
+slot 0, a 0.5x Gain insert in slot 1, a 0.8x track fader, and centre pan.
+The enabled low-pass result is checked against its analytical one-pole
+magnitude multiplied by the EQ, insert, fader, and pan gains. A second fresh
+run bypasses only the low-pass and verifies that the frequency-dependent loss
+disappears while the EQ and Gain insert remain active. This validates the
+combined signal path and the bypass state without opening an audio device.
