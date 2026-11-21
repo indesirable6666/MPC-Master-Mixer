@@ -44,14 +44,15 @@ single-producer/single-consumer (SPSC) command queue:
 - Only one producer and one consumer are supported. A future host with several
   UI/control sources must serialize them on a single control thread before
   calling the enqueue methods.
-- Insert replacements carry non-owning pointers. The producer keeps the
-  previous and replacement objects alive until the returned 32-bit ticket is
-  acknowledged by `hasApplied()` (or the controller's
-  `isInsertUpdateApplied(ticket)` helper). The acknowledgement is published after the
-  pointer swap at the block boundary; only then may the producer destroy the
-  previous object. Never allocate, delete, or wait for acknowledgement in the
-  audio callback. Configure an effect before enqueueing it and do not mutate it
-  while the audio thread may process it.
+- Insert replacements carry non-owning pointers. Passing `nullptr` is a
+  supported way to clear/bypass a slot. The producer keeps the previous and
+  replacement objects alive until the returned 32-bit ticket is acknowledged
+  by `hasApplied()` (or the controller's
+  `isInsertUpdateApplied(ticket)` helper). The acknowledgement is published
+  after the pointer swap at the block boundary; only then may the producer
+  destroy the previous object. Never allocate, delete, or wait for
+  acknowledgement in the audio callback. Configure an effect before
+  enqueueing it and do not mutate it while the audio thread may process it.
 - Published insert instances are immutable while the audio engine may
   process them. To change an effect parameter (such as SoftClip drive or enable),
   configure a replacement instance on the control thread and enqueue it with
