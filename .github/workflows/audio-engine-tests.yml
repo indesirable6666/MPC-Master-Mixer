@@ -43,7 +43,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Configure host CMake validation harness
-        run: cmake -S . -B build/host -DCMAKE_BUILD_TYPE=Release
+        run: cmake -S . -B build/host -DCMAKE_BUILD_TYPE=Debug
       - name: Build host tests and benchmark
         run: cmake --build build/host --parallel 2
       - name: Run C++ host tests through CTest
