@@ -13,8 +13,10 @@ deliberately avoids assuming that any physical MPC, USB, or ALSA channel number
 corresponds to a particular mixer strip.
 
 A duplicated route is rejected for that block and both output channels are
-silenced. Missing or invalid input pointers are handled the same way. If one
-output plane is missing, any available output plane is silenced. A callback
+silenced. Missing or invalid input pointers are handled the same way. If the
+output-channel count is not stereo, any available supported output planes are
+silenced without indexing beyond the supplied pointer array. If one output
+plane is missing, any available output plane is silenced. A callback
 whose input-channel count differs from the prepared format is rejected and
 available outputs are silenced. A block larger than the prepared maximum is
 ignored because the host cannot know whether the supplied buffers are large
