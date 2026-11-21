@@ -10,11 +10,18 @@ int main() {
 
     // Give every strip a distinct value and Mute/Solo combination. This
     // catches off-by-one/index aliasing across the full 16-track surface.
+    const float* noInputs[mpcmixer::AudioEngine::kTrackCount]{};
+    float outputLeft[1]{};
+    float outputRight[1]{};
     for (std::size_t track = 0; track < mpcmixer::AudioEngine::kTrackCount; ++track) {
         assert(controller.setTrackFader(track, static_cast<int>(60 + track)));
         assert(controller.setTrackPan(track, static_cast<int>(-80 + 10 * track)));
         assert(controller.setTrackMute(track, (track % 2) == 0));
         assert(controller.setTrackSolo(track, (track % 3) == 1));
+        // Drain bounded command batches as a simulated block boundary; the
+        // presentation snapshot still reflects the controller's desired state.
+        if ((track % 8) == 7)
+            bridge.process(noInputs, outputLeft, outputRight, 1);
     }
     assert(controller.setMasterFader(117));
     assert(controller.setMasterMute(true));
