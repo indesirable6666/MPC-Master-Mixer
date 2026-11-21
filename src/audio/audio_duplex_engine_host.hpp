@@ -2,6 +2,10 @@
 
 #include "audio_control_bridge.hpp"
 #include "audio_duplex_backend.hpp"
+#include "audio_meter_snapshot_bridge.hpp"
+
+#include <cmath>
+#include <cstdint>
 
 #include <array>
 #include <atomic>
@@ -16,8 +20,10 @@ class AudioDuplexEngineHost {
 public:
     enum : std::size_t { kUnmappedTrack = AudioEngine::kTrackCount };
 
-    explicit AudioDuplexEngineHost(AudioEngineCommandBridge& bridge) noexcept
-        : bridge_(bridge) {
+    explicit AudioDuplexEngineHost(
+        AudioEngineCommandBridge& bridge,
+        AudioMeterSnapshotBridge* meterBridge = nullptr) noexcept
+        : bridge_(bridge), meterBridge_(meterBridge) {
         for (auto& route : inputTrack_)
             route.store(kUnmappedTrack, std::memory_order_relaxed);
     }
@@ -111,6 +117,47 @@ public:
         }
         bridge_.process(trackInputs.data(), block.outputChannels[0],
                         block.outputChannels[1], block.frameCount);
+
+        // Metering is optional and remains a bounded audio-thread producer.
+        // Track taps are the routed input signals; Master is post-mix output.
+        if (meterBridge_ != nullptr && block.frameCount != 0) {
+            AudioMeterSnapshot snapshot;
+            snapshot.blockSequence = ++meterBlockSequence_;
+            bool valid = true;
+            for (std::size_t channel = 0; channel < block.inputChannelCount; ++channel) {
+                const std::size_t track =
+                    inputTrack_[channel].load(std::memory_order_acquire);
+                if (track == kUnmappedTrack) continue;
+                if (!AudioBlockMeter::measure(
+                        block.inputChannels[channel], block.frameCount,
+                        snapshot.channels[track])) {
+                    valid = false;
+                    break;
+                }
+            }
+
+            AudioBlockMeterReading leftReading;
+            AudioBlockMeterReading rightReading;
+            if (valid &&
+                AudioBlockMeter::measure(block.outputChannels[0], block.frameCount,
+                                         leftReading) &&
+                AudioBlockMeter::measure(block.outputChannels[1], block.frameCount,
+                                         rightReading)) {
+                AudioBlockMeterReading& master =
+                    snapshot.channels[AudioMeterSnapshot::kMasterIndex];
+                master.peak = leftReading.peak > rightReading.peak
+                    ? leftReading.peak : rightReading.peak;
+                master.rms = std::sqrt(
+                    (leftReading.rms * leftReading.rms +
+                     rightReading.rms * rightReading.rms) * 0.5f);
+            } else {
+                valid = false;
+            }
+            if (valid) {
+                // A full meter queue drops this frame; never wait in the callback.
+                (void)meterBridge_->publish(snapshot);
+            }
+        }
     }
 
     static void silence(const AudioDuplexBuffer& block) noexcept {
@@ -131,6 +178,8 @@ public:
 
 private:
     AudioEngineCommandBridge& bridge_;
+    AudioMeterSnapshotBridge* meterBridge_ = nullptr;
+    std::uint64_t meterBlockSequence_ = 0;
     std::array<std::atomic<std::size_t>, 2> inputTrack_{};
     AudioDuplexBackend* backend_ = nullptr;
     std::size_t expectedInputChannels_ = 0;
