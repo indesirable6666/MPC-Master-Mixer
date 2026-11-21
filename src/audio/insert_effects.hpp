@@ -15,6 +15,34 @@ public:
     virtual float processSample(float input) noexcept = 0;
 };
 
+// Simple utility gain insert for trimming or boosting a track before its
+// fader. Parameter changes are made off the audio thread; replace the
+// configured instance through AudioEngineCommandBridge when it is live.
+class GainInsert final : public AudioInsert {
+public:
+    bool setGain(float gain) noexcept {
+        if (!std::isfinite(gain) || gain < 0.0f || gain > 4.0f)
+            return false;
+        gain_ = gain;
+        return true;
+    }
+
+    float gain() const noexcept { return gain_; }
+    void setEnabled(bool enabled) noexcept { enabled_ = enabled; }
+    bool enabled() const noexcept { return enabled_; }
+
+    float processSample(float input) noexcept override {
+        if (!std::isfinite(input)) input = 0.0f;
+        if (!enabled_) return input;
+        const float output = input * gain_;
+        return std::isfinite(output) ? output : 0.0f;
+    }
+
+private:
+    float gain_ = 1.0f;
+    bool enabled_ = false;
+};
+
 class SoftClipInsert final : public AudioInsert {
 public:
     bool setDrive(float drive) noexcept {
