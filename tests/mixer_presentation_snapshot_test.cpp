@@ -118,4 +118,58 @@ int main() {
     assert(afterRejectedEdit.sequence == beforeRejectedEdit.sequence + 1);
     assert(afterRejectedEdit.tracks[1].faderValue ==
            beforeRejectedEdit.tracks[1].faderValue);
+
+    // Audio In presentation follows link/unlink transitions without losing
+    // the independent mono pans. Linking seeds shared controls from L; edits
+    // while linked mirror to both channels; unlinking restores two mono strips.
+    mpcmixer::AudioEngineCommandBridge pairBridge;
+    mpcmixer::MixerController pairController(pairBridge);
+    mpcmixer::MixerPresentationPublisher pairPublisher(pairController);
+    assert(pairController.setAudioInputPairChannelGain(0, 72));
+    assert(pairController.setAudioInputPairChannelGain(1, 38));
+    assert(pairController.setAudioInputPairChannelPan(0, -60));
+    assert(pairController.setAudioInputPairChannelPan(1, 45));
+    assert(pairController.setAudioInputPairChannelMute(0, true));
+    assert(pairController.setAudioInputPairChannelSolo(1, true));
+    assert(pairController.setAudioInputPairLinked(true));
+    const auto linkedFrame = pairPublisher.publish();
+    assert(linkedFrame.audioInputPair.linked);
+    assert(linkedFrame.audioInputPair.stereoGainValue == 72);
+    assert(linkedFrame.audioInputPair.stereoMute);
+    assert(!linkedFrame.audioInputPair.stereoSolo);
+    assert(linkedFrame.audioInputPair.channels[0].gainValue == 72);
+    assert(linkedFrame.audioInputPair.channels[1].gainValue == 72);
+    assert(linkedFrame.audioInputPair.channels[0].mute);
+    assert(linkedFrame.audioInputPair.channels[1].mute);
+    assert(!linkedFrame.audioInputPair.channels[0].solo);
+    assert(!linkedFrame.audioInputPair.channels[1].solo);
+    assert(linkedFrame.audioInputPair.channels[0].panPercent == -60);
+    assert(linkedFrame.audioInputPair.channels[1].panPercent == 45);
+
+    assert(pairController.setAudioInputPairStereoGain(91));
+    assert(pairController.setAudioInputPairBalance(-25));
+    assert(pairController.setAudioInputPairStereoMute(false));
+    assert(pairController.setAudioInputPairChannelSolo(0, true));
+    assert(pairController.setAudioInputPairLinked(false));
+    const auto unlinkedFrame = pairPublisher.publish();
+    assert(!unlinkedFrame.audioInputPair.linked);
+    assert(unlinkedFrame.audioInputPair.stereoGainValue == 91);
+    assert(unlinkedFrame.audioInputPair.balancePercent == -25);
+    assert(unlinkedFrame.audioInputPair.channels[0].gainValue == 91);
+    assert(unlinkedFrame.audioInputPair.channels[1].gainValue == 91);
+    assert(!unlinkedFrame.audioInputPair.channels[0].mute);
+    assert(!unlinkedFrame.audioInputPair.channels[1].mute);
+    assert(unlinkedFrame.audioInputPair.channels[0].solo);
+    assert(unlinkedFrame.audioInputPair.channels[1].solo);
+    assert(unlinkedFrame.audioInputPair.channels[0].panPercent == -60);
+    assert(unlinkedFrame.audioInputPair.channels[1].panPercent == 45);
+    assert(!pairController.setAudioInputPairStereoGain(50));
+    assert(pairController.setAudioInputPairChannelGain(1, 33));
+    assert(pairController.setAudioInputPairChannelPan(1, 12));
+    const auto independentFrame = pairPublisher.publish();
+    assert(!independentFrame.audioInputPair.linked);
+    assert(independentFrame.audioInputPair.channels[0].gainValue == 91);
+    assert(independentFrame.audioInputPair.channels[1].gainValue == 33);
+    assert(independentFrame.audioInputPair.channels[0].panPercent == -60);
+    assert(independentFrame.audioInputPair.channels[1].panPercent == 12);
 }
