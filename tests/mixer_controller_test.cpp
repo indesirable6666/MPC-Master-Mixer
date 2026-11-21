@@ -295,5 +295,47 @@ int main() {
     assert(untouchedTicket == 0x12345678u);
     assert(fullInsertController.desiredStateSnapshot().tracks[5].inserts[0] == nullptr);
 
+    // A failed replacement after a previously acknowledged insert must keep
+    // the currently active pointer in the desired snapshot and on the audio
+    // engine. Once backpressure clears, the replacement can be retried.
+    mpcmixer::AudioEngineCommandBridge replacementBridge;
+    mpcmixer::MixerController replacementController(replacementBridge);
+    mpcmixer::GainInsert activeInsert;
+    mpcmixer::GainInsert rejectedInsert;
+    mpcmixer::GainInsert retriedInsert;
+    assert(activeInsert.setGain(2.0f));
+    assert(rejectedInsert.setGain(3.0f));
+    assert(retriedInsert.setGain(0.5f));
+    activeInsert.setEnabled(true);
+    rejectedInsert.setEnabled(true);
+    retriedInsert.setEnabled(true);
+    std::uint32_t activeTicket = 0;
+    std::uint32_t rejectedTicket = 0xabcdef01u;
+    std::uint32_t retriedTicket = 0;
+    assert(replacementController.setTrackInsert(
+        0, 0, &activeInsert, activeTicket));
+    replacementBridge.process(insertInputs, insertLeft, insertRight, 1);
+    assert(replacementController.isInsertUpdateApplied(activeTicket));
+    assert(replacementBridge.engineOnAudioThread().trackInsert(0, 0) == nullptr ||
+           replacementController.desiredStateSnapshot().tracks[0].inserts[0] == &activeInsert);
+
+    for (std::size_t i = 0; i < mpcmixer::AudioEngineCommandBridge::kQueueCapacity; ++i)
+        assert(replacementController.setMasterMute((i & 1u) != 0));
+    assert(!replacementController.setTrackInsert(
+        0, 0, &rejectedInsert, rejectedTicket));
+    assert(rejectedTicket == 0xabcdef01u);
+    assert(replacementController.desiredStateSnapshot().tracks[0].inserts[0] == &activeInsert);
+    assert(replacementBridge.pendingCountApprox() ==
+           mpcmixer::AudioEngineCommandBridge::kQueueCapacity);
+
+    replacementBridge.process(insertInputs, insertLeft, insertRight, 1);
+    assert(replacementController.desiredStateSnapshot().tracks[0].inserts[0] == &activeInsert);
+    assert(replacementController.setTrackInsert(
+        0, 0, &retriedInsert, retriedTicket));
+    assert(!replacementController.isInsertUpdateApplied(retriedTicket));
+    replacementBridge.process(insertInputs, insertLeft, insertRight, 1);
+    assert(replacementController.isInsertUpdateApplied(retriedTicket));
+    assert(replacementController.desiredStateSnapshot().tracks[0].inserts[0] == &retriedInsert);
+
     return 0;
 }
