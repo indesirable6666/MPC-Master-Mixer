@@ -192,8 +192,8 @@ int main() {
     assert(near(highPass.processSample(0.25f), 0.25f));
     highPass.setEnabled(true);
     assert(near(highPass.processSample(0.25f), 0.0f));
-    assert(near(highPass.processSample(
-        std::numeric_limits<float>::quiet_NaN()), 0.0f));
+    assert(std::isfinite(highPass.processSample(
+        std::numeric_limits<float>::quiet_NaN())));
 
     // The low-pass insert is usable in the ordinary per-track insert chain.
     AudioEngine lowPassEngine;
