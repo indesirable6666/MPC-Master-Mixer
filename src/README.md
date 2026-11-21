@@ -9,7 +9,9 @@ Current audio components:
   pan, Mute/Solo, six-band EQ, two insert slots per track, four stereo Aux
   sends and returns, and the standalone linked Audio In pair processor.
 - `audio/audio_control_bridge.hpp` — fixed-capacity SPSC control queue that
-  applies track, prepared EQ, Aux and Master updates at audio block boundaries.
+  applies track, prepared EQ, insert-slot, Aux and Master updates at audio
+  block boundaries; insert replacement uses an acknowledgement before the
+  previous effect may be retired off the audio thread.
 - `audio/audio_duplex_backend.hpp` — device-independent full-duplex callback
   contract and deterministic offline callback driver.
 - `audio/audio_duplex_engine_host.hpp` — explicit input-channel-to-track
@@ -26,7 +28,9 @@ Current audio components:
 
 DSP configuration methods belong on a control thread and must not race audio
 block processing. The command bridge is single-producer/single-consumer; the
-duplex host's per-input routes are atomic. The host requires an explicit
+duplex host's per-input routes are atomic. EQ coefficient calculation happens
+before enqueue, and insert objects remain caller-owned until their replacement
+ticket is acknowledged by the audio consumer. The host requires an explicit
 channel-to-track mapping and defaults all inputs to unmapped.
 
 The offline duplex backend only forwards synthetic/caller-owned buffers. No
