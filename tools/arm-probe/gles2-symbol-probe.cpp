@@ -33,19 +33,36 @@ int main() {
     }
     std::puts("libGLESv2.so: loaded");
 
+    // Resolve a minimal shader + vertex-buffer + draw pipeline, plus
+    // cleanup and diagnostics. These are address lookups only: no function
+    // pointer is invoked and no graphics context is created.
     const Symbol symbols[] = {
         {"glCreateShader"},
         {"glShaderSource"},
         {"glCompileShader"},
+        {"glGetShaderiv"},
+        {"glGetShaderInfoLog"},
+        {"glDeleteShader"},
         {"glCreateProgram"},
         {"glAttachShader"},
+        {"glBindAttribLocation"},
         {"glLinkProgram"},
+        {"glGetProgramiv"},
+        {"glGetProgramInfoLog"},
+        {"glUseProgram"},
+        {"glDeleteProgram"},
+        {"glGetAttribLocation"},
         {"glGenBuffers"},
         {"glBindBuffer"},
         {"glBufferData"},
+        {"glDeleteBuffers"},
+        {"glEnableVertexAttribArray"},
+        {"glVertexAttribPointer"},
         {"glDrawArrays"},
         {"glDrawElements"},
         {"glViewport"},
+        {"glClearColor"},
+        {"glClear"},
         {"glGetString"}
     };
 
@@ -69,7 +86,7 @@ int main() {
     }
 
     std::printf("Result: %d/%d GLES2 symbols resolved.\n", resolved, total);
-    std::puts("Symbol availability does not prove that a context or display works.");
+    std::puts("Symbol availability does not prove that a context or display works.\nNo GL calls were made.");
 
     dlclose(gles);
     dlclose(egl);
