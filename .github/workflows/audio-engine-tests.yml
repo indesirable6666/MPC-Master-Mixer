@@ -23,6 +23,11 @@ on:
       - "tests/audio_engine_test.cpp"
       - "tests/meter_model_test.cpp"
       - "tests/audio_meter_snapshot_bridge_test.cpp"
+      - "tests/audio_duplex_meter_tap_test.cpp"
+      - "tests/audio_meter_ui_consumer_test.cpp"
+      - "tests/meter_presentation_adapter_test.cpp"
+      - "tests/audio_meter_end_to_end_test.cpp"
+      - "tests/mixer_controller_test.cpp"
       - "tools/audio-engine-benchmark.cpp"
       - ".github/workflows/audio-engine-tests.yml"
   workflow_dispatch:
