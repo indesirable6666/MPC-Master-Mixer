@@ -40,6 +40,13 @@ button{color:inherit;touch-action:manipulation;-webkit-tap-highlight-color:trans
 .fx-row{display:flex;gap:5px}
 .fx{flex:1;min-width:0;padding:6px 2px;border:1px solid #3b4654;border-radius:4px;background:#2b3542;color:#cbd4df;text-align:center;font-size:9px;font-weight:750}
 .fx.off{color:#778392;background:#202833}
+ .insert-slot{display:grid;grid-template-columns:1fr auto;gap:5px 7px;align-items:center;margin-top:6px}
+ .insert-slot select{min-width:0;width:100%;padding:5px 3px;border:1px solid #3b4654;border-radius:4px;background:#202833;color:#dce4ed;font-size:9px}
+ .insert-slot .fx{min-width:48px}
+ .insert-drive{grid-column:1/-1;display:grid;grid-template-columns:auto 1fr 30px;gap:6px;align-items:center;color:#9aa8b8;font-size:9px}
+ .insert-drive input{width:100%;min-width:0;accent-color:#e5a64b}
+ .insert-drive output{text-align:right;color:#dce4ed;font-variant-numeric:tabular-nums}
+ .insert-slot select:disabled,.insert-drive input:disabled{opacity:.4}
 .eq{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:4px}
 .band{min-width:0;text-align:center;color:#c2ccd8;font-size:10px;font-weight:750}
 .band input{display:block;width:100%;height:76px;min-height:36px;margin:4px auto;accent-color:var(--amber);writing-mode:vertical-lr;direction:rtl;touch-action:pan-y}
@@ -113,7 +120,8 @@ button{color:inherit;touch-action:manipulation;-webkit-tap-highlight-color:trans
 <script>
 const strips=document.getElementById('strips');
 const labels=['KICK','SNARE','HI-HAT','PERC','BASS','SYNTH 1','SYNTH 2','KEYS','PAD','GUITAR','VOX','FX 1','FX 2','AUDIO 1','AUDIO 2','AUDIO 3'];
-const defaults=()=>({volume:100,pan:0,eq:[0,0,0,0,0,0],aux:[0,0,0,0],mute:false,solo:false});
+const defaultInserts=()=>[{type:'none',enabled:false,drive:2},{type:'none',enabled:false,drive:2}];
+const defaults=()=>({volume:100,pan:0,eq:[0,0,0,0,0,0],aux:[0,0,0,0],mute:false,solo:false,inserts:defaultInserts()});
 let audioStereoLinked=false;
 let audioStereoBalance=0;
 let syncingAudioPair=false;
@@ -150,7 +158,7 @@ function makeStrip(index,isMaster=false){
  });
  el.innerHTML=`
   <div class="channel-head"><span class="channel-title">${name}</span><span class="channel-type">${isMaster?'STEREO':'<span class="channel-number">'+String(index+1).padStart(2,'0')+'</span> · AUDIO'}</span></div>
-  <div class="block"><div class="block-title">Inserts · effets</div><div class="fx-row"><button class="fx" type="button" aria-pressed="true" aria-label="Insert 1, placeholder activé" title="Placeholder visuel uniquement">INSERT 1</button><button class="fx off" type="button" aria-pressed="false" aria-label="Insert 2, placeholder désactivé" title="Placeholder visuel uniquement">INSERT 2</button></div></div>
+  ${isMaster ? '' : '<div class="block"><div class="block-title">Inserts · effets simulés</div><div class="insert-slot" data-insert-slot="0"><select data-insert-type="0" aria-label="Type effet insert 1"><option value="none">Vide</option><option value="softclip">Soft Clip</option></select><button class="fx off" data-insert-toggle="0" type="button" aria-pressed="false" aria-label="Activer insert 1">OFF</button><label class="insert-drive">Drive <input data-insert-drive="0" type="range" min="1" max="8" step="0.1" value="2" disabled aria-label="Drive insert 1"><output>2.0×</output></label></div><div class="insert-slot" data-insert-slot="1"><select data-insert-type="1" aria-label="Type effet insert 2"><option value="none">Vide</option><option value="softclip">Soft Clip</option></select><button class="fx off" data-insert-toggle="1" type="button" aria-pressed="false" aria-label="Activer insert 2">OFF</button><label class="insert-drive">Drive <input data-insert-drive="1" type="range" min="1" max="8" step="0.1" value="2" disabled aria-label="Drive insert 2"><output>2.0×</output></label></div></div>'}
   <div class="block"><div class="block-title">EQ paramétrique · 6 bandes</div><div class="eq">${['LF','LM','M1','M2','HM','HF'].map((band,i)=>`<label class="band">${band}<input data-eq="${i}" type="range" min="-12" max="12" step="0.5" value="0" aria-label="EQ ${band} ${name}"><output>0.0</output></label>`).join('')}</div></div>
   <div class="block"><div class="block-title">${index===13||index===14?'Panoramique / balance':'Panoramique'}</div><div class="pan"><span>L</span><input data-pan type="range" min="-100" max="100" value="0" aria-label="Panoramique ${name}"><span>R</span><output class="pan-value" aria-live="polite">C</output></div>${index===13||index===14?'<div class="pan stereo-balance"><span>L</span><input data-stereo-balance type="range" min="-100" max="100" value="0" disabled aria-label="Balance stéréo Audio In 1/2"><span>R</span><output class="balance-value" aria-live="polite">C</output></div>':''}</div>
   <div class="block"><div class="block-title">Aux sends</div><div class="aux">${[1,2,3,4].map((n)=>`<label>AUX ${n}<input data-aux="${n-1}" type="range" min="0" max="100" value="0" aria-label="Aux ${n} ${name}"><output>0</output></label>`).join('')}</div></div>
@@ -221,13 +229,16 @@ function syncLinkedAudioPair(sourceIndex){
  if(syncingAudioPair)return;
  const targetIndex=sourceIndex===13?14:13;
  const source=state[sourceIndex],target=state[targetIndex];
- Object.assign(target,{volume:source.volume,eq:[...source.eq],aux:[...source.aux],mute:source.mute,solo:source.solo});
+ Object.assign(target,{volume:source.volume,eq:[...source.eq],aux:[...source.aux],mute:source.mute,solo:source.solo,inserts:source.inserts.map(x=>({...x}))});
  const targetEl=document.querySelector('[data-channel="'+targetIndex+'"]');
  if(!targetEl)return;
  syncingAudioPair=true;
  targetEl.querySelector('[data-volume]').value=target.volume;
  targetEl.querySelector('[data-volume]').dispatchEvent(new Event('input',{bubbles:true}));
   targetEl.querySelectorAll('[data-eq]').forEach(input=>{input.value=target.eq[Number(input.dataset.eq)];input.dispatchEvent(new Event('input',{bubbles:true}))});
+  targetEl.querySelectorAll('[data-insert-type]').forEach(input=>{const slot=Number(input.dataset.insertType);input.value=target.inserts[slot].type;input.dispatchEvent(new Event('change',{bubbles:true}))});
+  targetEl.querySelectorAll('[data-insert-drive]').forEach(input=>{const slot=Number(input.dataset.insertDrive);input.value=target.inserts[slot].drive;input.dispatchEvent(new Event('input',{bubbles:true}))});
+  targetEl.querySelectorAll('[data-insert-toggle]').forEach(input=>{const slot=Number(input.dataset.insertToggle),desired=target.inserts[slot].enabled;if((input.getAttribute('aria-pressed')==='true')!==desired)input.click()});
  targetEl.querySelectorAll('[data-aux]').forEach(input=>{input.value=target.aux[Number(input.dataset.aux)];input.dispatchEvent(new Event('input',{bubbles:true}))});
  ['mute','solo'].forEach(key=>{const button=targetEl.querySelector('[data-toggle="'+key+'"]');button.classList.toggle('active',target[key]);button.setAttribute('aria-pressed',String(target[key]))});
  targetEl.classList.add('stereo-linked');
@@ -354,7 +365,11 @@ document.getElementById('reset').addEventListener('click',()=>{
   el.querySelectorAll('[data-eq]').forEach(x=>x.value=d.eq[Number(x.dataset.eq)]);
   el.querySelectorAll('[data-aux]').forEach(x=>x.value=d.aux[Number(x.dataset.aux)]);
   el.querySelectorAll('[data-toggle]').forEach(x=>{x.classList.remove('active');x.setAttribute('aria-pressed','false')});
-  el.querySelectorAll('.fx').forEach((x,i)=>{const active=i===0;x.classList.toggle('off',!active);x.setAttribute('aria-pressed',String(active));x.setAttribute('aria-label',x.textContent+', placeholder '+(active?'activé':'désactivé'))});
+  el.querySelectorAll('[data-insert-type]').forEach(x=>{const slot=Number(x.dataset.insertType);x.value=d.inserts[slot].type});
+  el.querySelectorAll('[data-insert-drive]').forEach(x=>{const slot=Number(x.dataset.insertDrive);x.value=d.inserts[slot].drive});
+  el.querySelectorAll('[data-insert-toggle]').forEach(x=>{const slot=Number(x.dataset.insertToggle);x.classList.toggle('off',!d.inserts[slot].enabled);x.textContent=d.inserts[slot].enabled?'ON':'OFF';x.setAttribute('aria-pressed',String(d.inserts[slot].enabled))});
+  el.querySelectorAll('[data-insert-drive]').forEach(x=>x.dispatchEvent(new Event('input',{bubbles:true})));
+  el.querySelectorAll('[data-insert-type]').forEach(x=>x.dispatchEvent(new Event('change',{bubbles:true})));
   el.querySelector('.db').textContent='0.0 dB';el.querySelector('.value').textContent='100 / 127';
   el.querySelectorAll('[data-eq]').forEach(x=>x.nextElementSibling.textContent='0.0');
   el.querySelectorAll('[data-aux]').forEach(x=>x.nextElementSibling.textContent='0');
