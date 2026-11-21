@@ -22,6 +22,7 @@ mpc_add_host_test(audio_engine_test tests/audio_engine_test.cpp)
 target_include_directories(audio_engine_test PRIVATE src/audio)
 mpc_add_host_test(audio_insert_frequency_response_test tests/audio_insert_frequency_response_test.cpp)
 mpc_add_host_test(audio_eq_frequency_response_test tests/audio_eq_frequency_response_test.cpp)
+mpc_add_host_test(audio_insert_chain_test tests/audio_insert_chain_test.cpp)
 
 mpc_add_host_test(audio_block_meter_test tests/audio_block_meter_test.cpp)
 mpc_add_host_test(audio_meter_snapshot_bridge_test tests/audio_meter_snapshot_bridge_test.cpp)
