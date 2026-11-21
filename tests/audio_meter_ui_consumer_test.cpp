@@ -28,7 +28,7 @@ int main() {
     second.channels[mpcmixer::AudioMeterSnapshot::kMasterIndex] = {0.7f, 0.35f};
     assert(bridge.publish(second));
 
-    // Drain both queued frames and display only the newest complete snapshot.
+    // Drain both queued frames: peak hold sees both; RMS ends on the newest frame.
     assert(consumer.tick(0.0f));
     assert(consumer.hasSnapshot());
     assert(consumer.lastSequence() == 2);
