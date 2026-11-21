@@ -493,8 +493,8 @@ int main() {
     assert(near(insertBridgeLeft[0], std::sqrt(0.5f)));
     assert(near(insertBridgeRight[0], std::sqrt(0.5f)));
     assert(insertBridge.engineOnAudioThread().track(0).gain == 1.0f);
-    assert(!insertBridge.enqueueTrackInsert(16, 0, nullptr, insertTicket));
-    assert(!insertBridge.enqueueTrackInsert(0, 2, nullptr, insertTicket));
+    assert(!insertBridge.enqueueTrackInsert(16, 0, nullptr, replacementInsertTicket));
+    assert(!insertBridge.enqueueTrackInsert(0, 2, nullptr, replacementInsertTicket));
 
     mpcmixer::AudioEngineCommandBridge returnBridge;
     mpcmixer::AudioEngine::AuxReturn bridgeReturn;
