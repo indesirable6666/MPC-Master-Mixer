@@ -1,0 +1,6 @@
+scenario,track_gain,pan,master_gain,track_mute,master_mute,expected_left_gain,expected_right_gain,expected_master_peak
+centre_half_gain,0.5,0,1,0,0,0.3535533906,0.3535533906,0.1767766953
+hard_left,0.5,-1,1,0,0,0.5,0,0.25
+track_mute,0.5,0,1,1,0,0,0,0
+master_quarter_gain,0.5,0,0.25,0,0,0.0883883476,0.0883883476,0.0441941738
+master_mute,0.5,0,1,0,1,0,0,0
