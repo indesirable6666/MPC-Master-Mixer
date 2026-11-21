@@ -145,6 +145,42 @@ int main() {
     gainInsert.setEnabled(true);
     assert(near(gainInsert.processSample(0.25f), 0.5f));
     assert(near(gainInsert.processSample(std::numeric_limits<float>::infinity()), 0.0f));
+    // The stateful one-pole low-pass insert validates its configuration,
+    // has the expected impulse decay, and remains safe through bypass changes.
+    mpcmixer::OnePoleLowPassInsert lowPass;
+    assert(!lowPass.configured());
+    assert(!lowPass.configure(48000.0f, 0.0f));
+    assert(!lowPass.configure(48000.0f, 24000.0f));
+    assert(!lowPass.configure(std::numeric_limits<float>::quiet_NaN(), 1000.0f));
+    assert(lowPass.configure(48000.0f, 1000.0f));
+    assert(lowPass.configured() && near(lowPass.cutoffHz(), 1000.0f));
+    const float lowPassAlpha = 1.0f -
+        std::exp(-2.0f * 3.14159265358979323846f * 1000.0f / 48000.0f);
+    lowPass.setEnabled(true);
+    assert(near(lowPass.processSample(1.0f), lowPassAlpha));
+    assert(near(lowPass.processSample(0.0f),
+                lowPassAlpha * (1.0f - lowPassAlpha)));
+    lowPass.setEnabled(false);
+    assert(near(lowPass.processSample(0.5f), 0.5f));
+    lowPass.setEnabled(true);
+    assert(near(lowPass.processSample(0.5f), 0.5f));
+    assert(std::isfinite(lowPass.processSample(
+        std::numeric_limits<float>::infinity())));
+
+    // The low-pass insert is usable in the ordinary per-track insert chain.
+    AudioEngine lowPassEngine;
+    mpcmixer::OnePoleLowPassInsert trackLowPass;
+    assert(trackLowPass.configure(48000.0f, 1000.0f));
+    trackLowPass.setEnabled(true);
+    assert(lowPassEngine.setTrackInsert(0, 0, &trackLowPass));
+    float lowPassImpulse[] = {1.0f};
+    const float* lowPassInputs[AudioEngine::kTrackCount] = {};
+    lowPassInputs[0] = lowPassImpulse;
+    float lowPassLeft[1] = {}, lowPassRight[1] = {};
+    lowPassEngine.process(lowPassInputs, lowPassLeft, lowPassRight, 1);
+    assert(near(lowPassLeft[0], lowPassAlpha * std::sqrt(0.5f)));
+    assert(near(lowPassRight[0], lowPassAlpha * std::sqrt(0.5f)));
+
     mpcmixer::SoftClipInsert softClip;
     assert(softClip.setDrive(2.0f));
     softClip.setEnabled(true);
