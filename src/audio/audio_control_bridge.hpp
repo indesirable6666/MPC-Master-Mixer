@@ -31,6 +31,20 @@ public:
         return enqueue(command);
     }
 
+    bool enqueueTrackEq(
+        std::size_t index, float sampleRate,
+        const std::array<SixBandEq::BandParameters, SixBandEq::kBandCount>& bands) noexcept {
+        if (index >= AudioEngine::kTrackCount) return false;
+        SixBandEq::PreparedConfiguration prepared;
+        if (!SixBandEq::prepareConfiguration(sampleRate, bands, prepared))
+            return false;
+        Command command;
+        command.type = CommandType::TrackEq;
+        command.index = index;
+        command.eq = prepared;
+        return enqueue(command);
+    }
+
     bool enqueueAuxReturn(std::size_t index,
                           const AudioEngine::AuxReturn& state) noexcept {
         if (index >= AudioEngine::kAuxBusCount || !validReturn(state)) return false;
@@ -100,12 +114,15 @@ public:
     }
 
 private:
-    enum class CommandType : std::uint8_t { Track, AuxReturn, MasterGain, MasterMute };
+    enum class CommandType : std::uint8_t {
+        Track, TrackEq, AuxReturn, MasterGain, MasterMute
+    };
 
     struct Command {
         CommandType type = CommandType::MasterMute;
         std::size_t index = 0;
         AudioEngine::Track track{};
+        SixBandEq::PreparedConfiguration eq{};
         AudioEngine::AuxReturn auxReturn{};
         float value = 0.0f;
         bool flag = false;
@@ -151,6 +168,9 @@ private:
             switch (command.type) {
             case CommandType::Track:
                 engine_.setTrack(command.index, command.track);
+                break;
+            case CommandType::TrackEq:
+                engine_.setTrackEqPrepared(command.index, command.eq);
                 break;
             case CommandType::AuxReturn:
                 engine_.setAuxReturn(command.index, command.auxReturn);
