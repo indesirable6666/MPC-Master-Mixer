@@ -1,12 +1,8 @@
 #include "../src/mixer/mixer_controller.hpp"
 
 #include <cassert>
-#include <cmath>
 #include <cstddef>
 
-namespace {
-bool near(float a, float b) { return std::fabs(a - b) < 1.0e-5f; }
-}
 
 int main() {
     using Engine = mpcmixer::AudioEngine;
