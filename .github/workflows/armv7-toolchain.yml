@@ -11,6 +11,7 @@ on:
       - "tests/audio_block_meter_test.cpp"
       - "tests/audio_meter_snapshot_bridge_test.cpp"
       - "tests/audio_duplex_meter_tap_test.cpp"
+      - "tests/audio_meter_ui_consumer_test.cpp"
       - "tests/mixer_controller_test.cpp"
       - "tools/audio-engine-benchmark.cpp"
       - ".github/workflows/armv7-toolchain.yml"
@@ -86,6 +87,10 @@ jobs:
             -o build/mpc-audio-duplex-meter-tap-test-armv7
 
           arm-linux-gnueabihf-g++ $COMMON_FLAGS -std=c++14 \
+            tests/audio_meter_ui_consumer_test.cpp \
+            -o build/mpc-audio-meter-ui-consumer-test-armv7
+
+          arm-linux-gnueabihf-g++ $COMMON_FLAGS -std=c++14 \
             tests/meter_model_test.cpp \
             -o build/mpc-meter-model-test-armv7
 
@@ -146,7 +151,7 @@ jobs:
           arm-linux-gnueabihf-g++ -print-file-name=libc.so.6
 
           echo "=== Reject runtime requirements newer than the MPC ==="
-          for binary in build/mpc-arm-probe-cpp build/mpc-arm-graphics-probe-v2 build/mpc-arm-egl-client-extension-probe build/mpc-arm-egl-gbm-symbol-probe build/mpc-arm-gles2-symbol-probe build/mpc-arm-egl-offscreen-pbuffer-probe build/mpc-audio-engine-test-armv7 build/mpc-audio-engine-benchmark-armv7 build/mpc-meter-model-test-armv7 build/mpc-audio-block-meter-test-armv7 build/mpc-audio-meter-snapshot-bridge-test-armv7 build/mpc-audio-duplex-meter-tap-test-armv7 build/mpc-mixer-controller-test-armv7; do
+          for binary in build/mpc-arm-probe-cpp build/mpc-arm-graphics-probe-v2 build/mpc-arm-egl-client-extension-probe build/mpc-arm-egl-gbm-symbol-probe build/mpc-arm-gles2-symbol-probe build/mpc-arm-egl-offscreen-pbuffer-probe build/mpc-audio-engine-test-armv7 build/mpc-audio-engine-benchmark-armv7 build/mpc-meter-model-test-armv7 build/mpc-audio-block-meter-test-armv7 build/mpc-audio-meter-snapshot-bridge-test-armv7 build/mpc-audio-duplex-meter-tap-test-armv7 build/mpc-audio-meter-ui-consumer-test-armv7 build/mpc-mixer-controller-test-armv7; do
             if arm-linux-gnueabihf-readelf --version-info "$binary" | \
               grep -E 'GLIBCXX_3\.4\.(29|[3-9][0-9])|GLIBC_2\.(33|[4-9][0-9])'; then
               echo "ERROR: $binary requires a newer runtime than the MPC audit found."
@@ -181,6 +186,13 @@ jobs:
         with:
           name: mpc-armv7-audio-duplex-meter-tap-test
           path: build/mpc-audio-duplex-meter-tap-test-armv7
+          if-no-files-found: error
+
+      - name: Upload ARMv7 UI meter consumer test binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: mpc-armv7-audio-meter-ui-consumer-test
+          path: build/mpc-audio-meter-ui-consumer-test-armv7
           if-no-files-found: error
 
       - name: Upload ARMv7 mixer controller test binary
