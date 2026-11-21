@@ -13,6 +13,7 @@ on:
       - "tests/audio_eq_insert_chain_test.cpp"
       - "tests/audio_aux_send_return_test.cpp"
       - "tests/audio_aux_control_bridge_test.cpp"
+      - "tests/mixer_controller_state_sequence_test.cpp"
       - "tests/meter_model_test.cpp"
       - "tests/audio_block_meter_test.cpp"
       - "tests/audio_meter_snapshot_bridge_test.cpp"
@@ -94,6 +95,10 @@ jobs:
         run: g++ -std=c++14 -Wall -Wextra -Werror -pedantic tests/audio_aux_control_bridge_test.cpp -o audio-aux-control-bridge-test
       - name: Run Aux control bridge tests
         run: ./audio-aux-control-bridge-test
+      - name: Compile mixer controller state sequence tests
+        run: g++ -std=c++14 -Wall -Wextra -Werror -pedantic tests/mixer_controller_state_sequence_test.cpp -o mixer-controller-state-sequence-test
+      - name: Run mixer controller state sequence tests
+        run: ./mixer-controller-state-sequence-test
       - name: Compile audio block meter tests
         run: g++ -std=c++14 -Wall -Wextra -Werror -pedantic tests/audio_block_meter_test.cpp -o audio-block-meter-test
       - name: Run audio block meter tests
