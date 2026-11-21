@@ -19,7 +19,7 @@ public:
     static constexpr std::uint8_t kAuxMaximum = 100;
 
     explicit MixerController(AudioEngineCommandBridge& bridge) noexcept
-        : bridge_(bridge) {}
+        : bridge_(bridge), eqBands_(defaultEqState()) {}
 
     bool setTrackFader(std::size_t track, int value) noexcept {
         if (value < 0 || value > kFaderMaximum || track >= AudioEngine::kTrackCount)
@@ -65,8 +65,10 @@ public:
     bool setTrackEq(
         std::size_t track, float sampleRate,
         const std::array<SixBandEq::BandParameters, SixBandEq::kBandCount>& bands) noexcept {
-        if (track >= AudioEngine::kTrackCount) return false;
-        return bridge_.enqueueTrackEq(track, sampleRate, bands);
+        if (track >= AudioEngine::kTrackCount ||
+            !bridge_.enqueueTrackEq(track, sampleRate, bands)) return false;
+        eqBands_[track] = bands;
+        return true;
     }
 
     bool setAuxReturn(std::size_t bus,
@@ -99,10 +101,24 @@ public:
         return auxReturns_[bus < AudioEngine::kAuxBusCount ? bus : 0];
     }
 
+    const std::array<SixBandEq::BandParameters, SixBandEq::kBandCount>&
+    desiredTrackEq(std::size_t track) const noexcept {
+        return eqBands_[track < AudioEngine::kTrackCount ? track : 0];
+    }
+
     float desiredMasterGain() const noexcept { return masterGain_; }
     bool desiredMasterMute() const noexcept { return masterMute_; }
 
 private:
+    static std::array<std::array<SixBandEq::BandParameters, SixBandEq::kBandCount>,
+                      AudioEngine::kTrackCount> defaultEqState() noexcept {
+        std::array<std::array<SixBandEq::BandParameters, SixBandEq::kBandCount>,
+                   AudioEngine::kTrackCount> state{};
+        const auto defaults = SixBandEq::defaultBandParameters();
+        for (auto& trackBands : state) trackBands = defaults;
+        return state;
+    }
+
     bool publishTrack(std::size_t index,
                       const AudioEngine::Track& next) noexcept {
         if (!bridge_.enqueueTrack(index, next)) return false;
@@ -112,6 +128,8 @@ private:
 
     AudioEngineCommandBridge& bridge_;
     std::array<AudioEngine::Track, AudioEngine::kTrackCount> tracks_{};
+    std::array<std::array<SixBandEq::BandParameters, SixBandEq::kBandCount>,
+               AudioEngine::kTrackCount> eqBands_{};
     std::array<AudioEngine::AuxReturn, AudioEngine::kAuxBusCount> auxReturns_{};
     float masterGain_ = 1.0f;
     bool masterMute_ = false;
