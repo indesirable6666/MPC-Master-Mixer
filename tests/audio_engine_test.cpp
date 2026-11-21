@@ -550,7 +550,7 @@ int main() {
     assert(controlled.mute && controlled.solo);
     assert(near(controlled.auxSend[3], 0.75f));
     assert(near(controllerBridge.engineOnAudioThread().masterGain(), 1.0f));
-    assert(controllerBridge.engineOnAudioThread().masterMuted());
+    assert(controllerBridge.engineOnAudioThread().masterMute());
     // A full queue does not advance the controller's cached desired state.
     mpcmixer::AudioEngineCommandBridge controllerFullBridge;
     mpcmixer::MixerController fullController(controllerFullBridge);
