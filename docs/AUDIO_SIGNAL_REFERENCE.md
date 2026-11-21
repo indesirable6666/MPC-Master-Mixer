@@ -148,3 +148,16 @@ FIFO command is the state applied by the audio engine on every batch, then
 confirms the drained queue remains reusable. This is host/offline validation
 of ring-slot reuse and backpressure only; it does not run concurrent producer
 threads or access an audio device.
+
+
+## Meter snapshot freshness and overflow recovery
+
+`tests/audio_meter_snapshot_freshness_test.cpp` fills the eight-frame meter
+snapshot queue, verifies that overflow rejects the newest frame without
+overwriting unread data, and confirms that the UI consumer advances to the
+latest accepted block sequence. It then verifies that sequence gaps caused by
+dropped frames are accepted, delayed stale frames cannot roll RMS or the
+source sequence backwards, and normal updates recover after the stale frame
+is drained. Peak hold remains monotonic until its normal time-based decay.
+This is a deterministic host-side test; it does not measure wall-clock signal
+age or interact with a physical audio device.
