@@ -74,7 +74,7 @@ engine setters from another thread while processing is active.
 `tests/mixer_controller_test.cpp` exercises range validation, desired-state
 snapshot consistency, six-band and single-band EQ updates, queue-full rejection,
 consumer-side application at a simulated block boundary, and insert replacement
-acknowledgement including safe slot clearing. The test uses only the offline
+acknowledgement including safe slot clearing, per-track state isolation, invalid EQ preparation, invalid Aux returns, and queue-full rejection for track and EQ edits without desired-state mutation. The test uses only the offline
 engine and caller-owned buffers; it does not exercise a live device or UI toolkit.
 
 ## Current boundary
