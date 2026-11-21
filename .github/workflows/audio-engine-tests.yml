@@ -9,6 +9,7 @@ on:
       - "tests/meter_model_test.cpp"
       - "tests/audio_block_meter_test.cpp"
       - "tests/audio_meter_snapshot_bridge_test.cpp"
+      - "tests/audio_duplex_meter_tap_test.cpp"
       - "tests/mixer_controller_test.cpp"
       - "tools/audio-engine-benchmark.cpp"
       - ".github/workflows/audio-engine-tests.yml"
@@ -44,6 +45,10 @@ jobs:
         run: g++ -std=c++14 -Wall -Wextra -Werror -pedantic tests/audio_meter_snapshot_bridge_test.cpp -o audio-meter-snapshot-bridge-test
       - name: Run audio meter snapshot bridge tests
         run: ./audio-meter-snapshot-bridge-test
+      - name: Compile duplex meter tap tests
+        run: g++ -std=c++14 -Wall -Wextra -Werror -pedantic tests/audio_duplex_meter_tap_test.cpp -o audio-duplex-meter-tap-test
+      - name: Run duplex meter tap tests
+        run: ./audio-duplex-meter-tap-test
       - name: Compile meter model tests
         run: g++ -std=c++14 -Wall -Wextra -Werror -pedantic tests/meter_model_test.cpp -o meter-model-test
       - name: Run meter model tests
