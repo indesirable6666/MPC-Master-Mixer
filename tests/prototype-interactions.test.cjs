@@ -426,7 +426,7 @@ test('browser audio demo generates a local tone controlled by selected track and
     connect(node) { this.connections.push(node); }
   }
   class FakeAudioContext {
-    constructor() { this.state = 'running'; this.destination = new FakeAudioNode(); this.closed = false; }
+    constructor() { this.state = 'running'; this.destination = new FakeAudioNode(); this.closed = false; FakeAudioContext.last = this; }
     createOscillator() { this.oscillator = new FakeAudioNode(); this.oscillator.start = () => { this.oscillator.started = true; }; this.oscillator.stop = () => { this.oscillator.stopped = true; }; return this.oscillator; }
     createGain() { const node = new FakeAudioNode(); this.gains = this.gains || []; this.gains.push(node); return node; }
     createStereoPanner() { this.panner = new FakeAudioNode(); return this.panner; }
@@ -443,17 +443,31 @@ test('browser audio demo generates a local tone controlled by selected track and
   button.click();
   assert.equal(button.getAttribute('aria-pressed'), 'true');
   assert.match(button.textContent, /220 Hz/);
-  const context = dom.window.AudioContext;
-  // The live context instance is retained by the fake constructor for inspection.
+  const context = FakeAudioContext.last;
+  assert.equal(context.oscillator.frequency.value, 220);
+  assert.equal(context.gains[0].gain.value, 1);
+  assert.equal(context.gains[1].gain.value, 1);
   const selectedFader = document.querySelector('[data-channel="0"] [data-volume]');
   selectedFader.value = '50';
   selectedFader.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+  assert.equal(context.gains[0].gain.value, 0.5);
   const selectedPan = document.querySelector('[data-channel="0"] [data-pan]');
   selectedPan.value = '35';
   selectedPan.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+  assert.equal(context.panner.pan.value, 0.35);
   const mute = document.querySelector('[data-channel="0"] [data-toggle="mute"]');
   mute.click();
+  assert.equal(context.gains[0].gain.value, 0);
+  mute.click();
+  const masterFader = document.querySelector('[data-channel="master"] [data-volume]');
+  masterFader.value = '60';
+  masterFader.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+  assert.equal(context.gains[1].gain.value, 0.6);
+  document.querySelector('[data-channel="master"] [data-toggle="mute"]').click();
+  assert.equal(context.gains[1].gain.value, 0);
   button.click();
+  assert.equal(context.oscillator.stopped, true);
+  assert.equal(context.closed, true);
   assert.equal(button.getAttribute('aria-pressed'), 'false');
   dom.window.close();
 });
