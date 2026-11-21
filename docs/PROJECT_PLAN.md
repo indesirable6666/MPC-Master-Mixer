@@ -28,7 +28,7 @@ Develop a touchscreen mixer companion for the Akai MPC Live II running MPC OS 2.
 The current branch contains a browser-only touch prototype and a portable,
 allocation-free C++14 stereo DSP core with:
 - Per-track six-band parametric EQ (frequency, Q and gain per band)
-- Two insert slots per track, including an initial soft-clip effect
+- Two insert slots per track, including utility gain, soft-clip, low-pass and high-pass processors
 - Track gain, pan, Mute and Solo
 - Four stereo Aux send buses and independently controlled stereo returns
 - A linked/unlinked Audio In pair processor
