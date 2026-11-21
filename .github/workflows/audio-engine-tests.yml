@@ -12,6 +12,7 @@ on:
       - "tests/audio_insert_chain_test.cpp"
       - "tests/audio_eq_insert_chain_test.cpp"
       - "tests/audio_aux_send_return_test.cpp"
+      - "tests/audio_aux_control_bridge_test.cpp"
       - "tests/meter_model_test.cpp"
       - "tests/audio_block_meter_test.cpp"
       - "tests/audio_meter_snapshot_bridge_test.cpp"
@@ -89,6 +90,10 @@ jobs:
         run: g++ -std=c++14 -Wall -Wextra -Werror -pedantic tests/audio_aux_send_return_test.cpp -o audio-aux-send-return-test
       - name: Run Aux send and return tests
         run: ./audio-aux-send-return-test
+      - name: Compile Aux control bridge tests
+        run: g++ -std=c++14 -Wall -Wextra -Werror -pedantic tests/audio_aux_control_bridge_test.cpp -o audio-aux-control-bridge-test
+      - name: Run Aux control bridge tests
+        run: ./audio-aux-control-bridge-test
       - name: Compile audio block meter tests
         run: g++ -std=c++14 -Wall -Wextra -Werror -pedantic tests/audio_block_meter_test.cpp -o audio-block-meter-test
       - name: Run audio block meter tests
