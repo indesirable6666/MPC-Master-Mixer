@@ -138,3 +138,8 @@ encore réalisé.
 ## Host runtime discovery
 
 The repository-level runtime/build-system audit and the evidence required before choosing a native host are tracked in [HOST_RUNTIME_DISCOVERY.md](HOST_RUNTIME_DISCOVERY.md). The framework-neutral meter presentation sink remains the boundary until a supported host and target SDK are identified.
+
+
+## Graphics probe evidence
+
+The distinction between ARMv7 cross-compilation, symbol lookup, guarded offscreen EGL execution, and actual touchscreen presentation is documented in [GRAPHICS_PROBE_STATUS.md](GRAPHICS_PROBE_STATUS.md). CI compiles and archives the probes; it does not execute them on the MPC or validate an on-screen host.
