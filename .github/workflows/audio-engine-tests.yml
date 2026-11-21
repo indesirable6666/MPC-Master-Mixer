@@ -19,6 +19,7 @@ on:
       - ".github/workflows/audio-engine-tests.yml"
   pull_request:
     paths:
+      - "CMakeLists.txt"
       - "src/audio/**"
       - "src/mixer/**"
       - "tests/audio_engine_test.cpp"
