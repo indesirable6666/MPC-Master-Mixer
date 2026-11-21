@@ -467,6 +467,29 @@ int main() {
     assert(near(queuedEqLeft[0], queuedEqRight[0]));
     assert(!eqBridge.enqueueTrackEq(0, 48000.0f, std::array<mpcmixer::SixBandEq::BandParameters, 6>{}));
 
+    // Insert replacement is acknowledged at a block boundary. The old effect
+    // remains alive until the producer observes the ticket, then may be retired
+    // off the audio thread.
+    mpcmixer::AudioEngineCommandBridge insertBridge;
+    mpcmixer::SoftClipInsert oldInsert;
+    mpcmixer::SoftClipInsert newInsert;
+    oldInsert.setEnabled(true);
+    newInsert.setEnabled(true);
+    std::uint32_t insertTicket = 0;
+    assert(insertBridge.enqueueTrackInsert(0, 0, &oldInsert, insertTicket));
+    assert(!insertBridge.hasApplied(insertTicket));
+    assert(insertBridge.enqueueTrackInsert(0, 0, &newInsert, insertTicket));
+    assert(!insertBridge.hasApplied(insertTicket));
+    float insertBridgeInput[] = {0.25f};
+    const float* insertBridgeInputs[AudioEngine::kTrackCount] = {};
+    insertBridgeInputs[0] = insertBridgeInput;
+    float insertBridgeLeft[1] = {}, insertBridgeRight[1] = {};
+    insertBridge.process(insertBridgeInputs, insertBridgeLeft, insertBridgeRight, 1);
+    assert(insertBridge.hasApplied(insertTicket));
+    assert(insertBridge.engineOnAudioThread().track(0).gain == 1.0f);
+    assert(!insertBridge.enqueueTrackInsert(16, 0, nullptr, insertTicket));
+    assert(!insertBridge.enqueueTrackInsert(0, 2, nullptr, insertTicket));
+
     mpcmixer::AudioEngineCommandBridge returnBridge;
     mpcmixer::AudioEngine::AuxReturn bridgeReturn;
     bridgeReturn.gain = 0.5f;
