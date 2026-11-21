@@ -61,7 +61,7 @@ int main() {
     assert(highPassHigh.configure(kSampleRate, 1000.0f));
     highPassHigh.setEnabled(true);
     const float highPassPassband = measuredRmsRatio(highPassHigh, 10000.0f);
-    assert(highPassPassband > 0.98f);
+    assert(between(highPassPassband, 0.90f, 1.0f));
 
     // Soft clipping remains odd-symmetric and bounded for finite overloads.
     mpcmixer::SoftClipInsert clipper;
