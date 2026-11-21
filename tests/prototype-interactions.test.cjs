@@ -430,6 +430,7 @@ test('browser audio demo generates a local tone controlled by selected track and
     createOscillator() { this.oscillator = new FakeAudioNode(); this.oscillator.start = () => { this.oscillator.started = true; }; this.oscillator.stop = () => { this.oscillator.stopped = true; }; return this.oscillator; }
     createGain() { const node = new FakeAudioNode(); this.gains = this.gains || []; this.gains.push(node); return node; }
     createStereoPanner() { this.panner = new FakeAudioNode(); return this.panner; }
+    createAnalyser() { this.analyser = new FakeAudioNode(); this.analyser.getFloatTimeDomainData = buffer => { for (let i=0;i<buffer.length;i++) buffer[i]=i%2===0?0.5:-0.5; }; return this.analyser; }
     close() { this.closed = true; this.state = 'closed'; return Promise.resolve(); }
     resume() { this.state = 'running'; return Promise.resolve(); }
   }
@@ -463,8 +464,16 @@ test('browser audio demo generates a local tone controlled by selected track and
   masterFader.value = '60';
   masterFader.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
   assert.equal(context.gains[1].gain.value, 0.6);
+  assert.equal(typeof dom.window.updateBrowserAudioMeters, 'function');
+  dom.window.updateBrowserAudioMeters();
+  assert.equal(document.querySelector('[data-channel="0"] [data-meter-value="peak"]').textContent, '50%');
+  assert.equal(document.querySelector('[data-channel="0"] [data-meter-value="rms"]').textContent, '50%');
+  assert.equal(document.querySelector('[data-channel="master"] [data-meter-value="peak"]').textContent, '30%');
+  assert.equal(document.querySelector('[data-channel="master"] [data-meter-value="rms"]').textContent, '30%');
   document.querySelector('[data-channel="master"] [data-toggle="mute"]').click();
   assert.equal(context.gains[1].gain.value, 0);
+  dom.window.updateBrowserAudioMeters();
+  assert.equal(document.querySelector('[data-channel="master"] [data-meter-value="peak"]').textContent, '0%');
   button.click();
   assert.equal(context.oscillator.stopped, true);
   assert.equal(context.closed, true);
