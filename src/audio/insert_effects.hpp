@@ -98,6 +98,64 @@ private:
     bool enabled_ = false;
 };
 
+
+
+// First-order high-pass insert. Configure before publication and keep the
+// instance immutable while the audio callback can reach it. State is local
+// to the audio callback; bypass tracks the input to avoid a stale edge.
+class OnePoleHighPassInsert final : public AudioInsert {
+public:
+    bool configure(float sampleRate, float cutoffHz) noexcept {
+        if (!std::isfinite(sampleRate) || !std::isfinite(cutoffHz) ||
+            sampleRate <= 0.0f || cutoffHz <= 0.0f ||
+            cutoffHz >= sampleRate * 0.5f)
+            return false;
+        const double exponent = -6.28318530717958647692 *
+            static_cast<double>(cutoffHz) / static_cast<double>(sampleRate);
+        const float coefficient = static_cast<float>(std::exp(exponent));
+        if (!std::isfinite(coefficient) || coefficient <= 0.0f ||
+            coefficient >= 1.0f)
+            return false;
+        sampleRate_ = sampleRate;
+        cutoffHz_ = cutoffHz;
+        coefficient_ = coefficient;
+        previousInput_ = 0.0f;
+        previousOutput_ = 0.0f;
+        configured_ = true;
+        return true;
+    }
+
+    float sampleRate() const noexcept { return sampleRate_; }
+    float cutoffHz() const noexcept { return cutoffHz_; }
+    bool configured() const noexcept { return configured_; }
+    void setEnabled(bool enabled) noexcept { enabled_ = enabled; }
+    bool enabled() const noexcept { return enabled_; }
+
+    float processSample(float input) noexcept override {
+        if (!std::isfinite(input)) input = 0.0f;
+        if (!configured_) return input;
+        if (!enabled_) {
+            previousInput_ = input;
+            previousOutput_ = 0.0f;
+            return input;
+        }
+        const float output = coefficient_ *
+            (previousOutput_ + input - previousInput_);
+        previousInput_ = input;
+        previousOutput_ = std::isfinite(output) ? output : 0.0f;
+        return previousOutput_;
+    }
+
+private:
+    float sampleRate_ = 0.0f;
+    float cutoffHz_ = 0.0f;
+    float coefficient_ = 0.0f;
+    float previousInput_ = 0.0f;
+    float previousOutput_ = 0.0f;
+    bool configured_ = false;
+    bool enabled_ = false;
+};
+
 class SoftClipInsert final : public AudioInsert {
 public:
     bool setDrive(float drive) noexcept {
