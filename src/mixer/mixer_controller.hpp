@@ -22,7 +22,7 @@ public:
         : bridge_(bridge) {}
 
     bool setTrackFader(std::size_t track, int value) noexcept {
-        if (value > kFaderMaximum || track >= AudioEngine::kTrackCount)
+        if (value < 0 || value > kFaderMaximum || track >= AudioEngine::kTrackCount)
             return false;
         AudioEngine::Track next = tracks_[track];
         next.gain = static_cast<float>(value) / 100.0f;
@@ -62,7 +62,7 @@ public:
     }
 
     bool setMasterFader(int value) noexcept {
-        if (value > kFaderMaximum) return false;
+        if (value < 0 || value > kFaderMaximum) return false;
         return bridge_.enqueueMasterGain(static_cast<float>(value) / 100.0f);
     }
 
