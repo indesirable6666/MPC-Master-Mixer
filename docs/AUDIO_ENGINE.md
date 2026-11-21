@@ -57,10 +57,12 @@ the MPC's existing audio device.
 
 The direct engine setters must not race the audio callback. The new
 `src/audio/audio_control_bridge.hpp` provides a fixed-capacity SPSC command
-queue so a single host/UI control thread can publish track, Aux return and
-Master changes for application at the next audio block boundary. Queue-full
-conditions are reported to the producer. EQ coefficient changes and insert
-lifetime management remain outside this command queue. The browser prototype
+queue so a single host/UI control thread can publish track, prepared EQ, Aux
+return and Master changes for application at the next audio block boundary.
+EQ coefficients are calculated on the producer thread and copied/reset by the
+audio thread without trigonometric work. Queue-full conditions are reported
+to the producer. Insert pointer replacement and effect lifetime management
+remain outside this queue and require a separate safe-retirement protocol. The browser prototype
 is not yet wired to a native host/controller. See
 `docs/AUDIO_CONTROL_BRIDGE.md` for the threading contract.
 
