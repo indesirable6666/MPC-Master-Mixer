@@ -65,7 +65,50 @@ int main() {
     command.type = mpcmixer::MixerUiCommandType::SetMasterMute;
     command.flag = true;
     assert(dispatcher.dispatch(command).accepted());
-    assert(dispatcher.lastAcceptedSequence() == 9);
+    command.sequence = 10;
+    command.type = mpcmixer::MixerUiCommandType::SetAudioInputPairLinked;
+    command.flag = true;
+    assert(dispatcher.dispatch(command).accepted());
+
+    command.sequence = 11;
+    command.type = mpcmixer::MixerUiCommandType::SetAudioInputPairStereoGain;
+    command.value = 85;
+    assert(dispatcher.dispatch(command).accepted());
+
+    command.sequence = 12;
+    command.type = mpcmixer::MixerUiCommandType::SetAudioInputPairBalance;
+    command.value = -30;
+    assert(dispatcher.dispatch(command).accepted());
+
+    command.sequence = 13;
+    command.type = mpcmixer::MixerUiCommandType::SetAudioInputPairStereoMute;
+    command.flag = false;
+    assert(dispatcher.dispatch(command).accepted());
+
+    command.sequence = 14;
+    command.type = mpcmixer::MixerUiCommandType::SetAudioInputChannelGain;
+    command.track = 0;
+    command.value = 65;
+    assert(dispatcher.dispatch(command).accepted());
+
+    command.sequence = 15;
+    command.type = mpcmixer::MixerUiCommandType::SetAudioInputChannelPan;
+    command.track = 1;
+    command.value = 40;
+    assert(dispatcher.dispatch(command).accepted());
+
+    command.sequence = 16;
+    command.type = mpcmixer::MixerUiCommandType::SetAudioInputChannelMute;
+    command.track = 1;
+    command.flag = true;
+    assert(dispatcher.dispatch(command).accepted());
+
+    command.sequence = 17;
+    command.type = mpcmixer::MixerUiCommandType::SetAudioInputChannelSolo;
+    command.track = 1;
+    command.flag = true;
+    assert(dispatcher.dispatch(command).accepted());
+    assert(dispatcher.lastAcceptedSequence() == 17);
 
     mpcmixer::MixerPresentationPublisher publisher(controller);
     const auto snapshot = publisher.publish();
@@ -81,9 +124,17 @@ int main() {
     assert(snapshot.auxReturns[1].mute);
     assert(snapshot.masterFaderValue == 123);
     assert(snapshot.masterMute);
+    assert(snapshot.audioInputPair.linked);
+    assert(snapshot.audioInputPair.stereoGainValue == 85);
+    assert(snapshot.audioInputPair.balancePercent == -30);
+    assert(!snapshot.audioInputPair.stereoMute);
+    assert(snapshot.audioInputPair.channels[0].gainValue == 65);
+    assert(snapshot.audioInputPair.channels[1].panPercent == 40);
+    assert(snapshot.audioInputPair.channels[1].mute);
+    assert(snapshot.audioInputPair.channels[1].solo);
 
     // A repeated or older sequence is rejected without mutating state.
-    command.sequence = 9;
+    command.sequence = 17;
     command.value = 10;
     command.type = mpcmixer::MixerUiCommandType::SetMasterFader;
     const auto replay = dispatcher.dispatch(command);
@@ -91,7 +142,7 @@ int main() {
     assert(controller.desiredMasterGain() == 1.23f);
 
     // Invalid values and unsupported insert requests do not consume sequence.
-    command.sequence = 10;
+    command.sequence = 18;
     command.type = static_cast<mpcmixer::MixerUiCommandType>(255);
     assert(dispatcher.dispatch(command).status ==
            mpcmixer::MixerUiCommandStatus::Invalid);
@@ -103,7 +154,16 @@ int main() {
     command.type = mpcmixer::MixerUiCommandType::SetInsertEnabled;
     assert(dispatcher.dispatch(command).status ==
            mpcmixer::MixerUiCommandStatus::Unsupported);
-    assert(dispatcher.lastAcceptedSequence() == 9);
+    command.type = mpcmixer::MixerUiCommandType::SetAudioInputChannelGain;
+    command.track = 2;
+    command.value = 50;
+    assert(dispatcher.dispatch(command).status ==
+           mpcmixer::MixerUiCommandStatus::Invalid);
+    command.type = mpcmixer::MixerUiCommandType::SetAudioInputPairBalance;
+    command.value = 101;
+    assert(dispatcher.dispatch(command).status ==
+           mpcmixer::MixerUiCommandStatus::Invalid);
+    assert(dispatcher.lastAcceptedSequence() == 17);
 
     // A full native command queue reports backpressure and permits retrying
     // the same sequence after the audio consumer drains the queue.
