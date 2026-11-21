@@ -32,6 +32,7 @@ on:
       - "tests/fixtures/audio_signal_reference.csv"
       - "tests/mixer_controller_test.cpp"
       - "tests/mixer_presentation_snapshot_test.cpp"
+      - "tests/mixer_presentation_all_tracks_test.cpp"
       - "tests/mixer_ui_command_dispatcher_test.cpp"
       - "tools/audio-engine-benchmark.cpp"
       - ".github/workflows/audio-engine-tests.yml"
@@ -152,6 +153,10 @@ jobs:
         run: g++ -std=c++14 -Wall -Wextra -Werror -pedantic tests/meter_model_test.cpp -o meter-model-test
       - name: Run meter model tests
         run: ./meter-model-test
+      - name: Compile all-track mixer presentation tests
+        run: g++ -std=c++14 -Wall -Wextra -Werror -pedantic tests/mixer_presentation_all_tracks_test.cpp -o mixer-presentation-all-tracks-test
+      - name: Run all-track mixer presentation tests
+        run: ./mixer-presentation-all-tracks-test
       - name: Compile mixer controller tests
         run: g++ -std=c++14 -Wall -Wextra -Werror -pedantic tests/mixer_controller_test.cpp -o mixer-controller-test
       - name: Run mixer controller tests
