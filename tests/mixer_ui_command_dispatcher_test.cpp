@@ -92,6 +92,9 @@ int main() {
 
     // Invalid values and unsupported insert requests do not consume sequence.
     command.sequence = 10;
+    command.type = static_cast<mpcmixer::MixerUiCommandType>(255);
+    assert(dispatcher.dispatch(command).status ==
+           mpcmixer::MixerUiCommandStatus::Invalid);
     command.type = mpcmixer::MixerUiCommandType::SetTrackFader;
     command.track = 3;
     command.value = 128;
