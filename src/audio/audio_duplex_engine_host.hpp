@@ -47,6 +47,8 @@ public:
             backend_ = nullptr;
             return false;
         }
+        expectedInputChannels_ = format.inputChannels;
+        maxFramesPerBlock_ = format.maxFramesPerBlock;
         return true;
     }
 
@@ -61,12 +63,18 @@ public:
             backend_->stop();
             backend_->shutdown();
             backend_ = nullptr;
+            expectedInputChannels_ = 0;
+            maxFramesPerBlock_ = 0;
         }
     }
 
     // Public for deterministic offline tests and backend implementations that
     // prefer to invoke the host directly. All buffers are backend-owned.
     void processBlock(const AudioDuplexBuffer& block) noexcept {
+        // The host cannot safely clear buffers when the callback exceeds the
+        // prepared capacity: their actual allocation length is not knowable.
+        if (maxFramesPerBlock_ == 0 || block.frameCount > maxFramesPerBlock_)
+            return;
         if (block.outputChannels == nullptr || block.outputChannelCount != 2)
             return;
         for (std::size_t channel = 0; channel < 2; ++channel) {
@@ -75,7 +83,8 @@ public:
                 return;
             }
         }
-        if (block.inputChannelCount > inputTrack_.size() ||
+        if (block.inputChannelCount != expectedInputChannels_ ||
+            block.inputChannelCount > inputTrack_.size() ||
             (block.inputChannelCount != 0 && block.inputChannels == nullptr)) {
             silence(block);
             return;
@@ -117,6 +126,8 @@ private:
     AudioEngineCommandBridge& bridge_;
     std::array<std::atomic<std::size_t>, 2> inputTrack_{};
     AudioDuplexBackend* backend_ = nullptr;
+    std::size_t expectedInputChannels_ = 0;
+    std::size_t maxFramesPerBlock_ = 0;
 };
 
 } // namespace mpcmixer
