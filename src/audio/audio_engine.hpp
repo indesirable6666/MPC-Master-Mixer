@@ -266,12 +266,31 @@ public:
     void setLinked(bool linked) { linked_ = linked; }
     bool linked() const { return linked_; }
 
-    // In linked mode, left/right remain separate and stereo balance attenuates
-    // only the opposite side. In unlinked mode, each input is a mono channel
-    // with its own gain, pan, mute, and solo controls.
+    // Replaces the supplied output buffers with the pair's stereo signal.
     void process(const float* inputLeft, const float* inputRight,
                  float* outputLeft, float* outputRight,
                  std::size_t frameCount) const {
+        processImpl(inputLeft, inputRight, outputLeft, outputRight,
+                    frameCount, false, 1.0f, false);
+    }
+
+    // Adds the pair to an existing stereo mix. postGain/postMute represent
+    // the shared Master stage, which must affect this source just like tracks.
+    void processAndMix(const float* inputLeft, const float* inputRight,
+                       float* outputLeft, float* outputRight,
+                       std::size_t frameCount, float postGain,
+                       bool postMute) const {
+        if (!std::isfinite(postGain) || postGain < 0.0f ||
+            postGain > AudioEngine::kMaxFaderGain) return;
+        processImpl(inputLeft, inputRight, outputLeft, outputRight,
+                    frameCount, true, postGain, postMute);
+    }
+
+private:
+    void processImpl(const float* inputLeft, const float* inputRight,
+                     float* outputLeft, float* outputRight,
+                     std::size_t frameCount, bool add,
+                     float postGain, bool postMute) const {
         if (outputLeft == nullptr || outputRight == nullptr) return;
 
         if (linked_) {
@@ -279,15 +298,23 @@ public:
                 ? 1.0f - stereo_.balance : 1.0f;
             const float rightBalance = stereo_.balance < 0.0f
                 ? 1.0f + stereo_.balance : 1.0f;
+            const float gain = postMute ? 0.0f : stereo_.gain * postGain;
             for (std::size_t frame = 0; frame < frameCount; ++frame) {
                 const float left = inputLeft != nullptr &&
                     std::isfinite(inputLeft[frame]) ? inputLeft[frame] : 0.0f;
                 const float right = inputRight != nullptr &&
                     std::isfinite(inputRight[frame]) ? inputRight[frame] : 0.0f;
-                outputLeft[frame] = stereo_.mute ? 0.0f :
-                    left * stereo_.gain * leftBalance;
-                outputRight[frame] = stereo_.mute ? 0.0f :
-                    right * stereo_.gain * rightBalance;
+                const float processedLeft = stereo_.mute ? 0.0f :
+                    left * gain * leftBalance;
+                const float processedRight = stereo_.mute ? 0.0f :
+                    right * gain * rightBalance;
+                if (add) {
+                    outputLeft[frame] += processedLeft;
+                    outputRight[frame] += processedRight;
+                } else {
+                    outputLeft[frame] = processedLeft;
+                    outputRight[frame] = processedRight;
+                }
             }
             return;
         }
@@ -296,23 +323,29 @@ public:
         for (std::size_t frame = 0; frame < frameCount; ++frame) {
             float leftOut = 0.0f;
             float rightOut = 0.0f;
-            for (std::size_t side = 0; side < 2; ++side) {
-                const Channel& state = channels_[side];
-                const float* input = side == 0 ? inputLeft : inputRight;
-                if (state.mute || (anySolo && !state.solo) || input == nullptr)
-                    continue;
-                const float sample = std::isfinite(input[frame])
-                    ? input[frame] : 0.0f;
-                const float scaled = sample * state.gain;
-                leftOut += scaled * std::sqrt((1.0f - state.pan) * 0.5f);
-                rightOut += scaled * std::sqrt((1.0f + state.pan) * 0.5f);
+            if (!postMute) {
+                for (std::size_t side = 0; side < 2; ++side) {
+                    const Channel& state = channels_[side];
+                    const float* input = side == 0 ? inputLeft : inputRight;
+                    if (state.mute || (anySolo && !state.solo) || input == nullptr)
+                        continue;
+                    const float sample = std::isfinite(input[frame])
+                        ? input[frame] : 0.0f;
+                    const float scaled = sample * state.gain * postGain;
+                    leftOut += scaled * std::sqrt((1.0f - state.pan) * 0.5f);
+                    rightOut += scaled * std::sqrt((1.0f + state.pan) * 0.5f);
+                }
             }
-            outputLeft[frame] = leftOut;
-            outputRight[frame] = rightOut;
+            if (add) {
+                outputLeft[frame] += leftOut;
+                outputRight[frame] += rightOut;
+            } else {
+                outputLeft[frame] = leftOut;
+                outputRight[frame] = rightOut;
+            }
         }
     }
 
-private:
     std::array<Channel, 2> channels_{};
     StereoControls stereo_{};
     bool linked_ = false;
