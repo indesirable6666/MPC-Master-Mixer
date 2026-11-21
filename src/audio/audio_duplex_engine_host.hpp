@@ -18,7 +18,12 @@ namespace mpcmixer {
 // Configure routing and prepare/start/stop the backend on the control thread.
 class AudioDuplexEngineHost {
 public:
-    enum : std::size_t { kUnmappedTrack = AudioEngine::kTrackCount };
+    enum : std::size_t {
+        kUnmappedTrack = AudioEngine::kTrackCount,
+        // These meter slots match the prototype's Audio In 1/2 strips.
+        kAudioInputLeftTrackIndex = 13,
+        kAudioInputRightTrackIndex = 14
+    };
 
     explicit AudioDuplexEngineHost(
         AudioEngineCommandBridge& bridge,
@@ -33,6 +38,7 @@ public:
 
     bool setInputRoute(std::size_t inputChannel, std::size_t trackIndex) noexcept {
         if (inputChannel >= inputTrack_.size() ||
+            (stereoInputPairEnabled_ && inputChannel < 2) ||
             (trackIndex != kUnmappedTrack && trackIndex >= AudioEngine::kTrackCount))
             return false;
         inputTrack_[inputChannel].store(trackIndex, std::memory_order_release);
@@ -45,9 +51,25 @@ public:
             : kUnmappedTrack;
     }
 
+    // Opt-in stereo Audio In consumes both prepared input channels as one
+    // linked/unlinked pair. Configure before prepare(); pair mode and per-track
+    // routing are mutually exclusive for those physical input channels.
+    bool setStereoInputPairEnabled(bool enabled) noexcept {
+        if (backend_ != nullptr) return false;
+        if (enabled && (inputRoute(0) != kUnmappedTrack ||
+                        inputRoute(1) != kUnmappedTrack)) return false;
+        stereoInputPairEnabled_ = enabled;
+        return true;
+    }
+
+    bool stereoInputPairEnabled() const noexcept {
+        return stereoInputPairEnabled_;
+    }
+
     bool prepare(AudioDuplexBackend& backend, const AudioDuplexFormat& format) noexcept {
         if (backend_ != nullptr || !format.valid() || format.outputChannels != 2 ||
-            format.inputChannels > inputTrack_.size()) return false;
+            format.inputChannels > inputTrack_.size() ||
+            (stereoInputPairEnabled_ && format.inputChannels != 2)) return false;
         backend_ = &backend;
         if (!backend_->prepare(format, &AudioDuplexEngineHost::processCallback, this)) {
             backend_ = nullptr;
@@ -102,38 +124,59 @@ public:
 
         std::array<const float*, AudioEngine::kTrackCount> trackInputs{};
         std::array<std::size_t, 2> blockRoutes{{kUnmappedTrack, kUnmappedTrack}};
-        for (std::size_t channel = 0; channel < block.inputChannelCount; ++channel) {
-            const std::size_t track =
-                inputTrack_[channel].load(std::memory_order_acquire);
-            blockRoutes[channel] = track;
-            if (track == kUnmappedTrack) continue;
-            if (block.inputChannels[channel] == nullptr) {
+        if (stereoInputPairEnabled_) {
+            if (block.inputChannelCount != 2 ||
+                block.inputChannels[0] == nullptr ||
+                block.inputChannels[1] == nullptr) {
                 silence(block);
                 return;
             }
-            if (trackInputs[track] != nullptr) {
-                silence(block); // Never replay stale output on invalid routing.
-                return;
+            bridge_.processWithAudioInputPair(
+                trackInputs.data(), block.inputChannels[0], block.inputChannels[1],
+                block.outputChannels[0], block.outputChannels[1], block.frameCount);
+        } else {
+            for (std::size_t channel = 0; channel < block.inputChannelCount; ++channel) {
+                const std::size_t track =
+                    inputTrack_[channel].load(std::memory_order_acquire);
+                blockRoutes[channel] = track;
+                if (track == kUnmappedTrack) continue;
+                if (block.inputChannels[channel] == nullptr) {
+                    silence(block);
+                    return;
+                }
+                if (trackInputs[track] != nullptr) {
+                    silence(block); // Never replay stale output on invalid routing.
+                    return;
+                }
+                trackInputs[track] = block.inputChannels[channel];
             }
-            trackInputs[track] = block.inputChannels[channel];
+            bridge_.process(trackInputs.data(), block.outputChannels[0],
+                            block.outputChannels[1], block.frameCount);
         }
-        bridge_.process(trackInputs.data(), block.outputChannels[0],
-                        block.outputChannels[1], block.frameCount);
 
         // Metering is optional and remains a bounded audio-thread producer.
-        // Track taps are the routed input signals; Master is post-mix output.
+        // Pair taps are pre-control Audio In signals; Master is post-mix output.
         if (meterBridge_ != nullptr && block.frameCount != 0) {
             AudioMeterSnapshot snapshot;
             snapshot.blockSequence = ++meterBlockSequence_;
             bool valid = true;
-            for (std::size_t channel = 0; channel < block.inputChannelCount; ++channel) {
-                const std::size_t track = blockRoutes[channel];
-                if (track == kUnmappedTrack) continue;
-                if (!AudioBlockMeter::measure(
-                        block.inputChannels[channel], block.frameCount,
-                        snapshot.channels[track])) {
-                    valid = false;
-                    break;
+            if (stereoInputPairEnabled_) {
+                valid = AudioBlockMeter::measure(
+                    block.inputChannels[0], block.frameCount,
+                    snapshot.channels[kAudioInputLeftTrackIndex]) &&
+                    AudioBlockMeter::measure(
+                    block.inputChannels[1], block.frameCount,
+                    snapshot.channels[kAudioInputRightTrackIndex]);
+            } else {
+                for (std::size_t channel = 0; channel < block.inputChannelCount; ++channel) {
+                    const std::size_t track = blockRoutes[channel];
+                    if (track == kUnmappedTrack) continue;
+                    if (!AudioBlockMeter::measure(
+                            block.inputChannels[channel], block.frameCount,
+                            snapshot.channels[track])) {
+                        valid = false;
+                        break;
+                    }
                 }
             }
 
@@ -185,6 +228,7 @@ private:
     AudioDuplexBackend* backend_ = nullptr;
     std::size_t expectedInputChannels_ = 0;
     std::size_t maxFramesPerBlock_ = 0;
+    bool stereoInputPairEnabled_ = false;
 };
 
 } // namespace mpcmixer
