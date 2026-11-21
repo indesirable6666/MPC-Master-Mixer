@@ -53,7 +53,18 @@ supported capture API, channel mapping, buffer size, sample format, and routing
 are independently established. It must not take ownership of or reconfigure
 the MPC's existing audio device.
 
-## Control-thread to audio-thread updates\n\nThe direct engine setters must not race the audio callback. The new\n`src/audio/audio_control_bridge.hpp` provides a fixed-capacity SPSC command\nqueue so a single host/UI control thread can publish track, Aux return and\nMaster changes for application at the next audio block boundary. Queue-full\nconditions are reported to the producer. EQ coefficient changes and insert\nlifetime management remain outside this command queue. The browser prototype\nis not yet wired to a native host/controller. See\n`docs/AUDIO_CONTROL_BRIDGE.md` for the threading contract.\n\n## Duplex engine host
+## Control-thread to audio-thread updates
+
+The direct engine setters must not race the audio callback. The new
+`src/audio/audio_control_bridge.hpp` provides a fixed-capacity SPSC command
+queue so a single host/UI control thread can publish track, Aux return and
+Master changes for application at the next audio block boundary. Queue-full
+conditions are reported to the producer. EQ coefficient changes and insert
+lifetime management remain outside this command queue. The browser prototype
+is not yet wired to a native host/controller. See
+`docs/AUDIO_CONTROL_BRIDGE.md` for the threading contract.
+
+## Duplex engine host
 
 `src/audio/audio_duplex_engine_host.hpp` connects the duplex callback contract
 to the command bridge and mixer. It accepts up to two explicit input channels,
