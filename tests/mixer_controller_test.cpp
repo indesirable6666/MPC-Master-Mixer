@@ -118,5 +118,43 @@ int main() {
     assert(insertController.desiredStateSnapshot().tracks[0].inserts[0] == nullptr);
     assert(std::fabs(insertLeft[0] - 0.25f * std::sqrt(0.5f)) < 0.0001f);
 
+    // Track edits are isolated: changing one strip must not overwrite another.
+    assert(controller.setTrackFader(4, 55));
+    assert(controller.setTrackPan(4, 25));
+    assert(std::fabs(controller.desiredTrack(3).gain - 1.27f) < 0.00001f);
+    assert(std::fabs(controller.desiredTrack(4).gain - 0.55f) < 0.00001f);
+    assert(std::fabs(controller.desiredTrack(4).pan - 0.25f) < 0.00001f);
+
+    // Invalid EQ preparation must not change the producer-side cached bands.
+    const auto beforeInvalidEq = controller.desiredTrackEq(4);
+    assert(!controller.setTrackEq(4, 0.0f, bands));
+    assert(!controller.setTrackEq(4, 48000.0f,
+        std::array<mpcmixer::SixBandEq::BandParameters,
+                   mpcmixer::SixBandEq::kBandCount>{}));
+    assert(std::fabs(controller.desiredTrackEq(4)[1].gainDb -
+                     beforeInvalidEq[1].gainDb) < 0.00001f);
+
+    // Invalid Aux return values are rejected without changing the desired copy.
+    mpcmixer::AudioEngine::AuxReturn invalidAux;
+    invalidAux.gain = -1.0f;
+    assert(!controller.setAuxReturn(2, invalidAux));
+    assert(std::fabs(controller.desiredAuxReturn(2).gain - 1.0f) < 0.00001f);
+
+    // A full queue rejects track and EQ edits without advancing desired state.
+    mpcmixer::AudioEngineCommandBridge saturatedBridge;
+    mpcmixer::MixerController saturatedController(saturatedBridge);
+    for (std::size_t i = 0; i < mpcmixer::AudioEngineCommandBridge::kQueueCapacity; ++i)
+        assert(saturatedController.setMasterMute((i & 1u) != 0));
+    const float oldTrackGain = saturatedController.desiredTrack(7).gain;
+    const auto oldEq = saturatedController.desiredTrackEq(7);
+    assert(!saturatedController.setTrackFader(7, 80));
+    auto replacementBands = oldEq;
+    replacementBands[0].gainDb = 6.0f;
+    assert(!saturatedController.setTrackEq(7, 48000.0f, replacementBands));
+    assert(std::fabs(saturatedController.desiredTrack(7).gain - oldTrackGain) <
+           0.00001f);
+    assert(std::fabs(saturatedController.desiredTrackEq(7)[0].gainDb -
+                     oldEq[0].gainDb) < 0.00001f);
+
     return 0;
 }
