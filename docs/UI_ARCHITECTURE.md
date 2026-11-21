@@ -169,3 +169,32 @@ there.
 the audio callback, nor does it report actual MPC project state. A future
 host must label or separately represent pending/applied/unknown state rather
 than presenting this snapshot as hardware feedback.
+
+
+## Native UI command envelope (host-side contract)
+
+`src/mixer/mixer_ui_command_dispatcher.hpp` defines a transport-neutral
+command envelope and a serialized dispatcher. The envelope carries a
+monotonically increasing producer sequence, a command type, target indices,
+and typed value fields. It currently covers track fader/pan/Mute/Solo,
+Aux sends, one EQ band, Aux return level/balance/mute, and Master fader/mute.
+
+The dispatcher validates target indices and parameter ranges before calling
+`MixerController`. Results distinguish accepted, invalid, out-of-order,
+queue-full, and unsupported commands. A rejected command does not consume its
+sequence, allowing a queue-full command to be retried after backpressure clears.
+The host must preserve a single producer and must not dispatch concurrently
+from multiple UI threads.
+
+Fader values are raw 0–127 control values (linear gain = value / 100), not
+percentages. Pan and Aux-return balance are -100–+100; Aux sends are 0–100.
+The presentation snapshot therefore exposes `faderValue`,
+`masterFaderValue`, and `levelValue` rather than misleading percent names;
+these values can legitimately exceed 100.
+
+Insert enable is intentionally reported as unsupported. The UI cannot supply
+an arbitrary `AudioInsert*`: effect construction, ownership, and replacement
+acknowledgement belong to a future native host. The command envelope is not
+yet a byte-level serialization format, IPC transport, browser binding, or
+proof of engine/device integration. The dispatcher itself is called on the
+controller's serialized producer thread.
