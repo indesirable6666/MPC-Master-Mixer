@@ -107,8 +107,20 @@ public:
                         AudioInsert* effect, std::uint32_t& ticket) noexcept {
         if (track >= AudioEngine::kTrackCount ||
             slot >= InsertChain::kSlotCount) return false;
+
+        // Do not allow a second pointer handoff for this slot while the first
+        // one is still queued or executing. Otherwise an intermediate object
+        // could be retired before the callback has finished referencing it.
+        if (insertUpdatePending_[track][slot]) {
+            if (!bridge_.hasApplied(insertUpdateTickets_[track][slot]))
+                return false;
+            insertUpdatePending_[track][slot] = false;
+        }
+
         if (!bridge_.enqueueTrackInsert(track, slot, effect, ticket)) return false;
         inserts_[track][slot] = effect;
+        insertUpdateTickets_[track][slot] = ticket;
+        insertUpdatePending_[track][slot] = true;
         return true;
     }
 
@@ -195,6 +207,10 @@ private:
                AudioEngine::kTrackCount> eqBands_{};
     std::array<std::array<AudioInsert*, InsertChain::kSlotCount>,
                AudioEngine::kTrackCount> inserts_{};
+    std::array<std::array<std::uint32_t, InsertChain::kSlotCount>,
+               AudioEngine::kTrackCount> insertUpdateTickets_{};
+    std::array<std::array<bool, InsertChain::kSlotCount>,
+               AudioEngine::kTrackCount> insertUpdatePending_{};
     std::array<AudioEngine::AuxReturn, AudioEngine::kAuxBusCount> auxReturns_{};
     float masterGain_ = 1.0f;
     bool masterMute_ = false;
