@@ -73,19 +73,23 @@ button{color:inherit;touch-action:manipulation;-webkit-tap-highlight-color:trans
 .clip:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
 .fader-area{flex:1;min-height:110px;display:flex;align-items:stretch;justify-content:center;gap:8px;padding:8px 6px 4px;background:var(--well);border:1px solid #303a47;border-radius:6px}
 .scale{display:flex;flex-direction:column;justify-content:space-between;padding:2px 0;color:#8390a0;font-size:8px}
-.fader{height:100%;min-height:100px;width:34px;margin:0;accent-color:var(--amber);writing-mode:vertical-lr;direction:rtl}
+.fader{appearance:none;-webkit-appearance:none;flex:none;height:100%;min-height:100px;width:42px;margin:0;padding:0;background:transparent;accent-color:var(--green);writing-mode:vertical-lr;direction:rtl;touch-action:pan-y;cursor:pointer}
+.fader::-webkit-slider-runnable-track{width:8px;border:1px solid #355b49;border-radius:5px;background:linear-gradient(90deg,#14251e,#203a2d)}
+.fader::-webkit-slider-thumb{-webkit-appearance:none;width:30px;height:18px;margin:0;border:2px solid #b5ebcb;border-radius:4px;background:linear-gradient(180deg,#78dba2,#34885d);box-shadow:0 2px 5px #0009}
+.fader::-moz-range-track{width:8px;border:1px solid #355b49;border-radius:5px;background:linear-gradient(90deg,#14251e,#203a2d)}
+.fader::-moz-range-thumb{width:26px;height:14px;border:2px solid #b5ebcb;border-radius:4px;background:linear-gradient(180deg,#78dba2,#34885d);box-shadow:0 2px 5px #0009}
 .fader-readout{display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px;padding-bottom:3px}
-.db{color:var(--amber);font-size:12px;font-weight:850;font-variant-numeric:tabular-nums}
+.db{color:var(--green);font-size:12px;font-weight:850;font-variant-numeric:tabular-nums}
 .value{color:var(--muted);font-size:9px;font-variant-numeric:tabular-nums}
 .master-dock{width:194px;min-width:194px;padding:10px 10px 10px 0;border-left:1px solid #303a47;background:#141920}
 .master-dock .channel{width:100%;min-width:0;border-color:#80602f;background:linear-gradient(180deg,#29271f,#1c2027)}
-.master-dock .fader{width:42px}
+.master-dock .fader{width:48px}
 .bottom{height:34px;flex:none;display:flex;align-items:center;gap:12px;padding:0 14px;border-top:1px solid var(--line);background:#171c24;color:var(--muted);font-size:10px}
 .bottom strong{color:#e9c47e;font-weight:750}
 .bottom .hint{margin-left:auto}
-@media(max-width:650px){.topbar{height:54px;padding:0 9px;gap:7px}.project,.toolbar .optional{display:none}.brand{font-size:13px}.mode{font-size:9px;padding:6px 7px}.bank-status{font-size:8px;padding:5px 6px}.master-dock{width:142px;min-width:142px;padding:8px 7px 8px 0}.strips{padding:8px}.channel{width:168px;min-width:168px}.master-dock .channel{width:100%;min-width:0}.bottom{font-size:9px;padding:0 8px}}
+@media(max-width:650px){.topbar{height:54px;padding:0 9px;gap:7px}.project,.toolbar .optional{display:none}.brand{font-size:13px}.mode{font-size:9px;padding:6px 7px}.bank-status{font-size:8px;padding:5px 6px}.master-dock{width:142px;min-width:142px;padding:8px 7px 8px 0}.strips{padding:8px}.channel{width:168px;min-width:168px}.master-dock .channel{width:100%;min-width:0}}
 @media(prefers-reduced-motion:reduce){.scroll-area{scroll-behavior:auto}.channel,.meter-fill{transition:none}}
-@media(max-height:650px){.topbar{height:48px}.channel{gap:4px;padding:6px}.block{padding:5px}.band input{height:48px}.fader-area{min-height:80px}.fader{min-height:75px}.bottom{height:27px}}
+@media(max-height:650px){.topbar{height:48px}.channel{gap:4px;padding:6px}.block{padding:5px}.band input{height:48px}.fader-area{min-height:80px}.fader{min-height:75px}}
 @media(max-width:480px){
  .topbar{gap:5px;padding:0 6px}
  .brand{font-size:10px;letter-spacing:.015em}
@@ -115,7 +119,7 @@ button{color:inherit;touch-action:manipulation;-webkit-tap-highlight-color:trans
  <div class="scroll-area" id="scrollArea" aria-label="Tranches de canaux"><div class="strips" id="strips"></div></div>
  <aside class="master-dock" aria-label="Tranche Master"><div id="master"></div></aside>
 </main>
-<footer class="bottom"><strong>SIMULATION LOCALE</strong><span>Les réglages restent dans cette page uniquement.</span><strong id="selectionStatus" role="status" aria-live="polite" aria-atomic="true">PISTE 01 · KICK</strong><span class="hint">Glisser horizontalement pour parcourir les 16 pistes</span></footer>
+
 </div>
 <script>
 const strips=document.getElementById('strips');
