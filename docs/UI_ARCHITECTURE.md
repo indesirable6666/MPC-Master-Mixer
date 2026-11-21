@@ -134,3 +134,7 @@ les entrées physiques, ne capture aucun signal et ne modifie pas le routage
 audio de la MPC. Le processeur C++ `AudioInputPair` traite des buffers fournis
 par l'appelant, mais son raccordement à un backend audio matériel n'est pas
 encore réalisé.
+
+## Host runtime discovery
+
+The repository-level runtime/build-system audit and the evidence required before choosing a native host are tracked in [HOST_RUNTIME_DISCOVERY.md](HOST_RUNTIME_DISCOVERY.md). The framework-neutral meter presentation sink remains the boundary until a supported host and target SDK are identified.
