@@ -31,7 +31,7 @@ public:
 class OfflineAudioDuplexBackend final : public AudioDuplexBackend {
 public:
     bool prepare(const AudioDuplexFormat& f, AudioProcessCallback cb, void* ctx) noexcept override {
-        if (!f.valid() || cb == nullptr) return false;
+        if (prepared_ || !f.valid() || cb == nullptr) return false;
         format_ = f; callback_ = cb; context_ = ctx; prepared_ = true; running_ = false;
         return true;
     }
