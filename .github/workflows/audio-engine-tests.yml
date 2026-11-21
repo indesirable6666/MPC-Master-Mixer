@@ -20,6 +20,7 @@ on:
       - "tests/meter_model_test.cpp"
       - "tests/audio_block_meter_test.cpp"
       - "tests/audio_meter_snapshot_bridge_test.cpp"
+      - "tests/audio_meter_snapshot_freshness_test.cpp"
       - "tests/audio_duplex_meter_tap_test.cpp"
       - "tests/audio_input_pair_host_test.cpp"
       - "tests/audio_meter_ui_consumer_test.cpp"
@@ -110,6 +111,10 @@ jobs:
         run: g++ -std=c++14 -Wall -Wextra -Werror -pedantic tests/audio_block_meter_test.cpp -o audio-block-meter-test
       - name: Run audio block meter tests
         run: ./audio-block-meter-test
+      - name: Compile audio meter snapshot freshness tests
+        run: g++ -std=c++14 -Wall -Wextra -Werror -pedantic tests/audio_meter_snapshot_freshness_test.cpp -o audio-meter-snapshot-freshness-test
+      - name: Run audio meter snapshot freshness tests
+        run: ./audio-meter-snapshot-freshness-test
       - name: Compile audio meter snapshot bridge tests
         run: g++ -std=c++14 -Wall -Wextra -Werror -pedantic tests/audio_meter_snapshot_bridge_test.cpp -o audio-meter-snapshot-bridge-test
       - name: Run audio meter snapshot bridge tests
