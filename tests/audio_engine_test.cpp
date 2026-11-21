@@ -167,6 +167,34 @@ int main() {
     assert(std::isfinite(lowPass.processSample(
         std::numeric_limits<float>::infinity())));
 
+
+    // The complementary one-pole high-pass validates configuration, rejects
+    // DC after its transient, tracks bypass state, and sanitizes bad samples.
+    mpcmixer::OnePoleHighPassInsert highPass;
+    assert(!highPass.configured());
+    assert(!highPass.configure(48000.0f, 0.0f));
+    assert(!highPass.configure(48000.0f, 24000.0f));
+    assert(!highPass.configure(48000.0f,
+                               std::numeric_limits<float>::infinity()));
+    assert(highPass.configure(48000.0f, 1000.0f));
+    assert(highPass.configured() && near(highPass.cutoffHz(), 1000.0f));
+    const float highPassAlpha = std::exp(
+        -2.0f * 3.14159265358979323846f * 1000.0f / 48000.0f);
+    highPass.setEnabled(true);
+    assert(near(highPass.processSample(1.0f), highPassAlpha));
+    assert(near(highPass.processSample(1.0f),
+                highPassAlpha * (highPassAlpha - 1.0f)));
+    float dcResidual = 0.0f;
+    for (int i = 0; i < 2000; ++i)
+        dcResidual = highPass.processSample(1.0f);
+    assert(std::fabs(dcResidual) < 0.00001f);
+    highPass.setEnabled(false);
+    assert(near(highPass.processSample(0.25f), 0.25f));
+    highPass.setEnabled(true);
+    assert(near(highPass.processSample(0.25f), 0.0f));
+    assert(near(highPass.processSample(
+        std::numeric_limits<float>::quiet_NaN()), 0.0f));
+
     // The low-pass insert is usable in the ordinary per-track insert chain.
     AudioEngine lowPassEngine;
     mpcmixer::OnePoleLowPassInsert trackLowPass;
