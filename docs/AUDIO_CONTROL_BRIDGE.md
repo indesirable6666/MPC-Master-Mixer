@@ -14,7 +14,8 @@ call this class directly; a native host/controller will own the bridge.
 single-producer/single-consumer (SPSC) command queue:
 
 - One control/UI producer enqueues validated track state, precomputed six-band
-  EQ configurations, Aux return state, Master gain, and Master mute values.
+  EQ configurations, insert-slot replacements, Aux return state, Master gain,
+  and Master mute values.
 - The audio callback is the sole consumer. It drains pending commands at the
   beginning of each block, then processes that block using the updated state.
 - Commands are applied in FIFO order. If the 64-command queue is full, enqueue
@@ -28,9 +29,13 @@ single-producer/single-consumer (SPSC) command queue:
 - Only one producer and one consumer are supported. A future host with several
   UI/control sources must serialize them on a single control thread before
   calling the enqueue methods.
-- EQ coefficient preparation and insert lifetime/configuration remain separate
-  control-thread responsibilities. They are not currently represented as
-  queue commands.
+- Insert replacements carry non-owning pointers. The producer keeps the
+  previous and replacement objects alive until the returned 32-bit ticket is
+  acknowledged by `hasApplied()`. The acknowledgement is published after the
+  pointer swap at the block boundary; only then may the producer destroy the
+  previous object. Never allocate, delete, or wait for acknowledgement in the
+  audio callback. Configure an effect before enqueueing it and do not mutate it
+  while the audio thread may process it.
 
 Use `process`, `processWithAux`, or
 `processWithAuxAndReturns` from the audio thread. Do not call the underlying
