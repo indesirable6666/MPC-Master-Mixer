@@ -82,3 +82,19 @@ magnitude multiplied by the EQ, insert, fader, and pan gains. A second fresh
 run bypasses only the low-pass and verifies that the frequency-dependent loss
 disappears while the EQ and Gain insert remain active. This validates the
 combined signal path and the bypass state without opening an audio device.
+
+
+## Aux send and return validation
+
+`tests/audio_aux_send_return_test.cpp` exercises the four-bus Aux path using
+single-frame synthetic buffers and the real `AudioEngine`. It verifies that
+track sends are post-fader/post-pan but pre-Master, that Aux returns are summed
+through return gain and balance into the Master path, and that return mute does
+not alter the sends. It also checks that track mute and Solo suppress the
+corresponding track sends, while Master mute silences the main output and
+returns without suppressing pre-Master sends. The return signal is supplied as
+an independent input to the mix call and is not routed back into the send
+buffers, preventing an internal Aux feedback loop.
+
+This is deterministic host-side DSP coverage only. It does not connect an
+external effect, open an audio device, or validate physical MPC routing.
