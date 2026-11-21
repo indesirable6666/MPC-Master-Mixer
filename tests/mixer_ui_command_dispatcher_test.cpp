@@ -137,6 +137,14 @@ int main() {
     assert(snapshot.audioInputPair.channels[0].solo);
     assert(snapshot.audioInputPair.channels[1].solo);
 
+    // Zero, repeated, and older sequence numbers are rejected.
+    command.sequence = 0;
+    command.type = mpcmixer::MixerUiCommandType::SetMasterFader;
+    command.value = 10;
+    assert(dispatcher.dispatch(command).status ==
+           mpcmixer::MixerUiCommandStatus::OutOfOrder);
+    assert(dispatcher.lastAcceptedSequence() == 17);
+
     // A repeated or older sequence is rejected without mutating state.
     command.sequence = 17;
     command.value = 10;
@@ -195,6 +203,10 @@ int main() {
     assert(fullDispatcher.dispatch(retry).status ==
            mpcmixer::MixerUiCommandStatus::QueueFull);
     assert(fullDispatcher.lastAcceptedSequence() == 0);
+    assert(fullController.desiredTrack(0).gain == 1.0f);
+    mpcmixer::MixerPresentationPublisher fullPublisher(fullController);
+    const auto beforeDrain = fullPublisher.publish();
+    assert(beforeDrain.tracks[0].faderValue == 100);
 
     const float* inputs[mpcmixer::AudioEngine::kTrackCount]{};
     float left[1]{};
@@ -202,4 +214,18 @@ int main() {
     fullBridge.process(inputs, left, right, 1);
     assert(fullDispatcher.dispatch(retry).accepted());
     assert(fullDispatcher.lastAcceptedSequence() == 1);
+    assert(fullController.desiredTrack(0).gain == 0.64f);
+    const auto afterRetry = fullPublisher.publish();
+    assert(afterRetry.tracks[0].faderValue == 64);
+
+    // Gaps are allowed (transport sequence numbers need only increase).
+    retry.sequence = 3;
+    retry.value = 72;
+    assert(fullDispatcher.dispatch(retry).accepted());
+    assert(fullDispatcher.lastAcceptedSequence() == 3);
+    retry.sequence = 2;
+    retry.value = 80;
+    assert(fullDispatcher.dispatch(retry).status ==
+           mpcmixer::MixerUiCommandStatus::OutOfOrder);
+    assert(fullController.desiredTrack(0).gain == 0.72f);
 }
