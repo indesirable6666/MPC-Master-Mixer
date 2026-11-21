@@ -64,7 +64,7 @@ public:
     bool hasApplied(std::uint32_t ticket) const noexcept {
         const std::uint32_t applied =
             appliedSequence_.load(std::memory_order_acquire);
-        return static_cast<std::int32_t>(applied - ticket) >= 0;
+        return static_cast<std::uint32_t>(applied - ticket) < 0x80000000u;
     }
 
     bool enqueueAuxReturn(std::size_t index,
@@ -222,7 +222,7 @@ private:
     std::array<Command, kQueueCapacity> commands_{};
     alignas(64) std::atomic<std::uint32_t> head_{0};
     alignas(64) std::atomic<std::uint32_t> tail_{0};
-    alignas(64) std::atomic<std::uint32_t> appliedSequence_{UINT32_MAX};
+    alignas(64) std::atomic<std::uint32_t> appliedSequence_{0};
     AudioEngine engine_{};
 };
 
