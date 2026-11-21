@@ -599,6 +599,16 @@ int main() {
     assert(near(controllerBridge.engineOnAudioThread().trackEq(2).bandParameters(1).gainDb, 4.0f));
     assert(near(controllerBridge.engineOnAudioThread().trackEq(2).bandParameters(4).gainDb, 2.5f));
     assert(controller.isInsertUpdateApplied(controllerInsertTicket));
+    // A null replacement explicitly removes/bypasses the insert. The desired
+    // snapshot changes when queued, but the old object must remain alive until
+    // the audio callback acknowledges the pointer swap.
+    std::uint32_t clearInsertTicket = 0;
+    assert(controller.setTrackInsert(2, 1, nullptr, clearInsertTicket));
+    assert(!controller.isInsertUpdateApplied(clearInsertTicket));
+    assert(controller.desiredStateSnapshot().tracks[2].inserts[1] == nullptr);
+    controllerBridge.process(controllerInputs, controllerLeft, controllerRight, 1);
+    assert(controller.isInsertUpdateApplied(clearInsertTicket));
+    assert(controllerBridge.engineOnAudioThread().track(2).gain == 1.27f);
     // A full queue does not advance the controller's cached desired state.
     mpcmixer::AudioEngineCommandBridge controllerFullBridge;
     mpcmixer::MixerController fullController(controllerFullBridge);
