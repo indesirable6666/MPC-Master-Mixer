@@ -61,6 +61,13 @@ public:
         return equalizers_[index].configure(sampleRate, bands);
     }
 
+    bool setTrackEqPrepared(
+        std::size_t index,
+        const SixBandEq::PreparedConfiguration& prepared) noexcept {
+        if (index >= kTrackCount) return false;
+        return equalizers_[index].applyPrepared(prepared);
+    }
+
     // Non-owning insert pointers: keep effects alive until processing stops.
     bool setTrackInsert(std::size_t trackIndex, std::size_t slot,
                         AudioInsert* effect) noexcept {
