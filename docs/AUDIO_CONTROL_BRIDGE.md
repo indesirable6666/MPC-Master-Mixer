@@ -60,6 +60,11 @@ single-producer/single-consumer (SPSC) command queue:
   acknowledged; only then retire the old instance off the audio thread. Never
   mutate fields on an active effect from the UI thread.
 
+See `docs/INSERT_EFFECT_LIFECYCLE.md` for a focused ownership handoff guide
+and a control-thread replacement example. In particular, serialize replacements
+per slot: do not queue a second update for a slot while its previous replacement
+is still awaiting acknowledgement.
+
 Use `process`, `processWithAux`, or
 `processWithAuxAndReturns` from the audio thread. Do not call the underlying
 engine setters from another thread while processing is active.
