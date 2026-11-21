@@ -60,8 +60,8 @@ int main() {
     const float* returnsR[Engine::kAuxBusCount] = {
         return0R, nullptr, return2R, nullptr
     };
-    float mainL[] = {};
-    float mainR[] = {};
+    float mainL[] = {0.0f};
+    float mainR[] = {0.0f};
     bridge.processWithAuxAndReturns(inputs, mainL, mainR,
                                     sendLeft.data(), sendRight.data(),
                                     returnsL, returnsR, 1);
@@ -126,7 +126,6 @@ int main() {
     assert(near(fullController.desiredAuxReturn(1).balance, 0.0f));
     assert(fullBridge.pendingCountApprox() == Bridge::kQueueCapacity);
 
-    float silenceL[] = {0.0f};
     const float* silenceInputs[Engine::kTrackCount] = {};
     fullBridge.process(silenceInputs, mainL, mainR, 0);
     assert(fullBridge.pendingCountApprox() == 0);
