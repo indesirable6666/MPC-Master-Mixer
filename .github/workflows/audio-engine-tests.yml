@@ -6,7 +6,7 @@ on:
       - "src/audio/**"
       - "src/mixer/**"
       - "tests/audio_engine_test.cpp"
-      - "tests/meter_model_test.cpp"
+      - "tests/meter_model_test.cpp"\n      - "tests/audio_block_meter_test.cpp"
       - "tests/mixer_controller_test.cpp"
       - "tools/audio-engine-benchmark.cpp"
       - ".github/workflows/audio-engine-tests.yml"
@@ -33,7 +33,7 @@ jobs:
         run: g++ -std=c++14 -Wall -Wextra -Werror -pedantic -Isrc/audio tests/audio_engine_test.cpp -o audio-engine-test
       - name: Run audio engine tests
         run: ./audio-engine-test
-      - name: Compile meter model tests
+      - name: Compile audio block meter tests\n        run: g++ -std=c++14 -Wall -Wextra -Werror -pedantic tests/audio_block_meter_test.cpp -o audio-block-meter-test\n      - name: Run audio block meter tests\n        run: ./audio-block-meter-test\n      - name: Compile meter model tests
         run: g++ -std=c++14 -Wall -Wextra -Werror -pedantic tests/meter_model_test.cpp -o meter-model-test
       - name: Run meter model tests
         run: ./meter-model-test
