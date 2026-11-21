@@ -21,7 +21,7 @@ public:
     explicit MixerController(AudioEngineCommandBridge& bridge) noexcept
         : bridge_(bridge) {}
 
-    bool setTrackFader(std::size_t track, std::uint8_t value) noexcept {
+    bool setTrackFader(std::size_t track, int value) noexcept {
         if (value > kFaderMaximum || track >= AudioEngine::kTrackCount)
             return false;
         AudioEngine::Track next = tracks_[track];
@@ -29,7 +29,7 @@ public:
         return publishTrack(track, next);
     }
 
-    bool setTrackPan(std::size_t track, std::int16_t value) noexcept {
+    bool setTrackPan(std::size_t track, int value) noexcept {
         if (value < kPanMinimum || value > kPanMaximum ||
             track >= AudioEngine::kTrackCount) return false;
         AudioEngine::Track next = tracks_[track];
@@ -52,7 +52,7 @@ public:
     }
 
     bool setTrackAuxSend(std::size_t track, std::size_t bus,
-                         std::uint8_t percent) noexcept {
+                         int percent) noexcept {
         if (track >= AudioEngine::kTrackCount ||
             bus >= AudioEngine::kAuxBusCount || percent > kAuxMaximum)
             return false;
@@ -61,7 +61,7 @@ public:
         return publishTrack(track, next);
     }
 
-    bool setMasterFader(std::uint8_t value) noexcept {
+    bool setMasterFader(int value) noexcept {
         if (value > kFaderMaximum) return false;
         return bridge_.enqueueMasterGain(static_cast<float>(value) / 100.0f);
     }
