@@ -216,3 +216,14 @@ per-track EQ, inserts and Aux sends; see
 ## All-track presentation consistency
 
 The `mixer_presentation_all_tracks_test` host test assigns distinct fader and pan values to all 16 strips and exercises independent Mute/Solo combinations. It verifies that each indexed strip is preserved in the presentation snapshot and that Master fader/mute remain separate from track 16. A second snapshot confirms that a later edit to one strip does not mutate the earlier value copy or alter neighboring strip states. This validates the controller's desired-state presentation contract, not applied engine state or physical MPC feedback.
+
+
+## Mute/Solo command ordering validation
+
+`mixer_mute_solo_order_test` exercises interleaved, rapid Mute and Solo
+changes across two strips. It checks that each control retains the other
+control's latest value, that the bridge drains the queued full-strip snapshots
+at a block boundary into the engine in FIFO order, and that later Mute-only or
+Solo-only changes do not clear the other flag. It also verifies that Master
+Mute remains independent of track Mute/Solo. This is an offline host test; it
+does not validate a physical MPC audio callback or touchscreen feedback.
