@@ -152,7 +152,14 @@ jobs:
           path: build/mpc-audio-engine-benchmark-armv7
           if-no-files-found: error
 
-      - name: Upload ARMv7 audio block meter test binary\n        uses: actions/upload-artifact@v4\n        with:\n          name: mpc-armv7-audio-block-meter-test\n          path: build/mpc-audio-block-meter-test-armv7\n          if-no-files-found: error\n\n      - name: Upload ARMv7 mixer controller test binary
+      - name: Upload ARMv7 audio block meter test binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: mpc-armv7-audio-block-meter-test
+          path: build/mpc-audio-block-meter-test-armv7
+          if-no-files-found: error
+
+      - name: Upload ARMv7 mixer controller test binary
         uses: actions/upload-artifact@v4
         with:
           name: mpc-armv7-mixer-controller-test
