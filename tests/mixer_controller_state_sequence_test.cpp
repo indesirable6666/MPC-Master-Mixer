@@ -119,5 +119,51 @@ int main() {
     assert(!fullController.setTrackAuxSend(2, 0, -1));
     assert(fullBridge.pendingCountApprox() == Bridge::kQueueCapacity);
 
+    // Audio In link/unlink is one atomic queue command. A full queue must
+    // leave the producer snapshot untouched, and a retry followed by a rapid
+    // unlink must reach the audio side in FIFO order.
+    Bridge pairBackpressureBridge;
+    mpcmixer::MixerController pairBackpressureController(pairBackpressureBridge);
+    assert(pairBackpressureController.setAudioInputPairChannelGain(0, 40));
+    assert(pairBackpressureController.setAudioInputPairChannelPan(1, 50));
+    for (std::size_t i = pairBackpressureBridge.pendingCountApprox();
+         i < Bridge::kQueueCapacity; ++i)
+        assert(pairBackpressureController.setMasterMute((i & 1u) != 0));
+
+    const auto beforeRejectedLink =
+        pairBackpressureController.desiredStateSnapshot();
+    assert(!pairBackpressureController.setAudioInputPairLinked(true));
+    const auto afterRejectedLink =
+        pairBackpressureController.desiredStateSnapshot();
+    assert(!afterRejectedLink.audioInputLinked);
+    assert(near(afterRejectedLink.audioInputChannels[0].gain,
+                beforeRejectedLink.audioInputChannels[0].gain));
+    assert(near(afterRejectedLink.audioInputChannels[1].pan,
+                beforeRejectedLink.audioInputChannels[1].pan));
+    assert(near(afterRejectedLink.audioInputStereo.gain,
+                beforeRejectedLink.audioInputStereo.gain));
+    assert(pairBackpressureBridge.pendingCountApprox() ==
+           Bridge::kQueueCapacity);
+
+    pairBackpressureBridge.process(noTrackInputs, pairOutputLeft, pairOutputRight, 1);
+    assert(pairBackpressureController.setAudioInputPairLinked(true));
+    assert(pairBackpressureController.setAudioInputPairLinked(false));
+    const auto rapidPairTransitions =
+        pairBackpressureController.desiredStateSnapshot();
+    assert(!rapidPairTransitions.audioInputLinked);
+    assert(near(rapidPairTransitions.audioInputChannels[0].gain, 0.4f));
+    assert(near(rapidPairTransitions.audioInputChannels[1].gain, 0.4f));
+    assert(near(rapidPairTransitions.audioInputChannels[1].pan, 0.5f));
+
+    const float pairBackpressureLeft[1] = {1.0f};
+    const float pairBackpressureRight[1] = {1.0f};
+    pairBackpressureBridge.processWithAudioInputPair(
+        noTrackInputs, pairBackpressureLeft, pairBackpressureRight,
+        pairOutputLeft, pairOutputRight, 1);
+    assert(near(pairOutputLeft[0],
+                0.4f * std::sqrt(0.5f) + 0.4f * 0.5f));
+    assert(near(pairOutputRight[0],
+                0.4f * std::sqrt(0.5f) + 0.4f * std::sqrt(0.75f)));
+
     return 0;
 }
