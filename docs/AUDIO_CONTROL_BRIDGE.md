@@ -10,7 +10,7 @@ call this class directly; a native host/controller will own the bridge.
 
 The framework-neutral `src/mixer/mixer_controller.hpp` maps native UI
 operations to the bridge: track faders, pan, Mute/Solo, four Aux sends, six-band
-EQ (including single-band edits that preserve the other five bands), insert-slot replacement with acknowledgement tickets, Aux returns, and Master gain/mute. Its integer controls are range-checked
+EQ (including single-band edits that preserve the other five bands), insert-slot replacement with acknowledgement tickets (also queryable through `MixerController::isInsertUpdateApplied()`), Aux returns, and Master gain/mute. Its integer controls are range-checked
 before conversion. It keeps producer-side desired-state snapshots for
 all 16 tracks, their six-band EQ settings and two non-owning insert-slot pointers, four Aux returns, and Master gain/mute. Changing one track
 control preserves the other cached track controls; accepted EQ changes update
@@ -46,7 +46,8 @@ single-producer/single-consumer (SPSC) command queue:
   calling the enqueue methods.
 - Insert replacements carry non-owning pointers. The producer keeps the
   previous and replacement objects alive until the returned 32-bit ticket is
-  acknowledged by `hasApplied()`. The acknowledgement is published after the
+  acknowledged by `hasApplied()` (or the controller's
+  `isInsertUpdateApplied(ticket)` helper). The acknowledgement is published after the
   pointer swap at the block boundary; only then may the producer destroy the
   previous object. Never allocate, delete, or wait for acknowledgement in the
   audio callback. Configure an effect before enqueueing it and do not mutate it
