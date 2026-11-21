@@ -3,6 +3,7 @@
 #include "audio_meter_ui_consumer.hpp"
 
 #include <array>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 
