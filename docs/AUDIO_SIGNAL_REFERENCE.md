@@ -43,3 +43,20 @@ measured in `audio_engine_test`.
 All tests are host/offline only. They do not open audio devices, use ALSA, send
 MIDI, or communicate with an MPC. A target-device build and physical audio
 validation remain separate steps requiring explicit authorization.
+
+
+## Six-band EQ frequency-response validation
+
+`tests/audio_eq_frequency_response_test.cpp` sends steady-state sine waves
+through each of the six parametric bands independently at that band's centre
+frequency. Both +6 dB boost and -6 dB cut are checked against their expected
+linear amplitude ratios with small floating-point tolerances.
+
+The same test also processes a sine through the actual `AudioEngine` track
+path with a +6 dB EQ band, an enabled 0.5x Gain insert, a 0.8x track fader,
+and centre equal-power pan. Its left output RMS is checked against the
+combined expected gain. This covers the EQ-before-insert ordering and the
+subsequent fader/pan stages together.
+
+These tests are deterministic host-side DSP checks. They do not render through
+a browser, open a device, or establish the sound of a physical MPC output.
