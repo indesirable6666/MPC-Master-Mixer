@@ -21,7 +21,8 @@ Audio callback
   -> UI/control thread
      AudioMeterUiConsumer::tick(elapsedSeconds)
      drains queued frames, applies peak hold/decay, retains newest RMS
-  -> host presentation adapter (not implemented)
+  -> MeterPresentationAdapter::tick() on the UI/control thread
+  -> MeterPresentationSink::present() with an owned-value frame
   -> concrete UI framework / embedded browser (not selected)
 ```
 
@@ -31,22 +32,27 @@ single UI/control consumer may drain the SPSC queue.
 
 ## Presentation frame contract
 
-A future adapter should publish one complete frame containing:
+`MeterPresentationAdapter` now publishes one complete value frame containing:
 
-- `sequence`: the monotonically increasing audio block sequence number;
+- `sequence`: a monotonically increasing presentation sequence (also advances
+  on decay-only UI ticks, so strict UI consumers accept every visual update);
+- `sourceBlockSequence`: the latest audio block sequence incorporated;
 - `channels`: exactly 17 entries, tracks 1–16 followed by Master;
 - each entry: finite normalized `peak` and `rms` values in [0, 1].
 
 The UI consumer is the source of presentation state: peak hold and decay come
 from `AudioMeterUiConsumer` / `MeterModel`, not from a second independently
-implemented timer in the host. The presentation adapter should copy the
-17-channel frame into UI-owned values before returning; it must not expose
-references to queue storage or retain pointers into a temporary snapshot.
+implemented timer in the host. `MeterPresentationAdapter` copies the 17-channel
+state into a `MeterPresentationFrame` before calling the sink; it never exposes
+references to queue storage. A sink that enqueues asynchronous UI work must
+copy that frame before returning.
 
 The browser prototype currently validates the sequence, channel count and
 numeric ranges before updating meters. A native wrapper that dispatches
-`mpc-meter-snapshot` must do so on the browser's owning/UI thread and pass a
-single complete frame. It should coalesce pending presentation work rather
+`mpc-meter-snapshot` can implement `MeterPresentationSink`; it must do so on
+the browser's owning/UI thread and pass a single complete frame. The adapter's
+presentation `sequence` is the field to forward as the browser event sequence;
+`sourceBlockSequence` is diagnostic metadata. It should coalesce pending presentation work rather
 than queue an unbounded number of JavaScript tasks.
 
 ## Refresh and overload policy
@@ -91,7 +97,9 @@ Do not implement a concrete transport until repository evidence identifies:
 - a host-side test strategy for startup, shutdown, dropped frames, stale
   sequence numbers and UI-thread affinity.
 
-The target UI framework and launch path remain unverified. The ARMv7 CI profile
+The target UI framework and launch path remain unverified. The abstract
+sink and fake-sink test are host-side only; no concrete UI or IPC transport has
+been selected. The ARMv7 CI profile
 is a cross-compilation check, not proof that a binary can run on the MPC Live II.
 
 ## Validation scope
