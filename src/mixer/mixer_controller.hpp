@@ -22,6 +22,7 @@ public:
         AudioEngine::Track controls{};
         std::array<SixBandEq::BandParameters, SixBandEq::kBandCount> eq =
             SixBandEq::defaultBandParameters();
+        std::array<AudioInsert*, InsertChain::kSlotCount> inserts{};
     };
 
     struct DesiredStateSnapshot {
@@ -99,6 +100,18 @@ public:
         return true;
     }
 
+    // Insert objects are non-owning. Keep the current and replacement
+    // objects alive until bridge.hasApplied(ticket) confirms the block-boundary
+    // swap; retire the old object only on this control thread after that ack.
+    bool setTrackInsert(std::size_t track, std::size_t slot,
+                        AudioInsert* effect, std::uint32_t& ticket) noexcept {
+        if (track >= AudioEngine::kTrackCount ||
+            slot >= InsertChain::kSlotCount) return false;
+        if (!bridge_.enqueueTrackInsert(track, slot, effect, ticket)) return false;
+        inserts_[track][slot] = effect;
+        return true;
+    }
+
     bool setAuxReturn(std::size_t bus,
                       const AudioEngine::AuxReturn& state) noexcept {
         if (bus >= AudioEngine::kAuxBusCount) return false;
@@ -144,6 +157,7 @@ public:
         for (std::size_t track = 0; track < AudioEngine::kTrackCount; ++track) {
             snapshot.tracks[track].controls = tracks_[track];
             snapshot.tracks[track].eq = eqBands_[track];
+            snapshot.tracks[track].inserts = inserts_[track];
         }
         snapshot.auxReturns = auxReturns_;
         snapshot.masterGain = masterGain_;
@@ -172,6 +186,8 @@ private:
     std::array<AudioEngine::Track, AudioEngine::kTrackCount> tracks_{};
     std::array<std::array<SixBandEq::BandParameters, SixBandEq::kBandCount>,
                AudioEngine::kTrackCount> eqBands_{};
+    std::array<std::array<AudioInsert*, InsertChain::kSlotCount>,
+               AudioEngine::kTrackCount> inserts_{};
     std::array<AudioEngine::AuxReturn, AudioEngine::kAuxBusCount> auxReturns_{};
     float masterGain_ = 1.0f;
     bool masterMute_ = false;
