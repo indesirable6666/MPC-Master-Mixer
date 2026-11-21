@@ -109,3 +109,19 @@ that decrement from elapsed time rather than assume a fixed frame rate.
 Until those gates are completed, meters are software models and helpers only.
 They must not be described as live MPC input/output meters.
 \nThe UI consumer is `src/mixer/audio_meter_ui_consumer.hpp`. Its `tick()`\nmethod is intended for the serialized UI/control thread; it never runs on the\naudio callback. The default peak decay is 2.5 normalized amplitude units per\nsecond and can be configured at construction. RMS follows the newest accepted\nsnapshot, while peak hold observes every drained snapshot.\n
+## Browser prototype presentation seam
+
+`prototype/index.html` accepts a host-embedding event named
+`mpc-meter-snapshot` with `detail = { sequence, channels }.
+`sequence` must be a strictly increasing safe integer. `channels`
+must contain exactly 17 objects in order: tracks 1–16 followed by Master.
+Each object carries finite normalized `peak` and `rms` values in
+[0,1]. Invalid, stale, incomplete, or out-of-range snapshots are ignored.
+An incoming host snapshot stops the synthetic meter demo.
+
+This is only a presentation/integration seam for a future embedding wrapper.
+It is **not** a native IPC transport, does not connect the C++ snapshot queue
+to the browser, and does not capture live MPC audio. The browser remains a
+simulation until a supported host process and transport are implemented.
+The prototype test suite covers all 17 channels, Master clip indication,
+sequence rejection, and malformed payload rejection.
