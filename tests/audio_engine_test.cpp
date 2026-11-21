@@ -562,6 +562,13 @@ int main() {
     assert(near(controller.desiredTrack(2).pan, -0.5f));
     assert(controller.desiredTrack(2).mute && controller.desiredTrack(2).solo);
     assert(near(controller.desiredTrack(2).auxSend[3], 0.75f));
+    mpcmixer::SoftClipInsert controllerInsert;
+    assert(controllerInsert.setDrive(1.8f));
+    controllerInsert.setEnabled(true);
+    std::uint32_t controllerInsertTicket = 0;
+    assert(controller.setTrackInsert(2, 1, &controllerInsert, controllerInsertTicket));
+    assert(!controllerBridge.hasApplied(controllerInsertTicket));
+    assert(!controller.setTrackInsert(2, 2, &controllerInsert, controllerInsertTicket));
     assert(controller.setMasterFader(100));
     assert(controller.setMasterMute(true));
     assert(near(controller.desiredMasterGain(), 1.0f));
@@ -571,6 +578,7 @@ int main() {
     const auto desiredSnapshot = controller.desiredStateSnapshot();
     assert(near(desiredSnapshot.tracks[2].controls.gain, 1.27f));
     assert(near(desiredSnapshot.tracks[2].eq[1].gainDb, 4.0f));
+    assert(desiredSnapshot.tracks[2].inserts[1] == &controllerInsert);
     assert(near(desiredSnapshot.auxReturns[1].gain, 0.75f));
     assert(near(desiredSnapshot.masterGain, 1.0f));
     assert(desiredSnapshot.masterMute);
@@ -590,6 +598,7 @@ int main() {
     assert(near(controllerBridge.engineOnAudioThread().auxReturn(1).balance, -0.25f));
     assert(near(controllerBridge.engineOnAudioThread().trackEq(2).bandParameters(1).gainDb, 4.0f));
     assert(near(controllerBridge.engineOnAudioThread().trackEq(2).bandParameters(4).gainDb, 2.5f));
+    assert(controllerBridge.hasApplied(controllerInsertTicket));
     // A full queue does not advance the controller's cached desired state.
     mpcmixer::AudioEngineCommandBridge controllerFullBridge;
     mpcmixer::MixerController fullController(controllerFullBridge);
@@ -603,6 +612,11 @@ int main() {
     assert(near(fullController.desiredMasterGain(), 1.0f));
     assert(!fullController.setMasterMute(true));
     assert(!fullController.desiredMasterMute());
+    mpcmixer::SoftClipInsert rejectedInsert;
+    std::uint32_t rejectedInsertTicket = 123u;
+    assert(!fullController.setTrackInsert(0, 0, &rejectedInsert, rejectedInsertTicket));
+    assert(fullController.desiredStateSnapshot().tracks[0].inserts[0] == nullptr);
+    assert(rejectedInsertTicket == 123u);
     auto fullQueueEq = mpcmixer::SixBandEq::defaultBandParameters();
     fullQueueEq[0].gainDb = 3.0f;
     assert(!fullController.setTrackEq(0, 48000.0f, fullQueueEq));
