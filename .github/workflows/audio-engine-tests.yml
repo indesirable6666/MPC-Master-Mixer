@@ -16,6 +16,7 @@ on:
       - "tests/audio_aux_control_bridge_test.cpp"
       - "tests/audio_control_bridge_queue_lifecycle_test.cpp"
       - "tests/mixer_controller_state_sequence_test.cpp"
+      - "tests/mixer_mute_solo_order_test.cpp"
       - "tests/mixer_ui_command_dispatcher_test.cpp"
       - "tests/meter_model_test.cpp"
       - "tests/audio_block_meter_test.cpp"
@@ -31,6 +32,7 @@ on:
       - "tests/audio_signal_reference_test.cpp"
       - "tests/fixtures/audio_signal_reference.csv"
       - "tests/mixer_controller_test.cpp"
+      - "tests/mixer_mute_solo_order_test.cpp"
       - "tests/mixer_presentation_snapshot_test.cpp"
       - "tests/mixer_presentation_all_tracks_test.cpp"
       - "tests/mixer_ui_command_dispatcher_test.cpp"
@@ -105,6 +107,10 @@ jobs:
         run: g++ -std=c++14 -Wall -Wextra -Werror -pedantic tests/audio_control_bridge_queue_lifecycle_test.cpp -o audio-control-bridge-queue-lifecycle-test
       - name: Run SPSC bridge queue lifecycle tests
         run: ./audio-control-bridge-queue-lifecycle-test
+      - name: Compile Mute/Solo command ordering tests
+        run: g++ -std=c++14 -Wall -Wextra -Werror -pedantic tests/mixer_mute_solo_order_test.cpp -o mixer-mute-solo-order-test
+      - name: Run Mute/Solo command ordering tests
+        run: ./mixer-mute-solo-order-test
       - name: Compile mixer controller state sequence tests
         run: g++ -std=c++14 -Wall -Wextra -Werror -pedantic tests/mixer_controller_state_sequence_test.cpp -o mixer-controller-state-sequence-test
       - name: Run mixer controller state sequence tests
