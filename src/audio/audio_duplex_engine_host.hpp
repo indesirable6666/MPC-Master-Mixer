@@ -75,8 +75,12 @@ public:
         // prepared capacity: their actual allocation length is not knowable.
         if (maxFramesPerBlock_ == 0 || block.frameCount > maxFramesPerBlock_)
             return;
-        if (block.outputChannels == nullptr || block.outputChannelCount != 2)
+        if (block.outputChannels == nullptr)
             return;
+        if (block.outputChannelCount != 2) {
+            silence(block);
+            return;
+        }
         for (std::size_t channel = 0; channel < 2; ++channel) {
             if (block.outputChannels[channel] == nullptr) {
                 silence(block);
@@ -110,7 +114,10 @@ public:
     }
 
     static void silence(const AudioDuplexBuffer& block) noexcept {
-        for (std::size_t channel = 0; channel < 2; ++channel) {
+        if (block.outputChannels == nullptr) return;
+        const std::size_t availableChannels =
+            block.outputChannelCount < 2 ? block.outputChannelCount : 2;
+        for (std::size_t channel = 0; channel < availableChannels; ++channel) {
             if (block.outputChannels[channel] == nullptr) continue;
             for (std::size_t frame = 0; frame < block.frameCount; ++frame)
                 block.outputChannels[channel][frame] = 0.0f;
