@@ -69,3 +69,8 @@ Do not patch or replace the MPC executable, alter services or startup scripts, m
 ## Next engineering milestone
 
 Keep the framework-neutral sink contract. The next useful step is to collect documentary evidence for the target SDK and the JUCE/runtime clue (version, headers, libraries, build entry point, license and launch model). If no supported cooperative host can be established, continue with portable model/controller tests and the browser prototype rather than inventing a native integration. Add a concrete sink only after the host runtime, target SDK, presentation path, and lifecycle have been established with evidence.
+
+
+## JUCE follow-up
+
+The reported JUCE lock-file clue is assessed separately in [JUCE_FEASIBILITY.md](JUCE_FEASIBILITY.md). JUCE remains an unselected candidate until its exact version, independent SDK, target build configuration, license suitability, launch path, cooperative display integration, and touch-input path are established.
