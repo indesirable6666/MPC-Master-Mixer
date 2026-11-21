@@ -70,7 +70,10 @@ public:
         if (block.outputChannels == nullptr || block.outputChannelCount != 2)
             return;
         for (std::size_t channel = 0; channel < 2; ++channel) {
-            if (block.outputChannels[channel] == nullptr) return;
+            if (block.outputChannels[channel] == nullptr) {
+                silence(block);
+                return;
+            }
         }
         if (block.inputChannelCount > inputTrack_.size() ||
             (block.inputChannelCount != 0 && block.inputChannels == nullptr)) {
