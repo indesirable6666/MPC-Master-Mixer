@@ -38,14 +38,14 @@ int main() {
 
     // A later edit to one strip must not mutate an already-published frame
     // or disturb any other strip's desired state.
-    assert(controller.setTrackMute(7, false));
-    assert(controller.setTrackSolo(7, true));
+    assert(controller.setTrackMute(7, true));
+    assert(controller.setTrackSolo(7, false));
     const auto next = publisher.publish();
     assert(next.sequence == 2);
     assert(frame.tracks[7].mute == false); // track 7 was odd: initially false
     assert(frame.tracks[7].solo == true);  // track 7 % 3 == 1
-    assert(next.tracks[7].mute == false);
-    assert(next.tracks[7].solo == true);
+    assert(next.tracks[7].mute == true);
+    assert(next.tracks[7].solo == false);
     assert(next.masterFaderValue == frame.masterFaderValue);
     assert(next.masterMute == frame.masterMute);
     for (std::size_t track = 0; track < mpcmixer::AudioEngine::kTrackCount; ++track) {
