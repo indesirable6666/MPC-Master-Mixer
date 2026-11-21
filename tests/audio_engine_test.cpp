@@ -567,7 +567,7 @@ int main() {
     controllerInsert.setEnabled(true);
     std::uint32_t controllerInsertTicket = 0;
     assert(controller.setTrackInsert(2, 1, &controllerInsert, controllerInsertTicket));
-    assert(!controllerBridge.hasApplied(controllerInsertTicket));
+    assert(!controller.isInsertUpdateApplied(controllerInsertTicket));
     assert(!controller.setTrackInsert(2, 2, &controllerInsert, controllerInsertTicket));
     assert(controller.setMasterFader(100));
     assert(controller.setMasterMute(true));
@@ -598,7 +598,7 @@ int main() {
     assert(near(controllerBridge.engineOnAudioThread().auxReturn(1).balance, -0.25f));
     assert(near(controllerBridge.engineOnAudioThread().trackEq(2).bandParameters(1).gainDb, 4.0f));
     assert(near(controllerBridge.engineOnAudioThread().trackEq(2).bandParameters(4).gainDb, 2.5f));
-    assert(controllerBridge.hasApplied(controllerInsertTicket));
+    assert(controller.isInsertUpdateApplied(controllerInsertTicket));
     // A full queue does not advance the controller's cached desired state.
     mpcmixer::AudioEngineCommandBridge controllerFullBridge;
     mpcmixer::MixerController fullController(controllerFullBridge);
