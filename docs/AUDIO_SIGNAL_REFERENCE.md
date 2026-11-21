@@ -98,3 +98,19 @@ buffers, preventing an internal Aux feedback loop.
 
 This is deterministic host-side DSP coverage only. It does not connect an
 external effect, open an audio device, or validate physical MPC routing.
+
+
+## Aux control bridge validation
+
+`tests/audio_aux_control_bridge_test.cpp` exercises the producer-side
+`MixerController` and the SPSC `AudioEngineCommandBridge` together. It queues
+independent levels for all four sends on one track, updates two independent
+returns, and verifies that the complete command sequence becomes visible at
+the next audio block boundary. It then changes only selected sends and mutes
+one return to verify that untouched buses retain their previous state.
+
+The test also checks invalid return rejection and queue saturation. A failed
+enqueue must not update the controller's desired return state; after the queue
+drains, the same update can be published and is applied by the next block.
+All buffers are synthetic and processed offline; this does not test device
+I/O, external effects hardware, or MPC routing.
