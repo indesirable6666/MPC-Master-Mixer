@@ -30,6 +30,9 @@ public:
         std::array<AudioEngine::AuxReturn, AudioEngine::kAuxBusCount> auxReturns{};
         float masterGain = 1.0f;
         bool masterMute = false;
+        AudioInputPair::StereoControls audioInputStereo{};
+        std::array<AudioInputPair::Channel, 2> audioInputChannels{};
+        bool audioInputLinked = false;
     };
 
     explicit MixerController(AudioEngineCommandBridge& bridge) noexcept
@@ -153,6 +156,74 @@ public:
         return true;
     }
 
+    bool setAudioInputPairLinked(bool linked) noexcept {
+        if (!bridge_.enqueueAudioInputPairLinked(linked)) return false;
+        audioInputLinked_ = linked;
+        return true;
+    }
+
+    bool setAudioInputPairStereoGain(int value) noexcept {
+        if (value < 0 || value > kFaderMaximum) return false;
+        auto next = audioInputStereo_;
+        next.gain = static_cast<float>(value) / 100.0f;
+        if (!bridge_.enqueueAudioInputPairStereoControls(next)) return false;
+        audioInputStereo_ = next;
+        return true;
+    }
+
+    bool setAudioInputPairBalance(int value) noexcept {
+        if (value < kPanMinimum || value > kPanMaximum) return false;
+        auto next = audioInputStereo_;
+        next.balance = static_cast<float>(value) / 100.0f;
+        if (!bridge_.enqueueAudioInputPairStereoControls(next)) return false;
+        audioInputStereo_ = next;
+        return true;
+    }
+
+    bool setAudioInputPairStereoMute(bool muted) noexcept {
+        auto next = audioInputStereo_;
+        next.mute = muted;
+        if (!bridge_.enqueueAudioInputPairStereoControls(next)) return false;
+        audioInputStereo_ = next;
+        return true;
+    }
+
+    bool setAudioInputPairChannelGain(std::size_t side, int value) noexcept {
+        if (side >= 2 || value < 0 || value > kFaderMaximum) return false;
+        auto next = audioInputChannels_[side];
+        next.gain = static_cast<float>(value) / 100.0f;
+        if (!bridge_.enqueueAudioInputPairChannel(side, next)) return false;
+        audioInputChannels_[side] = next;
+        return true;
+    }
+
+    bool setAudioInputPairChannelPan(std::size_t side, int value) noexcept {
+        if (side >= 2 || value < kPanMinimum || value > kPanMaximum) return false;
+        auto next = audioInputChannels_[side];
+        next.pan = static_cast<float>(value) / 100.0f;
+        if (!bridge_.enqueueAudioInputPairChannel(side, next)) return false;
+        audioInputChannels_[side] = next;
+        return true;
+    }
+
+    bool setAudioInputPairChannelMute(std::size_t side, bool muted) noexcept {
+        if (side >= 2) return false;
+        auto next = audioInputChannels_[side];
+        next.mute = muted;
+        if (!bridge_.enqueueAudioInputPairChannel(side, next)) return false;
+        audioInputChannels_[side] = next;
+        return true;
+    }
+
+    bool setAudioInputPairChannelSolo(std::size_t side, bool soloed) noexcept {
+        if (side >= 2) return false;
+        auto next = audioInputChannels_[side];
+        next.solo = soloed;
+        if (!bridge_.enqueueAudioInputPairChannel(side, next)) return false;
+        audioInputChannels_[side] = next;
+        return true;
+    }
+
     const AudioEngine::Track& desiredTrack(std::size_t track) const noexcept {
         return tracks_[track < AudioEngine::kTrackCount ? track : 0];
     }
@@ -168,6 +239,14 @@ public:
 
     float desiredMasterGain() const noexcept { return masterGain_; }
     bool desiredMasterMute() const noexcept { return masterMute_; }
+    bool desiredAudioInputPairLinked() const noexcept { return audioInputLinked_; }
+    const AudioInputPair::StereoControls& desiredAudioInputPairStereo() const noexcept {
+        return audioInputStereo_;
+    }
+    const AudioInputPair::Channel& desiredAudioInputPairChannel(
+        std::size_t side) const noexcept {
+        return audioInputChannels_[side < 2 ? side : 0];
+    }
 
     // Copy the complete producer-side UI state. Call on the serialized
     // control thread; this is not a cross-thread/audio-thread snapshot.
@@ -181,6 +260,9 @@ public:
         snapshot.auxReturns = auxReturns_;
         snapshot.masterGain = masterGain_;
         snapshot.masterMute = masterMute_;
+        snapshot.audioInputStereo = audioInputStereo_;
+        snapshot.audioInputChannels = audioInputChannels_;
+        snapshot.audioInputLinked = audioInputLinked_;
         return snapshot;
     }
 
@@ -214,6 +296,9 @@ private:
     std::array<AudioEngine::AuxReturn, AudioEngine::kAuxBusCount> auxReturns_{};
     float masterGain_ = 1.0f;
     bool masterMute_ = false;
+    AudioInputPair::StereoControls audioInputStereo_{};
+    std::array<AudioInputPair::Channel, 2> audioInputChannels_{};
+    bool audioInputLinked_ = false;
 };
 
 } // namespace mpcmixer
