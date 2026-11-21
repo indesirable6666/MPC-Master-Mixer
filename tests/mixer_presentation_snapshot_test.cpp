@@ -18,6 +18,10 @@ int main() {
     assert(!initial.tracks[0].mute);
     assert(!initial.tracks[0].solo);
     assert(!initial.tracks[0].hasInsert[0]);
+    assert(!initial.audioInputPair.linked);
+    assert(initial.audioInputPair.stereoGainValue == 100);
+    assert(initial.audioInputPair.balancePercent == 0);
+    assert(initial.audioInputPair.channels[0].gainValue == 100);
 
     assert(controller.setTrackFader(5, 73));
     assert(controller.setTrackPan(5, -35));
@@ -41,6 +45,14 @@ int main() {
     assert(controller.setAuxReturn(2, aux));
     assert(controller.setMasterFader(88));
     assert(controller.setMasterMute(true));
+    assert(controller.setAudioInputPairLinked(true));
+    assert(controller.setAudioInputPairStereoGain(77));
+    assert(controller.setAudioInputPairBalance(-35));
+    assert(controller.setAudioInputPairStereoMute(true));
+    assert(controller.setAudioInputPairChannelGain(0, 62));
+    assert(controller.setAudioInputPairChannelPan(0, -45));
+    assert(controller.setAudioInputPairChannelMute(1, true));
+    assert(controller.setAudioInputPairChannelSolo(1, true));
 
     const auto changed = publisher.publish();
     assert(changed.sequence == 2);
@@ -59,6 +71,14 @@ int main() {
     assert(changed.auxReturns[2].mute);
     assert(changed.masterFaderValue == 88);
     assert(changed.masterMute);
+    assert(changed.audioInputPair.linked);
+    assert(changed.audioInputPair.stereoGainValue == 77);
+    assert(changed.audioInputPair.balancePercent == -35);
+    assert(changed.audioInputPair.stereoMute);
+    assert(changed.audioInputPair.channels[0].gainValue == 62);
+    assert(changed.audioInputPair.channels[0].panPercent == -45);
+    assert(changed.audioInputPair.channels[1].mute);
+    assert(changed.audioInputPair.channels[1].solo);
 
     // Presentation is a copy: later edits do not mutate a previously
     // published frame, and the snapshot carries no insert object pointers.
@@ -86,6 +106,8 @@ int main() {
     }
     const auto beforeRejectedEdit = fullPublisher.publish();
     assert(!fullController.setTrackFader(1, 65));
+    assert(!fullController.setAudioInputPairLinked(true));
+    assert(!fullController.desiredAudioInputPairLinked());
     const auto afterRejectedEdit = fullPublisher.publish();
     assert(afterRejectedEdit.sequence == beforeRejectedEdit.sequence + 1);
     assert(afterRejectedEdit.tracks[1].faderValue ==
