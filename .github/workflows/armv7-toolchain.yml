@@ -11,6 +11,9 @@ on:
       - "tests/audio_block_meter_test.cpp"
       - "tests/audio_meter_snapshot_bridge_test.cpp"
       - "tests/audio_duplex_meter_tap_test.cpp"
+      - "tests/audio_input_pair_host_test.cpp"
+      - "tests/audio_native_signal_scenarios_test.cpp"
+      - "tests/audio_signal_reference_test.cpp"
       - "tests/audio_meter_ui_consumer_test.cpp"
       - "tests/meter_presentation_adapter_test.cpp"
       - "tests/audio_meter_end_to_end_test.cpp"
@@ -71,6 +74,18 @@ jobs:
           arm-linux-gnueabihf-g++ $COMMON_FLAGS -std=c++14 \
             -Isrc/audio tests/audio_engine_test.cpp \
             -o build/mpc-audio-engine-test-armv7
+
+          arm-linux-gnueabihf-g++ $COMMON_FLAGS -std=c++14 \
+            tests/audio_input_pair_host_test.cpp \
+            -o build/mpc-audio-input-pair-host-test-armv7
+
+          arm-linux-gnueabihf-g++ $COMMON_FLAGS -std=c++14 \
+            tests/audio_native_signal_scenarios_test.cpp \
+            -o build/mpc-audio-native-signal-scenarios-test-armv7
+
+          arm-linux-gnueabihf-g++ $COMMON_FLAGS -std=c++14 \
+            tests/audio_signal_reference_test.cpp \
+            -o build/mpc-audio-signal-reference-test-armv7
 
           arm-linux-gnueabihf-g++ $COMMON_FLAGS -std=c++14 \
             tools/audio-engine-benchmark.cpp \
@@ -161,7 +176,7 @@ jobs:
           arm-linux-gnueabihf-g++ -print-file-name=libc.so.6
 
           echo "=== Reject runtime requirements newer than the MPC ==="
-          for binary in build/mpc-arm-probe-cpp build/mpc-arm-graphics-probe-v2 build/mpc-arm-egl-client-extension-probe build/mpc-arm-egl-gbm-symbol-probe build/mpc-arm-gles2-symbol-probe build/mpc-arm-egl-offscreen-pbuffer-probe build/mpc-audio-engine-test-armv7 build/mpc-audio-engine-benchmark-armv7 build/mpc-meter-model-test-armv7 build/mpc-audio-block-meter-test-armv7 build/mpc-audio-meter-snapshot-bridge-test-armv7 build/mpc-audio-duplex-meter-tap-test-armv7 build/mpc-audio-meter-ui-consumer-test-armv7 build/mpc-meter-presentation-adapter-test-armv7 build/mpc-audio-meter-end-to-end-test-armv7 build/mpc-mixer-controller-test-armv7; do
+          for binary in build/mpc-arm-probe-cpp build/mpc-arm-graphics-probe-v2 build/mpc-arm-egl-client-extension-probe build/mpc-arm-egl-gbm-symbol-probe build/mpc-arm-gles2-symbol-probe build/mpc-arm-egl-offscreen-pbuffer-probe build/mpc-audio-engine-test-armv7 build/mpc-audio-engine-benchmark-armv7 build/mpc-meter-model-test-armv7 build/mpc-audio-block-meter-test-armv7 build/mpc-audio-meter-snapshot-bridge-test-armv7 build/mpc-audio-duplex-meter-tap-test-armv7 build/mpc-audio-meter-ui-consumer-test-armv7 build/mpc-meter-presentation-adapter-test-armv7 build/mpc-audio-meter-end-to-end-test-armv7 build/mpc-mixer-controller-test-armv7 build/mpc-audio-input-pair-host-test-armv7 build/mpc-audio-native-signal-scenarios-test-armv7 build/mpc-audio-signal-reference-test-armv7; do
             if arm-linux-gnueabihf-readelf --version-info "$binary" | \
               grep -E 'GLIBCXX_3\.4\.(29|[3-9][0-9])|GLIBC_2\.(33|[4-9][0-9])'; then
               echo "ERROR: $binary requires a newer runtime than the MPC audit found."
@@ -231,6 +246,27 @@ jobs:
         with:
           name: mpc-armv7-audio-engine-test
           path: build/mpc-audio-engine-test-armv7
+          if-no-files-found: error
+
+      - name: Upload ARMv7 stereo Audio In pair host-test binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: mpc-armv7-audio-input-pair-host-test
+          path: build/mpc-audio-input-pair-host-test-armv7
+          if-no-files-found: error
+
+      - name: Upload ARMv7 native offline signal scenarios test binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: mpc-armv7-native-signal-scenarios-test
+          path: build/mpc-audio-native-signal-scenarios-test-armv7
+          if-no-files-found: error
+
+      - name: Upload ARMv7 shared audio reference test binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: mpc-armv7-audio-signal-reference-test
+          path: build/mpc-audio-signal-reference-test-armv7
           if-no-files-found: error
 
       - name: Upload graphics loader probe v2
