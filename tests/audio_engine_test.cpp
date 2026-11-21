@@ -539,6 +539,7 @@ int main() {
     assert(!controller.setTrackEq(16, 48000.0f, controllerEq));
     controllerEq[1].gainDb = 20.0f;
     assert(!controller.setTrackEq(2, 48000.0f, controllerEq));
+    assert(near(controller.desiredTrackEq(2)[1].gainDb, 4.0f));
     mpcmixer::AudioEngine::AuxReturn controllerReturn;
     controllerReturn.gain = 0.75f;
     controllerReturn.balance = -0.25f;
@@ -589,6 +590,10 @@ int main() {
     assert(near(fullController.desiredMasterGain(), 1.0f));
     assert(!fullController.setMasterMute(true));
     assert(!fullController.desiredMasterMute());
+    auto fullQueueEq = mpcmixer::SixBandEq::defaultBandParameters();
+    fullQueueEq[0].gainDb = 3.0f;
+    assert(!fullController.setTrackEq(0, 48000.0f, fullQueueEq));
+    assert(near(fullController.desiredTrackEq(0)[0].gainDb, 0.0f));
 
     // The duplex host maps physical inputs only through explicit routes.
     mpcmixer::AudioEngineCommandBridge hostedBridge;
