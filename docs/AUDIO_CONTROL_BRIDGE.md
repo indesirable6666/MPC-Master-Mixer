@@ -18,7 +18,10 @@ the corresponding six-band snapshot only after enqueue succeeds. Each snapshot a
 only after its command is successfully enqueued; a full queue therefore leaves
 the previous desired state intact. The controller and bridge must be called
 from the same serialized producer thread. This adapter is not yet connected
-to a widget toolkit or to the browser prototype.
+to a widget toolkit or to the browser prototype. `desiredStateSnapshot()`
+provides a value-copy of the complete producer-side state for a native view to
+render; call it on that same serialized control thread, not from the audio
+callback or an unrelated UI thread.
 
 ## Contract
 
