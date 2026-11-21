@@ -36,6 +36,12 @@ single-producer/single-consumer (SPSC) command queue:
   previous object. Never allocate, delete, or wait for acknowledgement in the
   audio callback. Configure an effect before enqueueing it and do not mutate it
   while the audio thread may process it.
+- Published insert instances are immutable while the audio engine may
+  process them. To change an effect parameter (such as SoftClip drive or enable),
+  configure a replacement instance on the control thread and enqueue it with
+  `enqueueTrackInsert()`. Keep both instances alive until its ticket is
+  acknowledged; only then retire the old instance off the audio thread. Never
+  mutate fields on an active effect from the UI thread.
 
 Use `process`, `processWithAux`, or
 `processWithAuxAndReturns` from the audio thread. Do not call the underlying
