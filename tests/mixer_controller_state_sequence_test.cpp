@@ -149,6 +149,7 @@ int main() {
            Bridge::kQueueCapacity);
 
     pairBackpressureBridge.process(pairNoTrackInputs, pairTransitionOutputLeft, pairTransitionOutputRight, 1);
+    assert(pairBackpressureController.setMasterMute(false));
     assert(pairBackpressureController.setAudioInputPairLinked(true));
     assert(pairBackpressureController.setAudioInputPairLinked(false));
     const auto rapidPairTransitions =
