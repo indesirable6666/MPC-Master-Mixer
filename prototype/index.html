@@ -331,6 +331,8 @@ function setMeterDemo(enabled){
  if(meterTimer!==null){clearInterval(meterTimer);meterTimer=null}
  if(!enabled){
   document.querySelectorAll('.channel').forEach(el=>{el.dataset.peakHold='0';el.dataset.clipLatched='false';renderMeter(el,0,0)});
+ document.querySelectorAll('.meter-row [role="meter"]').forEach((meter,index)=>meter.setAttribute('aria-label',index%2===0?'Peak simulé':'RMS simulé'));
+ document.querySelectorAll('.meter-panel').forEach(panel=>panel.setAttribute('aria-label','Mesures simulées'));
   return;
  }
  meterTimer=setInterval(()=>{
@@ -364,6 +366,8 @@ function updateBrowserAudioMeters(){
  const trackEl=document.querySelector('[data-channel="'+selectedIndex+'"]');
  const masterEl=document.querySelector('[data-channel="master"]');
  if(trackEl)renderMeter(trackEl,peak,rms);
+ document.querySelectorAll('.meter-row [role="meter"]').forEach((meter,index)=>meter.setAttribute('aria-label',index%2===0?'Peak navigateur':'RMS navigateur'));
+ document.querySelectorAll('.meter-panel').forEach(panel=>panel.setAttribute('aria-label','Mesures audio du navigateur'));
  if(masterEl){
   const masterGain=masterState.mute?0:masterState.volume/100;
   renderMeter(masterEl,Math.min(1,peak*masterGain),rms*masterGain);
@@ -396,6 +400,7 @@ function startAudioDemo(){
   return;
  }
  try{
+  if(meterDemo)setMeterDemo(false);
   audioContext=new AudioContextClass();
   audioOscillator=audioContext.createOscillator();
   audioChannelGain=audioContext.createGain();
