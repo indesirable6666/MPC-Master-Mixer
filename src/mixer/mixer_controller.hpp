@@ -84,6 +84,21 @@ public:
         return true;
     }
 
+    // Convenience path for a UI editing one EQ band at a time. The full
+    // six-band configuration is re-enqueued so the audio thread still sees
+    // one atomic prepared configuration at a block boundary.
+    bool setTrackEqBand(
+        std::size_t track, std::size_t band, float sampleRate,
+        const SixBandEq::BandParameters& parameters) noexcept {
+        if (track >= AudioEngine::kTrackCount ||
+            band >= SixBandEq::kBandCount) return false;
+        auto next = eqBands_[track];
+        next[band] = parameters;
+        if (!bridge_.enqueueTrackEq(track, sampleRate, next)) return false;
+        eqBands_[track] = next;
+        return true;
+    }
+
     bool setAuxReturn(std::size_t bus,
                       const AudioEngine::AuxReturn& state) noexcept {
         if (bus >= AudioEngine::kAuxBusCount) return false;
