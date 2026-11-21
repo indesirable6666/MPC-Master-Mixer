@@ -17,8 +17,12 @@ struct AudioDuplexBuffer {
 };
 enum class AudioDuplexStatus { Processed, NotPrepared, InvalidBuffer };
 using AudioProcessCallback = void (*)(void*, const AudioDuplexBuffer&);
-// Lifecycle methods run on the control thread. Implementations must invoke the
-// callback with backend-owned buffers without allocation, locks, logging or waits.
+// Lifecycle methods run on the control thread. A failed prepare() must leave the
+// backend stopped and unprepared, release any partial resources, and guarantee
+// that no callback will be made. After a successful prepare(), stop() must
+// prevent further callbacks before it returns; shutdown() releases prepared
+// resources and is safe after stop(). Implementations must invoke the callback
+// with backend-owned buffers without allocation, locks, logging or waits.
 class AudioDuplexBackend {
 public:
     virtual ~AudioDuplexBackend() = default;
