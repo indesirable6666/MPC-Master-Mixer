@@ -63,6 +63,11 @@ int main() {
     // Presentation is a copy: later edits do not mutate a previously
     // published frame, and the snapshot carries no insert object pointers.
     assert(controller.setTrackFader(5, 50));
+    const float* inputs[mpcmixer::AudioEngine::kTrackCount]{};
+    float outputLeft[1]{};
+    float outputRight[1]{};
+    bridge.process(inputs, outputLeft, outputRight, 1);
+    assert(controller.isInsertUpdateApplied(ticket));
     assert(controller.setTrackInsert(5, 1, nullptr, ticket));
     assert(changed.tracks[5].faderPercent == 73);
     assert(changed.tracks[5].hasInsert[1]);
