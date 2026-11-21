@@ -491,7 +491,7 @@ test('audio demo button clearly reports when browser Web Audio is unavailable', 
 });
 
 test('shared audio reference fixture defines browser/native equal-power expectations', () => {
-  const fixture = fs.readFileSync('tests/fixtures/audio_signal_reference.csv', 'utf8').trim().split(/\\r?\\n/);
+  const fixture = fs.readFileSync('tests/fixtures/audio_signal_reference.csv', 'utf8').trim().split(/\r?\n/);
   assert.equal(fixture[0], 'scenario,track_gain,pan,master_gain,track_mute,master_mute,expected_left_gain,expected_right_gain,expected_master_peak');
   const scenarios = fixture.slice(1).map(line => {
     const [name, trackGain, pan, masterGain, trackMute, masterMute,
