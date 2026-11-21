@@ -61,6 +61,19 @@ public:
         return publishTrack(track, next);
     }
 
+    bool setTrackEq(
+        std::size_t track, float sampleRate,
+        const std::array<SixBandEq::BandParameters, SixBandEq::kBandCount>& bands) noexcept {
+        if (track >= AudioEngine::kTrackCount) return false;
+        return bridge_.enqueueTrackEq(track, sampleRate, bands);
+    }
+
+    bool setAuxReturn(std::size_t bus,
+                      const AudioEngine::AuxReturn& state) noexcept {
+        if (bus >= AudioEngine::kAuxBusCount) return false;
+        return bridge_.enqueueAuxReturn(bus, state);
+    }
+
     bool setMasterFader(int value) noexcept {
         if (value < 0 || value > kFaderMaximum) return false;
         return bridge_.enqueueMasterGain(static_cast<float>(value) / 100.0f);
