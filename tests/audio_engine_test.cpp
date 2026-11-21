@@ -533,9 +533,12 @@ int main() {
     assert(controller.setTrackMute(2, true));
     assert(controller.setTrackSolo(2, true));
     assert(controller.setTrackAuxSend(2, 3, 75));
-    assert(!controller.setTrackFader(2, 128));\n    assert(!controller.setTrackFader(2, -1));
-    assert(!controller.setTrackPan(2, 101));\n    assert(!controller.setTrackPan(2, -101));
-    assert(!controller.setTrackAuxSend(2, 4, 101));\n    assert(!controller.setTrackAuxSend(2, 0, -1));
+    assert(!controller.setTrackFader(2, 128));
+    assert(!controller.setTrackFader(2, -1));
+    assert(!controller.setTrackPan(2, 101));
+    assert(!controller.setTrackPan(2, -101));
+    assert(!controller.setTrackAuxSend(2, 4, 101));
+    assert(!controller.setTrackAuxSend(2, 0, -1));
     assert(!controller.setTrackAuxSend(16, 0, 50));
     assert(controller.setMasterFader(100));
     assert(controller.setMasterMute(true));
