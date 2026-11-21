@@ -12,7 +12,7 @@ constexpr std::size_t kWarmupFrames = 24000;
 constexpr std::size_t kMeasureFrames = 48000;
 
 template <typename Processor>
-float measureRatio(Processor& processor, float frequencyHz) {
+float measureRatio(Processor processor, float frequencyHz) {
     double inputEnergy = 0.0;
     double outputEnergy = 0.0;
     for (std::size_t frame = 0;
