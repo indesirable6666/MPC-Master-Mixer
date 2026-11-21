@@ -533,6 +533,17 @@ int main() {
     assert(controller.setTrackMute(2, true));
     assert(controller.setTrackSolo(2, true));
     assert(controller.setTrackAuxSend(2, 3, 75));
+    auto controllerEq = mpcmixer::SixBandEq::defaultBandParameters();
+    controllerEq[1].gainDb = 4.0f;
+    assert(controller.setTrackEq(2, 48000.0f, controllerEq));
+    assert(!controller.setTrackEq(16, 48000.0f, controllerEq));
+    controllerEq[1].gainDb = 20.0f;
+    assert(!controller.setTrackEq(2, 48000.0f, controllerEq));
+    mpcmixer::AudioEngine::AuxReturn controllerReturn;
+    controllerReturn.gain = 0.75f;
+    controllerReturn.balance = -0.25f;
+    assert(controller.setAuxReturn(1, controllerReturn));
+    assert(!controller.setAuxReturn(4, controllerReturn));
     assert(!controller.setTrackFader(2, 128));
     assert(!controller.setTrackFader(2, -1));
     assert(!controller.setTrackPan(2, 101));
@@ -554,6 +565,9 @@ int main() {
     assert(near(controlled.auxSend[3], 0.75f));
     assert(near(controllerBridge.engineOnAudioThread().masterGain(), 1.0f));
     assert(controllerBridge.engineOnAudioThread().masterMute());
+    assert(near(controllerBridge.engineOnAudioThread().auxReturn(1).gain, 0.75f));
+    assert(near(controllerBridge.engineOnAudioThread().auxReturn(1).balance, -0.25f));
+    assert(near(controllerBridge.engineOnAudioThread().trackEq(2).bands()[1].gainDb, 4.0f));
     // A full queue does not advance the controller's cached desired state.
     mpcmixer::AudioEngineCommandBridge controllerFullBridge;
     mpcmixer::MixerController fullController(controllerFullBridge);
