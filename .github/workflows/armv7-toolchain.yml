@@ -97,6 +97,9 @@ jobs:
             -o build/mpc-meter-presentation-adapter-test-armv7
 
           arm-linux-gnueabihf-g++ $COMMON_FLAGS -std=c++14 \
+            tests/audio_meter_end_to_end_test.cpp \\
+            -o build/mpc-audio-meter-end-to-end-test-armv7
+
             tests/meter_model_test.cpp \
             -o build/mpc-meter-model-test-armv7
 
