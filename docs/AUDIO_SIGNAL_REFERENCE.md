@@ -136,3 +136,15 @@ it does not exercise the touchscreen, device audio, or physical MPC.
 `tests/mixer_ui_command_dispatcher_test.cpp` drives the transport-neutral UI command dispatcher through interleaved track, EQ, Aux return, Master, and stereo Audio In commands. It checks the published presentation snapshot, rejects zero/replayed/out-of-order sequence numbers and invalid command payloads without changing state, and confirms unsupported insert-toggle commands do not consume a sequence.
 
 The queue-saturation case fills the SPSC bridge, verifies that a rejected command leaves both the controller's desired state and presentation snapshot unchanged, drains the queue at an offline block boundary, and retries the exact same sequence successfully. Increasing sequence gaps are accepted; only non-increasing values are rejected. This test is host/offline only and does not create IPC or communicate with an MPC.
+
+
+## SPSC command bridge queue lifecycle stress test
+
+`tests/audio_control_bridge_queue_lifecycle_test.cpp` repeatedly fills all
+64 command slots, verifies that one additional enqueue is rejected without
+changing the pending count, and drains the queue at a simulated audio block
+boundary. It performs 256 complete ring rotations and checks that the final
+FIFO command is the state applied by the audio engine on every batch, then
+confirms the drained queue remains reusable. This is host/offline validation
+of ring-slot reuse and backpressure only; it does not run concurrent producer
+threads or access an audio device.
