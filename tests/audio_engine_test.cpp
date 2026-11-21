@@ -514,6 +514,23 @@ int main() {
     hostedOutputL[0] = hostedOutputR[0] = 7.0f;
     host.processBlock(hostedBlock);
     assert(near(hostedOutputL[0], 0.0f) && near(hostedOutputR[0], 0.0f));
+    // A routed channel with a missing input buffer must silence both outputs.
+    assert(host.setInputRoute(1, 4));
+    const float* malformedInputs[] = {hostedInputL, nullptr};
+    hostedOutputL[0] = hostedOutputR[0] = 9.0f;
+    mpcmixer::AudioDuplexBuffer missingInputBlock{
+        malformedInputs, hostedOutputs, 2, 2, 2};
+    host.processBlock(missingInputBlock);
+    assert(near(hostedOutputL[0], 0.0f) && near(hostedOutputR[0], 0.0f));
+
+    // If one output plane is missing, any available plane is still silenced.
+    float* malformedOutputs[] = {hostedOutputL, nullptr};
+    hostedOutputL[0] = 9.0f;
+    mpcmixer::AudioDuplexBuffer missingOutputBlock{
+        hostedInputs, malformedOutputs, 2, 2, 2};
+    host.processBlock(missingOutputBlock);
+    assert(near(hostedOutputL[0], 0.0f));
+
     host.stop();
     host.shutdown();
 
