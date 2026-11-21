@@ -132,3 +132,8 @@ to the browser, and does not capture live MPC audio. The browser remains a
 simulation until a supported host process and transport are implemented.
 The prototype test suite covers all 17 channels, Master clip indication,
 sequence rejection, and malformed payload rejection.
+
+
+## Clip indication reset
+
+`AudioMeterUiConsumer` exposes UI-thread-only `resetClip(channel)` and `resetAllClips()` operations. A channel reset clears only that channel's latched clip flag; peak hold and RMS remain unchanged. Invalid channel indices are rejected. The host test covers all 16 tracks plus Master, individual and bulk reset independence, persistence below threshold, and rejection of non-finite or negative measurements. These checks validate the software model only; they do not measure physical audio or device signal age.
