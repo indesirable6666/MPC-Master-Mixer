@@ -8,6 +8,7 @@ on:
       - "tests/audio_engine_test.cpp"
       - "tests/meter_model_test.cpp"
       - "tests/audio_block_meter_test.cpp"
+      - "tests/audio_meter_snapshot_bridge_test.cpp"
       - "tests/mixer_controller_test.cpp"
       - "tools/audio-engine-benchmark.cpp"
       - ".github/workflows/audio-engine-tests.yml"
@@ -38,6 +39,10 @@ jobs:
         run: g++ -std=c++14 -Wall -Wextra -Werror -pedantic tests/audio_block_meter_test.cpp -o audio-block-meter-test
       - name: Run audio block meter tests
         run: ./audio-block-meter-test
+      - name: Compile audio meter snapshot bridge tests
+        run: g++ -std=c++14 -Wall -Wextra -Werror -pedantic tests/audio_meter_snapshot_bridge_test.cpp -o audio-meter-snapshot-bridge-test
+      - name: Run audio meter snapshot bridge tests
+        run: ./audio-meter-snapshot-bridge-test
       - name: Compile meter model tests
         run: g++ -std=c++14 -Wall -Wextra -Werror -pedantic tests/meter_model_test.cpp -o meter-model-test
       - name: Run meter model tests
