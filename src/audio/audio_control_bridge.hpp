@@ -93,6 +93,37 @@ public:
         return enqueue(command);
     }
 
+    bool enqueueAudioInputPairChannel(
+        std::size_t side, const AudioInputPair::Channel& state) noexcept {
+        if (side >= 2 || !std::isfinite(state.gain) ||
+            !std::isfinite(state.pan) || state.gain < 0.0f ||
+            state.gain > AudioEngine::kMaxFaderGain ||
+            state.pan < -1.0f || state.pan > 1.0f) return false;
+        Command command;
+        command.type = CommandType::AudioInputPairChannel;
+        command.index = side;
+        command.inputPairChannel = state;
+        return enqueue(command);
+    }
+
+    bool enqueueAudioInputPairStereoControls(
+        const AudioInputPair::StereoControls& state) noexcept {
+        if (!std::isfinite(state.gain) || !std::isfinite(state.balance) ||
+            state.gain < 0.0f || state.gain > AudioEngine::kMaxFaderGain ||
+            state.balance < -1.0f || state.balance > 1.0f) return false;
+        Command command;
+        command.type = CommandType::AudioInputPairStereoControls;
+        command.inputPairStereo = state;
+        return enqueue(command);
+    }
+
+    bool enqueueAudioInputPairLinked(bool linked) noexcept {
+        Command command;
+        command.type = CommandType::AudioInputPairLinked;
+        command.flag = linked;
+        return enqueue(command);
+    }
+
     // These methods are audio-thread-only. Pending commands are applied in
     // FIFO order at the block boundary, so no setter races process().
     void process(const float* const inputs[AudioEngine::kTrackCount],
@@ -100,6 +131,21 @@ public:
                  std::size_t frameCount) noexcept {
         applyPending();
         engine_.process(inputs, outputLeft, outputRight, frameCount);
+    }
+
+    // Dedicated stereo Audio In mix-in. Pair controls are applied at the same
+    // block boundary as track and Master commands; the shared Master stage is
+    // also applied to the pair before it is added to the main stereo output.
+    void processWithAudioInputPair(
+        const float* const inputs[AudioEngine::kTrackCount],
+        const float* inputLeft, const float* inputRight,
+        float* outputLeft, float* outputRight,
+        std::size_t frameCount) noexcept {
+        applyPending();
+        engine_.process(inputs, outputLeft, outputRight, frameCount);
+        audioInputPair_.processAndMix(
+            inputLeft, inputRight, outputLeft, outputRight, frameCount,
+            engine_.masterGain(), engine_.masterMute());
     }
 
     void processWithAux(
@@ -137,7 +183,8 @@ public:
 
 private:
     enum class CommandType : std::uint8_t {
-        Track, TrackEq, TrackInsert, AuxReturn, MasterGain, MasterMute
+        Track, TrackEq, TrackInsert, AuxReturn, MasterGain, MasterMute,
+        AudioInputPairChannel, AudioInputPairStereoControls, AudioInputPairLinked
     };
 
     struct Command {
@@ -149,6 +196,8 @@ private:
         AudioEngine::Track track{};
         SixBandEq::PreparedConfiguration eq{};
         AudioEngine::AuxReturn auxReturn{};
+        AudioInputPair::Channel inputPairChannel{};
+        AudioInputPair::StereoControls inputPairStereo{};
         float value = 0.0f;
         bool flag = false;
     };
@@ -212,6 +261,15 @@ private:
             case CommandType::MasterMute:
                 engine_.setMasterMute(command.flag);
                 break;
+            case CommandType::AudioInputPairChannel:
+                audioInputPair_.setChannel(command.index, command.inputPairChannel);
+                break;
+            case CommandType::AudioInputPairStereoControls:
+                audioInputPair_.setStereoControls(command.inputPairStereo);
+                break;
+            case CommandType::AudioInputPairLinked:
+                audioInputPair_.setLinked(command.flag);
+                break;
             }
             appliedSequence_.store(command.sequence, std::memory_order_release);
         }
@@ -224,6 +282,7 @@ private:
     alignas(64) std::atomic<std::uint32_t> tail_{0};
     alignas(64) std::atomic<std::uint32_t> appliedSequence_{0};
     AudioEngine engine_{};
+    AudioInputPair audioInputPair_{};
 };
 
 } // namespace mpcmixer
