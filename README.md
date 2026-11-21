@@ -6,6 +6,7 @@ Touchscreen mixer project for the Akai MPC Live II.
 
 - Browser-based tactile UI prototype in `prototype/index.html` (local demo state only).
 - Portable C++14 DSP and mixer-control core with host tests.
+- Framework-neutral mixer presentation snapshots and a validated, sequenced UI command dispatcher (host-side contract only).
 - Native audio meter snapshot, UI consumer and framework-neutral presentation adapter.
 - ARMv7 hard-float cross-compilation probes and test binaries in GitHub Actions.
 
@@ -32,7 +33,7 @@ The benchmark is diagnostic for the build machine only; it is not an MPC perform
 ## Architecture and integration notes
 
 - [Project plan](docs/PROJECT_PLAN.md)
-- [UI architecture and parameter contract](docs/UI_ARCHITECTURE.md)
+- [UI architecture, presentation snapshot and command contract](docs/UI_ARCHITECTURE.md)
 - [Host runtime discovery](docs/HOST_RUNTIME_DISCOVERY.md)
 - [JUCE feasibility assessment](docs/JUCE_FEASIBILITY.md)
 - [Graphics probe status](docs/GRAPHICS_PROBE_STATUS.md)
