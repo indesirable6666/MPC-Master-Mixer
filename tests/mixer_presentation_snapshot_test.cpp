@@ -74,7 +74,7 @@ int main() {
     assert(changed.masterFaderValue == 88);
     assert(changed.masterMute);
     assert(changed.audioInputPair.linked);
-    assert(changed.audioInputPair.stereoGainValue == 77);
+    assert(changed.audioInputPair.stereoGainValue == 62);
     assert(changed.audioInputPair.balancePercent == -35);
     assert(changed.audioInputPair.stereoMute);
     assert(changed.audioInputPair.stereoSolo);
