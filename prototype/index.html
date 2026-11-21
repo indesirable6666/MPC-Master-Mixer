@@ -116,7 +116,7 @@ body[data-view="eq"] .insert-block,body[data-view="eq"] .pan-block,body[data-vie
  <div class="project">SESSION · PROJET DE DÉMONSTRATION</div>
  <div class="top-spacer"></div>
  <div class="mode">MODE DÉMO · HORS LIGNE · SIMULATION LOCALE</div>
- <div class="toolbar"><nav class="view-tabs" aria-label="Pages du mixeur"><button class="tool view-tab active" type="button" data-view="mixer" aria-pressed="true">MIXER</button><button class="tool view-tab" type="button" data-view="eq" aria-pressed="false">EQ</button><button class="tool view-tab" type="button" data-view="aux" aria-pressed="false">AUX</button><button class="tool view-tab" type="button" data-view="meters" aria-pressed="false">VU MÈTRE</button></nav><button class="tool optional" id="prev" type="button" aria-label="Afficher la banque précédente" aria-controls="scrollArea bankStatus">◀ BANQUE</button><button class="tool optional" id="next" type="button" aria-label="Afficher la banque suivante" aria-controls="scrollArea bankStatus" disabled>BANQUE ▶</button><span id="bankStatus" class="mode bank-status" role="status" aria-live="polite" aria-atomic="true">BANQUE 1/2 · PISTES 1–8</span><button class="tool stereo-link" id="stereoLink" type="button" aria-pressed="false" aria-controls="audioIn1 audioIn2">LINK AUDIO 1/2 : OFF</button><button class="tool" id="meterDemo" type="button" aria-pressed="false">DÉMO MÈTRES : OFF</button><button class="tool" id="reset" type="button">RÉINITIALISER</button></div>
+ <div class="toolbar"><nav class="view-tabs" aria-label="Pages du mixeur"><button class="tool view-tab active" type="button" data-view="mixer" aria-pressed="true">MIXER</button><button class="tool view-tab" type="button" data-view="eq" aria-pressed="false">EQ</button><button class="tool view-tab" type="button" data-view="aux" aria-pressed="false">AUX</button><button class="tool view-tab" type="button" data-view="meters" aria-pressed="false">VU MÈTRE</button></nav><button class="tool optional" id="prev" type="button" aria-label="Afficher la banque précédente" aria-controls="scrollArea bankStatus">◀ BANQUE</button><button class="tool optional" id="next" type="button" aria-label="Afficher la banque suivante" aria-controls="scrollArea bankStatus" disabled>BANQUE ▶</button><span id="bankStatus" class="mode bank-status" role="status" aria-live="polite" aria-atomic="true">BANQUE 1/2 · PISTES 1–8</span><button class="tool stereo-link" id="stereoLink" type="button" aria-pressed="false" aria-controls="audioIn1 audioIn2">LINK AUDIO 1/2 : OFF</button><button class="tool" id="audioDemo" type="button" aria-pressed="false">SIGNAL AUDIO : OFF</button><button class="tool" id="meterDemo" type="button" aria-pressed="false">DÉMO MÈTRES : OFF</button><button class="tool" id="reset" type="button">RÉINITIALISER</button></div>
 </header>
 <main class="workspace">
  <span id="selectionStatus" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></span>
@@ -217,12 +217,13 @@ function makeStrip(index,isMaster=false){
   if(t.matches('[data-eq]'))data.eq[Number(t.dataset.eq)]=Number(t.value);
   if(t.matches('[data-aux]'))data.aux[Number(t.dataset.aux)]=Number(t.value);
   update();
+  updateAudioDemoParameters();
   if(!isMaster&&audioStereoLinked&&!syncingAudioPair&&(index===13||index===14))syncLinkedAudioPair(index);
  });
  el.addEventListener('click',e=>{
   if(!isMaster)selectChannel(index);
   const toggle=e.target.closest('[data-toggle]');
-  if(toggle){const key=toggle.dataset.toggle;data[key]=!data[key];update();if(!isMaster){refreshMixVisibility();if(audioStereoLinked&&(index===13||index===14))syncLinkedAudioPair(index)}return}
+  if(toggle){const key=toggle.dataset.toggle;data[key]=!data[key];update();if(!isMaster){refreshMixVisibility();if(audioStereoLinked&&(index===13||index===14))syncLinkedAudioPair(index)}updateAudioDemoParameters();return}
   const fx=e.target.closest('.fx');if(fx){const active=fx.classList.toggle('off')===false;fx.setAttribute('aria-pressed',String(active));fx.setAttribute('aria-label',fx.textContent+', placeholder '+(active?'activé':'désactivé'));return}
  });
  function applyValues(){
@@ -285,6 +286,7 @@ function selectChannel(index){
  const trackName=titleEl?.textContent?.trim()||labels[index];
  if(titleEl)titleEl.title=trackName;
  if(status)status.textContent='PISTE '+String(index+1).padStart(2,'0')+' · '+trackName;
+ updateAudioDemoParameters();
 }
 function refreshMixVisibility(){
  const strips=[...document.querySelectorAll('.channel:not([data-channel="master"])')];
@@ -338,7 +340,63 @@ function setMeterDemo(enabled){
   });
  },120);
 }
+
 meterDemoButton.addEventListener('click',()=>setMeterDemo(!meterDemo));
+
+// Browser-only audible test signal. It deliberately does not connect to the
+// MPC, native audio engine, ALSA, or any external device.
+const audioDemoButton=document.getElementById('audioDemo');
+let audioContext=null,audioOscillator=null,audioChannelGain=null,audioPanner=null,audioMasterGain=null;
+function updateAudioDemoParameters(){
+ if(!audioContext||!audioChannelGain||!audioPanner||!audioMasterGain)return;
+ const selected=document.querySelector('.channel.selected');
+ const index=selected?Number(selected.dataset.channel):0;
+ const track=state[index]||state[0];
+ const anySolo=state.some(item=>item.solo);
+ const audible=!track.mute&&(!anySolo||track.solo)&&!masterState.mute;
+ audioChannelGain.gain.value=audible?track.volume/100:0;
+ audioPanner.pan.value=track.pan/100;
+ audioMasterGain.gain.value=masterState.volume/100;
+}
+function stopAudioDemo(){
+ if(audioOscillator){try{audioOscillator.stop()}catch(error){}}
+ if(audioContext){try{audioContext.close()}catch(error){}}
+ audioContext=null;audioOscillator=null;audioChannelGain=null;audioPanner=null;audioMasterGain=null;
+ audioDemoButton.setAttribute('aria-pressed','false');
+ audioDemoButton.textContent='SIGNAL AUDIO : OFF';
+}
+function startAudioDemo(){
+ const AudioContextClass=window.AudioContext||window.webkitAudioContext;
+ if(!AudioContextClass){
+  audioDemoButton.textContent='AUDIO INDISPONIBLE';
+  return;
+ }
+ try{
+  audioContext=new AudioContextClass();
+  audioOscillator=audioContext.createOscillator();
+  audioChannelGain=audioContext.createGain();
+  audioPanner=audioContext.createStereoPanner();
+  audioMasterGain=audioContext.createGain();
+  audioOscillator.type='sine';
+  audioOscillator.frequency.value=220;
+  audioOscillator.connect(audioChannelGain);
+  audioChannelGain.connect(audioPanner);
+  audioPanner.connect(audioMasterGain);
+  audioMasterGain.connect(audioContext.destination);
+  updateAudioDemoParameters();
+  audioOscillator.start();
+  if(audioContext.state==='suspended'&&audioContext.resume)audioContext.resume();
+  audioDemoButton.setAttribute('aria-pressed','true');
+  audioDemoButton.textContent='SIGNAL AUDIO : ON · 220 Hz';
+ }catch(error){
+  stopAudioDemo();
+  audioDemoButton.textContent='AUDIO INDISPONIBLE';
+ }
+}
+audioDemoButton.addEventListener('click',()=>{
+ if(audioContext)stopAudioDemo();
+ else startAudioDemo();
+});
 
 // Host-embedding seam only: a future native wrapper may dispatch this event
 // after transferring a complete, validated 17-channel meter snapshot.
@@ -386,6 +444,7 @@ nextBank.addEventListener('click',()=>setBank(currentBank+1));
 setBank(0);
 document.getElementById('reset').addEventListener('click',()=>{
  setMeterDemo(false);
+ stopAudioDemo();
  state.forEach((s,i)=>Object.assign(s,defaults()));
  Object.assign(masterState,defaults());
  document.querySelectorAll('.channel').forEach(el=>{
