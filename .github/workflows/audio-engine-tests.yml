@@ -5,7 +5,7 @@ on:
     paths:
       - "src/audio/**"
       - "src/mixer/**"
-      - "tests/audio_engine_test.cpp"
+      - "tests/audio_engine_test.cpp"\n      - "tools/audio-engine-benchmark.cpp"
       - ".github/workflows/audio-engine-tests.yml"
   pull_request:
     paths:
