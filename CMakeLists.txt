@@ -33,6 +33,7 @@ target_include_directories(audio_meter_end_to_end_test PRIVATE src/audio)
 mpc_add_host_test(meter_model_test tests/meter_model_test.cpp)
 mpc_add_host_test(mixer_controller_test tests/mixer_controller_test.cpp)
 mpc_add_host_test(mixer_presentation_snapshot_test tests/mixer_presentation_snapshot_test.cpp)
+mpc_add_host_test(mixer_ui_command_dispatcher_test tests/mixer_ui_command_dispatcher_test.cpp)
 mpc_add_host_test(midi_adapter_test tests/midi_adapter_test.cpp)
 target_include_directories(midi_adapter_test PRIVATE src/midi src/mixer)
 
