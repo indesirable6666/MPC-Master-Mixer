@@ -18,6 +18,19 @@ public:
     static constexpr std::int16_t kPanMaximum = 100;
     static constexpr std::uint8_t kAuxMaximum = 100;
 
+    struct TrackState {
+        AudioEngine::Track controls{};
+        std::array<SixBandEq::BandParameters, SixBandEq::kBandCount> eq =
+            SixBandEq::defaultBandParameters();
+    };
+
+    struct DesiredStateSnapshot {
+        std::array<TrackState, AudioEngine::kTrackCount> tracks{};
+        std::array<AudioEngine::AuxReturn, AudioEngine::kAuxBusCount> auxReturns{};
+        float masterGain = 1.0f;
+        bool masterMute = false;
+    };
+
     explicit MixerController(AudioEngineCommandBridge& bridge) noexcept
         : bridge_(bridge), eqBands_(defaultEqState()) {}
 
@@ -108,6 +121,20 @@ public:
 
     float desiredMasterGain() const noexcept { return masterGain_; }
     bool desiredMasterMute() const noexcept { return masterMute_; }
+
+    // Copy the complete producer-side UI state. Call on the serialized
+    // control thread; this is not a cross-thread/audio-thread snapshot.
+    DesiredStateSnapshot desiredStateSnapshot() const noexcept {
+        DesiredStateSnapshot snapshot;
+        for (std::size_t track = 0; track < AudioEngine::kTrackCount; ++track) {
+            snapshot.tracks[track].controls = tracks_[track];
+            snapshot.tracks[track].eq = eqBands_[track];
+        }
+        snapshot.auxReturns = auxReturns_;
+        snapshot.masterGain = masterGain_;
+        snapshot.masterMute = masterMute_;
+        return snapshot;
+    }
 
 private:
     static std::array<std::array<SixBandEq::BandParameters, SixBandEq::kBandCount>,
