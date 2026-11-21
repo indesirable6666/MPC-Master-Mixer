@@ -137,6 +137,14 @@ int main() {
 
     // A per-track insert runs after EQ and before fader/pan and Aux sends.
     AudioEngine insertEngine;
+    mpcmixer::GainInsert gainInsert;
+    assert(near(gainInsert.processSample(0.25f), 0.25f)); // bypassed by default
+    assert(gainInsert.setGain(2.0f));
+    assert(!gainInsert.setGain(-0.1f));
+    assert(!gainInsert.setGain(4.1f));
+    gainInsert.setEnabled(true);
+    assert(near(gainInsert.processSample(0.25f), 0.5f));
+    assert(near(gainInsert.processSample(std::numeric_limits<float>::infinity()), 0.0f));
     mpcmixer::SoftClipInsert softClip;
     assert(softClip.setDrive(2.0f));
     softClip.setEnabled(true);
