@@ -30,6 +30,8 @@ mpc_add_host_test(meter_presentation_adapter_test tests/meter_presentation_adapt
 mpc_add_host_test(audio_meter_end_to_end_test tests/audio_meter_end_to_end_test.cpp)
 target_include_directories(audio_meter_end_to_end_test PRIVATE src/audio)
 
+mpc_add_host_test(audio_native_signal_scenarios_test tests/audio_native_signal_scenarios_test.cpp)
+
 mpc_add_host_test(meter_model_test tests/meter_model_test.cpp)
 mpc_add_host_test(mixer_controller_test tests/mixer_controller_test.cpp)
 mpc_add_host_test(mixer_presentation_snapshot_test tests/mixer_presentation_snapshot_test.cpp)
