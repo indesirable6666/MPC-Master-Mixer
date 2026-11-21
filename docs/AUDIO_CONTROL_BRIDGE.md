@@ -10,9 +10,9 @@ call this class directly; a native host/controller will own the bridge.
 
 The framework-neutral `src/mixer/mixer_controller.hpp` maps native UI
 operations to the bridge: track faders, pan, Mute/Solo, four Aux sends, six-band
-EQ (including single-band edits that preserve the other five bands), Aux returns, and Master gain/mute. Its integer controls are range-checked
+EQ (including single-band edits that preserve the other five bands), insert-slot replacement with acknowledgement tickets, Aux returns, and Master gain/mute. Its integer controls are range-checked
 before conversion. It keeps producer-side desired-state snapshots for
-all 16 tracks, their six-band EQ settings, four Aux returns, and Master gain/mute. Changing one track
+all 16 tracks, their six-band EQ settings and two non-owning insert-slot pointers, four Aux returns, and Master gain/mute. Changing one track
 control preserves the other cached track controls; accepted EQ changes update
 the corresponding six-band snapshot only after enqueue succeeds. Each snapshot advances
 only after its command is successfully enqueued; a full queue therefore leaves
