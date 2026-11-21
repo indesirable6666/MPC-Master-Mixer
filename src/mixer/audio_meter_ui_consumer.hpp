@@ -28,7 +28,8 @@ public:
                                   : kDefaultPeakDecayPerSecond) {}
 
     // Call from the UI timer/render loop. Elapsed time is in seconds.
-    // All queued frames are drained; only the newest valid sequence is shown.
+    // All queued frames are drained in order: peak hold observes every frame,
+    // while RMS naturally ends at the newest valid frame.
     // Peak decay is time-based, so refresh-rate changes do not change its speed.
     bool tick(float elapsedSeconds) noexcept {
         if (std::isfinite(elapsedSeconds) && elapsedSeconds > 0.0f) {
@@ -42,17 +43,13 @@ public:
             if (hasSnapshot_ && snapshot.blockSequence <= lastSequence_) {
                 continue;
             }
-            latest_ = snapshot;
-            received = true;
-        }
-
-        if (received) {
             for (std::size_t i = 0; i < kChannelCount; ++i) {
-                meters_[i].update(latest_.channels[i].peak,
-                                  latest_.channels[i].rms);
+                meters_[i].update(snapshot.channels[i].peak,
+                                  snapshot.channels[i].rms);
             }
-            lastSequence_ = latest_.blockSequence;
+            lastSequence_ = snapshot.blockSequence;
             hasSnapshot_ = true;
+            received = true;
         }
         return received;
     }
@@ -68,7 +65,6 @@ private:
     AudioMeterSnapshotBridge& bridge_;
     float peakDecayPerSecond_;
     std::array<MeterModel, kChannelCount> meters_{};
-    AudioMeterSnapshot latest_{};
     std::uint64_t lastSequence_ = 0;
     bool hasSnapshot_ = false;
 };
