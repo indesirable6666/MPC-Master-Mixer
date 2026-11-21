@@ -67,3 +67,12 @@ pair path in automated tests using synthetic buffers.
 There is still no ALSA, JACK, or MPC-specific backend, no physical input/output
 device selection, and no live hardware validation. This host is a reusable
 integration point, not proof that audio is already connected on the MPC.
+
+
+The same pair controls are represented in the framework-neutral
+`MixerController`, sequenced `MixerUiCommandDispatcher`, and value-only
+`MixerPresentationSnapshot`. This lets a future native UI submit and render
+pair state without calling DSP setters directly. It remains a host-side
+contract only: there is no browser binding, IPC transport, or live device
+feedback, and the snapshot reports desired rather than confirmed applied
+state.
