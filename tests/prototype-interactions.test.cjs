@@ -360,3 +360,42 @@ test('Audio In 1 and 2 can be linked as a stereo pair with shared controls', () 
   dom.window.close();
 });
 
+
+
+test('host snapshot event updates all 16 tracks and Master without claiming live capture', () => {
+  const dom = loadPrototype();
+  const { window } = dom;
+  const button = window.document.getElementById('meterDemo');
+  button.click();
+  assert.equal(button.getAttribute('aria-pressed'), 'true');
+
+  const channels = Array.from({ length: 17 }, (_, index) => ({
+    peak: index === 16 ? 0.999 : (index + 1) / 100,
+    rms: index === 16 ? 0.5 : (index + 1) / 200
+  }));
+  window.dispatchEvent(new window.CustomEvent('mpc-meter-snapshot', {
+    detail: { sequence: 10, channels }
+  }));
+
+  assert.equal(button.getAttribute('aria-pressed'), 'false');
+  for (let index = 0; index < 16; index++) {
+    const strip = window.document.querySelector('[data-channel="' + index + '"]');
+    assert.equal(strip.querySelector('[data-meter-value="peak"]').textContent,
+      Math.round(channels[index].peak * 100) + '%');
+    assert.equal(strip.querySelector('[data-meter-value="rms"]').textContent,
+      Math.round(channels[index].rms * 100) + '%');
+  }
+  const master = window.document.querySelector('[data-channel="master"]');
+  assert.equal(master.querySelector('[data-meter-value="peak"]').textContent, '100%');
+  assert.equal(master.querySelector('[data-clip]').textContent, 'CLIP');
+
+  // Stale and malformed snapshots are ignored rather than rolling UI state back.
+  window.dispatchEvent(new window.CustomEvent('mpc-meter-snapshot', {
+    detail: { sequence: 9, channels: channels.map(() => ({ peak: 0, rms: 0 })) }
+  }));
+  window.dispatchEvent(new window.CustomEvent('mpc-meter-snapshot', {
+    detail: { sequence: 11, channels: channels.slice(0, 16) }
+  }));
+  assert.equal(master.querySelector('[data-meter-value="peak"]').textContent, '100%');
+  dom.window.close();
+});
