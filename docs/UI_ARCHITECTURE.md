@@ -177,7 +177,11 @@ than presenting this snapshot as hardware feedback.
 command envelope and a serialized dispatcher. The envelope carries a
 monotonically increasing producer sequence, a command type, target indices,
 and typed value fields. It currently covers track fader/pan/Mute/Solo,
-Aux sends, one EQ band, Aux return level/balance/mute, and Master fader/mute.
+Aux sends, one EQ band, Aux return level/balance/mute, Master fader/mute, and
+linked/unlinked Audio In pair controls. Pair commands cover linked state,
+stereo gain/balance/mute, and each side's independent gain/pan/mute/solo.
+Channel-specific Audio In commands use the envelope's `track` field as side
+0 (left) or 1 (right).
 
 The dispatcher validates target indices and parameter ranges before calling
 `MixerController`. Results distinguish accepted, invalid, out-of-order,
@@ -198,3 +202,12 @@ acknowledgement belong to a future native host. The command envelope is not
 yet a byte-level serialization format, IPC transport, browser binding, or
 proof of engine/device integration. The dispatcher itself is called on the
 controller's serialized producer thread.
+
+
+The desired-state and presentation snapshots also carry a value-only Audio In
+pair section. It contains linked state, stereo gain/balance/mute and both
+independent channel states. Like track state, it is a producer-side desired
+copy: it is not proof that the audio callback has applied the command, and it
+is not hardware feedback. The dedicated duplex pair path currently bypasses
+per-track EQ, inserts and Aux sends; see
+`docs/AUDIO_DUPLEX_ENGINE_HOST.md` for that explicit limitation.
