@@ -9,6 +9,7 @@ on:
       - "tests/audio_engine_test.cpp"
       - "tests/audio_insert_frequency_response_test.cpp"
       - "tests/audio_eq_frequency_response_test.cpp"
+      - "tests/audio_insert_chain_test.cpp"
       - "tests/meter_model_test.cpp"
       - "tests/audio_block_meter_test.cpp"
       - "tests/audio_meter_snapshot_bridge_test.cpp"
@@ -72,6 +73,10 @@ jobs:
         run: g++ -std=c++14 -Wall -Wextra -Werror -pedantic tests/audio_eq_frequency_response_test.cpp -o audio-eq-frequency-response-test
       - name: Run EQ frequency-response tests
         run: ./audio-eq-frequency-response-test
+      - name: Compile insert chain behavior tests
+        run: g++ -std=c++14 -Wall -Wextra -Werror -pedantic tests/audio_insert_chain_test.cpp -o audio-insert-chain-test
+      - name: Run insert chain behavior tests
+        run: ./audio-insert-chain-test
       - name: Compile audio block meter tests
         run: g++ -std=c++14 -Wall -Wextra -Werror -pedantic tests/audio_block_meter_test.cpp -o audio-block-meter-test
       - name: Run audio block meter tests
