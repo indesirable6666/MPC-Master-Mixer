@@ -3,7 +3,7 @@ name: Audio engine tests
 on:
   push:
     paths:
-      - "src/audio/**"
+      - "src/audio/**"\n      - "src/mixer/**"
       - "tests/audio_engine_test.cpp"
       - ".github/workflows/audio-engine-tests.yml"
   pull_request:
