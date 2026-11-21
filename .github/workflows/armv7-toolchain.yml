@@ -125,7 +125,7 @@ jobs:
           done
           echo "No GLIBC newer than 2.32 or GLIBCXX newer than 3.4.28 was found."
 
-      - name: Upload ARMv7 audio engine host-test binary
+      - name: Upload ARMv7 DSP benchmark binary\n        uses: actions/upload-artifact@v4\n        with:\n          name: mpc-armv7-audio-engine-benchmark\n          path: build/mpc-audio-engine-benchmark-armv7\n          if-no-files-found: error\n\n      - name: Upload ARMv7 audio engine host-test binary
         uses: actions/upload-artifact@v4
         with:
           name: mpc-armv7-audio-engine-test
