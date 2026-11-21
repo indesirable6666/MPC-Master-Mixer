@@ -17,6 +17,25 @@ function input(dom, selector, value) {
   return element;
 }
 
+test('top navigation switches Mixer, EQ, AUX and colored VU meter views', () => {
+  const dom = loadPrototype();
+  const { document } = dom.window;
+  const tabs = [...document.querySelectorAll('.view-tab')];
+  assert.deepEqual(tabs.map(tab => tab.textContent.trim()), ['MIXER', 'EQ', 'AUX', 'VU MÈTRE']);
+  assert.equal(document.body.dataset.view, 'mixer');
+  for (const view of ['eq', 'aux', 'meters', 'mixer']) {
+    document.querySelector('[data-view="' + view + '"]').click();
+    assert.equal(document.body.dataset.view, view);
+    for (const tab of tabs) {
+      assert.equal(tab.getAttribute('aria-pressed'), String(tab.dataset.view === view));
+      assert.equal(tab.classList.contains('active'), tab.dataset.view === view);
+    }
+  }
+  assert.match(html, /body\[data-view="meters"\] \.meter-fill\{background:linear-gradient/);
+  assert.ok(document.getElementById('selectionStatus'));
+  dom.window.close();
+});
+
 test('renders 16 channel strips and one fixed master strip', () => {
   const dom = loadPrototype();
   assert.equal(dom.window.document.querySelectorAll('#strips .channel').length, 16);
