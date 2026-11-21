@@ -7,6 +7,7 @@ on:
       - "tools/arm-probe/**"
       - "src/audio/**"
       - "tests/audio_engine_test.cpp"
+      - "tests/meter_model_test.cpp"
       - "tools/audio-engine-benchmark.cpp"
       - ".github/workflows/armv7-toolchain.yml"
 
@@ -68,6 +69,10 @@ jobs:
             tools/audio-engine-benchmark.cpp \
             -o build/mpc-audio-engine-benchmark-armv7
 
+          arm-linux-gnueabihf-g++ $COMMON_FLAGS -std=c++14 \
+            tests/meter_model_test.cpp \
+            -o build/mpc-meter-model-test-armv7
+
           echo "=== C executable ==="
           file build/mpc-arm-probe-c
           arm-linux-gnueabihf-readelf -h build/mpc-arm-probe-c
@@ -121,7 +126,7 @@ jobs:
           arm-linux-gnueabihf-g++ -print-file-name=libc.so.6
 
           echo "=== Reject runtime requirements newer than the MPC ==="
-          for binary in build/mpc-arm-probe-cpp build/mpc-arm-graphics-probe-v2 build/mpc-arm-egl-client-extension-probe build/mpc-arm-egl-gbm-symbol-probe build/mpc-arm-gles2-symbol-probe build/mpc-arm-egl-offscreen-pbuffer-probe build/mpc-audio-engine-test-armv7 build/mpc-audio-engine-benchmark-armv7; do
+          for binary in build/mpc-arm-probe-cpp build/mpc-arm-graphics-probe-v2 build/mpc-arm-egl-client-extension-probe build/mpc-arm-egl-gbm-symbol-probe build/mpc-arm-gles2-symbol-probe build/mpc-arm-egl-offscreen-pbuffer-probe build/mpc-audio-engine-test-armv7 build/mpc-audio-engine-benchmark-armv7 build/mpc-meter-model-test-armv7; do
             if arm-linux-gnueabihf-readelf --version-info "$binary" | \
               grep -E 'GLIBCXX_3\.4\.(29|[3-9][0-9])|GLIBC_2\.(33|[4-9][0-9])'; then
               echo "ERROR: $binary requires a newer runtime than the MPC audit found."
