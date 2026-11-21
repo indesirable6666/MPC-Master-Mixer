@@ -16,6 +16,7 @@ on:
       - "tests/audio_meter_end_to_end_test.cpp"
       - "tests/mixer_controller_test.cpp"
       - "tests/mixer_presentation_snapshot_test.cpp"
+      - "tests/mixer_ui_command_dispatcher_test.cpp"
       - "tools/audio-engine-benchmark.cpp"
       - ".github/workflows/audio-engine-tests.yml"
   pull_request:
