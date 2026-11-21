@@ -14,6 +14,7 @@ on:
       - "tests/audio_meter_ui_consumer_test.cpp"
       - "tests/meter_presentation_adapter_test.cpp"
       - "tests/audio_meter_end_to_end_test.cpp"
+      - "tests/audio_native_signal_scenarios_test.cpp"
       - "tests/mixer_controller_test.cpp"
       - "tests/mixer_presentation_snapshot_test.cpp"
       - "tests/mixer_ui_command_dispatcher_test.cpp"
@@ -31,6 +32,7 @@ on:
       - "tests/audio_meter_ui_consumer_test.cpp"
       - "tests/meter_presentation_adapter_test.cpp"
       - "tests/audio_meter_end_to_end_test.cpp"
+      - "tests/audio_native_signal_scenarios_test.cpp"
       - "tests/mixer_controller_test.cpp"
       - "tests/mixer_presentation_snapshot_test.cpp"
       - "tools/audio-engine-benchmark.cpp"
@@ -80,6 +82,10 @@ jobs:
         run: g++ -std=c++14 -Wall -Wextra -Werror -pedantic -Isrc/audio tests/audio_meter_end_to_end_test.cpp -o audio-meter-end-to-end-test
       - name: Run end-to-end audio meter tests
         run: ./audio-meter-end-to-end-test
+      - name: Compile native offline signal scenario tests
+        run: g++ -std=c++14 -Wall -Wextra -Werror -pedantic tests/audio_native_signal_scenarios_test.cpp -o audio-native-signal-scenarios-test
+      - name: Run native offline signal scenario tests
+        run: ./audio-native-signal-scenarios-test
       - name: Compile meter model tests
         run: g++ -std=c++14 -Wall -Wextra -Werror -pedantic tests/meter_model_test.cpp -o meter-model-test
       - name: Run meter model tests
