@@ -143,3 +143,29 @@ The repository-level runtime/build-system audit and the evidence required before
 ## Graphics probe evidence
 
 The distinction between ARMv7 cross-compilation, symbol lookup, guarded offscreen EGL execution, and actual touchscreen presentation is documented in [GRAPHICS_PROBE_STATUS.md](GRAPHICS_PROBE_STATUS.md). CI compiles and archives the probes; it does not execute them on the MPC or validate an on-screen host.
+
+
+## Mixer presentation snapshot contract
+
+`src/mixer/mixer_presentation_snapshot.hpp` provides a framework-neutral,
+UI-facing value snapshot for the 16 channel strips, four Aux returns and
+Master. It copies fader/pan percentages, Mute/Solo, Aux send percentages,
+six EQ band parameter sets, insert-slot presence flags, Aux return level and
+balance, and Master level/mute.
+
+The snapshot deliberately contains no `AudioInsert*` or engine pointers.
+Insert slots are represented only as `hasInsert` booleans; this is a visual
+presence hint, not an effect description or lifecycle handle.
+
+`MixerPresentationPublisher` is called explicitly by the serialized
+UI/control thread. It assigns a monotonically increasing 64-bit presentation
+sequence and returns an immutable-by-convention value copy. It has no timer,
+thread, lock, IPC, or delivery mechanism. A future host may serialize/copy
+this value into its own transport, but must define ownership and synchronization
+there.
+
+**State meaning:** the snapshot reflects the controller's producer-side
+*desired state*. It does not prove that queued commands have been consumed by
+the audio callback, nor does it report actual MPC project state. A future
+host must label or separately represent pending/applied/unknown state rather
+than presenting this snapshot as hardware feedback.
