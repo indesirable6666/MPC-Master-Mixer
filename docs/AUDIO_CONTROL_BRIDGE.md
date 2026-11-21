@@ -13,13 +13,16 @@ call this class directly; a native host/controller will own the bridge.
 `src/audio/audio_control_bridge.hpp` provides a fixed-capacity,
 single-producer/single-consumer (SPSC) command queue:
 
-- One control/UI producer enqueues validated track state, Aux return state,
-  Master gain, and Master mute values.
+- One control/UI producer enqueues validated track state, precomputed six-band
+  EQ configurations, Aux return state, Master gain, and Master mute values.
 - The audio callback is the sole consumer. It drains pending commands at the
   beginning of each block, then processes that block using the updated state.
 - Commands are applied in FIFO order. If the 64-command queue is full, enqueue
   returns `false`; callers must retain/retry the latest desired state rather
   than silently assuming it was applied.
+- EQ coefficient calculation (trigonometry and powers) happens before enqueue
+  on the producer/control thread. The audio callback only copies the prepared
+  coefficients and resets the filter history at a block boundary.
 - No mutex, dynamic allocation, logging, or device access occurs in enqueue or
   block processing. Queue publication uses acquire/release atomics.
 - Only one producer and one consumer are supported. A future host with several
