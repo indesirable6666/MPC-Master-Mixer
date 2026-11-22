@@ -46,7 +46,7 @@ public:
     }
 
     // The caller retains both old and new effect objects until the returned
-    // ticket is acknowledged by hasApplied(). Destruction stays on control thread.
+    // nonzero ticket is acknowledged by hasApplied(). Destruction stays on control thread.
     bool enqueueTrackInsert(std::size_t trackIndex, std::size_t slot,
                             AudioInsert* effect, std::uint32_t& ticket) noexcept {
         if (trackIndex >= AudioEngine::kTrackCount ||
@@ -59,9 +59,12 @@ public:
         return enqueue(command, &ticket);
     }
 
-    // Control-thread query. Once true, the audio thread has replaced the slot
-    // and will not dereference the previous effect again.
+    // Control-thread query. Ticket zero is reserved as invalid. Sequence
+    // comparisons are modulo 2^32 and remain unambiguous within half-range.
+    // Once true, the audio thread has replaced the slot and will not
+    // dereference the previous effect again.
     bool hasApplied(std::uint32_t ticket) const noexcept {
+        if (ticket == 0) return false;
         const std::uint32_t applied =
             appliedSequence_.load(std::memory_order_acquire);
         return static_cast<std::uint32_t>(applied - ticket) < 0x80000000u;
@@ -256,6 +259,8 @@ private:
         if (head - tail >= kQueueCapacity) return false;
         Command queued = command;
         queued.sequence = head + 1;
+        // Reserve zero as an invalid ticket even when the 32-bit counter wraps.
+        if (queued.sequence == 0) queued.sequence = 1;
         commands_[head % kQueueCapacity] = queued;
         head_.store(head + 1, std::memory_order_release);
         if (ticket != nullptr) *ticket = queued.sequence;
