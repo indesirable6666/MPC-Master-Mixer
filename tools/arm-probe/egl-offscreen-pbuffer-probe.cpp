@@ -33,6 +33,23 @@ static T symbol(void* lib, const char* name) {
     return reinterpret_cast<T>(dlsym(lib, name));
 }
 
+// Returns true for an MPC-named task or whenever its identity cannot be verified.
+static bool commContainsMpcOrIsUnreadable(const char* path) {
+    FILE* f = std::fopen(path, "r");
+    if (!f) return errno != ENOENT && errno != ESRCH;
+    char name[128] = {};
+    bool unsafe = false;
+    if (!std::fgets(name, sizeof(name), f)) {
+        unsafe = std::ferror(f) != 0;
+    } else {
+        name[std::strcspn(name, "\\r\\n")] = '\\0';
+        // Linux task names may be truncated to TASK_COMM_LEN - 1.
+        if (std::strstr(name, "MPC") != nullptr) unsafe = true;
+    }
+    std::fclose(f);
+    return unsafe;
+}
+
 static bool mpcProcessPresent() {
     DIR* proc = opendir("/proc");
     if (!proc) return true; // fail closed
@@ -42,8 +59,7 @@ static bool mpcProcessPresent() {
         errno = 0;
         dirent* entry = readdir(proc);
         if (!entry) {
-            // An enumeration error means the process list was not verified.
-            if (errno != 0) found = true;
+            if (errno != 0) found = true; // incomplete process enumeration
             break;
         }
 
@@ -51,12 +67,10 @@ static bool mpcProcessPresent() {
         std::strtol(entry->d_name, &end, 10);
         if (!end || *end != '\\0' || end == entry->d_name) continue;
 
-        // Do not trust dirent::d_type: procfs may report DT_UNKNOWN.
         char processPath[512];
         std::snprintf(processPath, sizeof(processPath), "/proc/%s", entry->d_name);
         struct stat processInfo {};
         if (stat(processPath, &processInfo) != 0) {
-            // A process can exit while scanning; other errors fail closed.
             if (errno != ENOENT && errno != ESRCH) found = true;
             if (found) break;
             continue;
@@ -65,24 +79,41 @@ static bool mpcProcessPresent() {
 
         char commPath[512];
         std::snprintf(commPath, sizeof(commPath), "%s/comm", processPath);
-        FILE* f = std::fopen(commPath, "r");
-        if (!f) {
-            // Ignore only the normal process-exit race.
+        if (commContainsMpcOrIsUnreadable(commPath)) {
+            found = true;
+            break;
+        }
+
+        // The MPC UI thread can have a distinct comm name from its process leader.
+        char taskPath[512];
+        std::snprintf(taskPath, sizeof(taskPath), "%s/task", processPath);
+        DIR* tasks = opendir(taskPath);
+        if (!tasks) {
             if (errno != ENOENT && errno != ESRCH) found = true;
             if (found) break;
             continue;
         }
 
-        char name[128] = {};
-        if (!std::fgets(name, sizeof(name), f)) {
-            if (std::ferror(f)) found = true; // unreadable process identity
-        } else {
-            name[std::strcspn(name, "\\r\\n")] = '\\0';
-            // Linux task names may be truncated to TASK_COMM_LEN - 1.
-            // A conservative substring match avoids missing "MPC Main Threa".
-            if (std::strstr(name, "MPC") != nullptr) found = true;
+        for (;;) {
+            errno = 0;
+            dirent* task = readdir(tasks);
+            if (!task) {
+                if (errno != 0) found = true;
+                break;
+            }
+            char* taskEnd = nullptr;
+            std::strtol(task->d_name, &taskEnd, 10);
+            if (!taskEnd || *taskEnd != '\\0' || taskEnd == task->d_name) continue;
+
+            char taskCommPath[512];
+            std::snprintf(taskCommPath, sizeof(taskCommPath),
+                          "%s/%s/comm", taskPath, task->d_name);
+            if (commContainsMpcOrIsUnreadable(taskCommPath)) {
+                found = true;
+                break;
+            }
         }
-        std::fclose(f);
+        closedir(tasks);
         if (found) break;
     }
 
