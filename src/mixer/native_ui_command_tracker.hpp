@@ -28,14 +28,22 @@ public:
         return count_ < kCapacity;
     }
 
-    bool recordAccepted(const MixerUiCommandResult& result) noexcept {
-        if (!result.accepted() || result.audioTicket == 0) return result.accepted();
-        if (!canTrackAudioCommand()) return false;
+    // Atomically couples capacity reservation, dispatcher acceptance, and
+    // ticket retention on the serialized control thread. QueueFull is returned
+    // before dispatch, so the request sequence remains available for retry.
+    MixerUiCommandResult dispatch(
+        MixerUiCommandDispatcher& dispatcher,
+        const MixerUiCommand& command) noexcept {
+        if (!canTrackAudioCommand())
+            return {MixerUiCommandStatus::QueueFull, command.sequence};
 
-        const std::size_t tail = (head_ + count_) % kCapacity;
-        pending_[tail] = {result.sequence, result.audioTicket};
-        ++count_;
-        return true;
+        const MixerUiCommandResult result = dispatcher.dispatch(command);
+        if (result.accepted() && result.audioTicket != 0) {
+            const std::size_t tail = (head_ + count_) % kCapacity;
+            pending_[tail] = {result.sequence, result.audioTicket};
+            ++count_;
+        }
+        return result;
     }
 
     // Returns the oldest completed acknowledgement, preserving dispatch order.
