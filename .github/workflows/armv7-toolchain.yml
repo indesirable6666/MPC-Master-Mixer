@@ -25,6 +25,7 @@ on:
       - "tests/mixer_presentation_snapshot_test.cpp"
       - "tests/mixer_ui_command_dispatcher_test.cpp"
       - "tests/native_ui_command_adapter_test.cpp"
+      - "tests/native_ui_session_gate_test.cpp"
       - "tests/native_ui_command_tracker_test.cpp"
       - "tests/native_ui_connection_epoch_test.cpp"
       - "tests/native_ui_json_decoder_test.cpp"
@@ -53,6 +54,7 @@ on:
       - "tests/mixer_presentation_snapshot_test.cpp"
       - "tests/mixer_ui_command_dispatcher_test.cpp"
       - "tests/native_ui_command_adapter_test.cpp"
+      - "tests/native_ui_session_gate_test.cpp"
       - "tests/native_ui_json_decoder_test.cpp"
       - "tools/audio-engine-benchmark.cpp"
       - ".github/workflows/armv7-toolchain.yml"
@@ -244,7 +246,7 @@ jobs:
           arm-linux-gnueabihf-g++ -print-file-name=libc.so.6
 
           echo "=== Reject runtime requirements newer than the MPC ==="
-          for binary in build/mpc-arm-probe-cpp build/mpc-arm-graphics-probe-v2 build/mpc-arm-egl-client-extension-probe build/mpc-arm-egl-gbm-symbol-probe build/mpc-arm-gles2-symbol-probe build/mpc-arm-egl-offscreen-pbuffer-probe build/mpc-audio-engine-test-armv7 build/mpc-audio-output-headroom-test-armv7 build/mpc-audio-engine-benchmark-armv7 build/mpc-meter-model-test-armv7 build/mpc-audio-block-meter-test-armv7 build/mpc-audio-meter-snapshot-bridge-test-armv7 build/mpc-audio-duplex-meter-tap-test-armv7 build/mpc-audio-meter-ui-consumer-test-armv7 build/mpc-meter-presentation-adapter-test-armv7 build/mpc-audio-meter-end-to-end-test-armv7 build/mpc-mixer-controller-test-armv7 build/mpc-native-ui-command-adapter-test-armv7 build/mpc-native-ui-command-tracker-test-armv7 build/mpc-native-ui-connection-epoch-test-armv7 build/mpc-native-ui-json-decoder-test-armv7 build/mpc-mixer-insert-effect-owner-test-armv7 build/mpc-audio-input-pair-host-test-armv7 build/mpc-audio-native-signal-scenarios-test-armv7 build/mpc-audio-signal-reference-test-armv7 build/mpc-mixer-presentation-snapshot-test-armv7 build/mpc-mixer-ui-command-dispatcher-test-armv7; do
+          for binary in build/mpc-arm-probe-cpp build/mpc-arm-graphics-probe-v2 build/mpc-arm-egl-client-extension-probe build/mpc-arm-egl-gbm-symbol-probe build/mpc-arm-gles2-symbol-probe build/mpc-arm-egl-offscreen-pbuffer-probe build/mpc-audio-engine-test-armv7 build/mpc-audio-output-headroom-test-armv7 build/mpc-audio-engine-benchmark-armv7 build/mpc-meter-model-test-armv7 build/mpc-audio-block-meter-test-armv7 build/mpc-audio-meter-snapshot-bridge-test-armv7 build/mpc-audio-duplex-meter-tap-test-armv7 build/mpc-audio-meter-ui-consumer-test-armv7 build/mpc-meter-presentation-adapter-test-armv7 build/mpc-audio-meter-end-to-end-test-armv7 build/mpc-mixer-controller-test-armv7 build/mpc-native-ui-command-adapter-test-armv7 build/mpc-native-ui-command-tracker-test-armv7 build/mpc-native-ui-connection-epoch-test-armv7 build/mpc-native-ui-session-gate-test-armv7 build/mpc-native-ui-json-decoder-test-armv7 build/mpc-mixer-insert-effect-owner-test-armv7 build/mpc-audio-input-pair-host-test-armv7 build/mpc-audio-native-signal-scenarios-test-armv7 build/mpc-audio-signal-reference-test-armv7 build/mpc-mixer-presentation-snapshot-test-armv7 build/mpc-mixer-ui-command-dispatcher-test-armv7; do
             if arm-linux-gnueabihf-readelf --version-info "$binary" | \
               grep -E 'GLIBCXX_3\.4\.(29|[3-9][0-9])|GLIBC_2\.(33|[4-9][0-9])'; then
               echo "ERROR: $binary requires a newer runtime than the MPC audit found."
@@ -335,6 +337,13 @@ jobs:
         with:
           name: mpc-armv7-native-ui-connection-epoch-test
           path: build/mpc-native-ui-connection-epoch-test-armv7
+          if-no-files-found: error
+
+      - name: Upload ARMv7 native UI session gate test binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: mpc-armv7-native-ui-session-gate-test
+          path: build/mpc-native-ui-session-gate-test-armv7
           if-no-files-found: error
 
       - name: Upload ARMv7 native UI JSON decoder test binary
