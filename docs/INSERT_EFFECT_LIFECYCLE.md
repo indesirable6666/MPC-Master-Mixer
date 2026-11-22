@@ -7,6 +7,11 @@ non-owning pointers published by `MixerController`. It owns one current and
 at most one pending `std::unique_ptr<AudioInsert>` for every track insert
 slot and each of the two Audio Input pair sides.
 
+The raw `MixerController` pointer setters are private and accessible only to
+`MixerInsertEffectOwner` as a friend. Callers cannot bypass the ownership layer
+through the public controller API; use `publish`, `clear`, and their Audio Input
+pair counterparts instead.
+
 - `publish(track, slot, candidate, ticket)` transfers ownership only after
   the controller successfully queues the pointer. On failure, the caller
   retains the candidate.
