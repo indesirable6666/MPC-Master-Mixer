@@ -12,9 +12,11 @@ browser prototype remains offline and simulated. A strict JSON decoder is now
 implemented in `src/mixer/native_ui_json_decoder.hpp`; it validates JSON
 syntax, exact JSON value types, duplicate keys, unknown fields, and
 command-specific field sets before constructing `NativeUiCommandMessage`.
-The transport-facing orchestration remains the responsibility of a future
-native adapter owner; the individual epoch, gate, decoder, command adapter,
-and acknowledgement tracker remain separate transport-neutral pieces.
+The transport-neutral orchestration boundary is now composed by
+`NativeUiSessionCoordinator`. It owns the epoch source, readiness gate, and
+acknowledgement tracker, and ensures that dispatch is rejected until the
+current connection has supplied a complete, caught-up snapshot. It still does
+not implement IPC, a native UI toolkit, or device integration.
 
 The browser must never call the DSP engine or audio callback directly.
 
@@ -243,6 +245,16 @@ successful decoding.
 Still not implemented: IPC, reconnect/snapshot transport, native UI toolkit
 integration, and live-device validation. No hardware tests have been performed.
 
+`NativeUiSessionCoordinator` composes the connection epoch source, snapshot
+readiness gate, and pending acknowledgement tracker. Its control-thread-only
+API starts and invalidates sessions, accepts presentation snapshots, gates
+command dispatch, and exposes only acknowledgements tagged for the active
+epoch. It does not own the controller or dispatcher; those remain owned by the
+native host and are supplied to dispatch/poll calls. While disconnected, the
+coordinator drains completed obsolete tickets without forwarding them. The
+coordinator is a guardrail for the future transport owner, not a transport
+implementation.
+
 ## Reconnect readiness gate
 
 `NativeUiSessionGate` is implemented as a small control-thread-only state
@@ -282,3 +294,8 @@ establish an IPC implementation or device integration.
 states, rejection of partial, stale, duplicate, and out-of-order snapshots,
 transition to ready only after audio catch-up, stale disconnect protection,
 and reconnect isolation.
+
+
+`tests/native_ui_session_coordinator_test.cpp` covers dispatch rejection
+before synchronization, full-snapshot catch-up, ticket acknowledgement,
+disconnect/reconnect sequencing, and stale-epoch isolation.
