@@ -114,6 +114,9 @@ jobs:
         run: cmake --build build/host --parallel 2
       - name: Run C++ host tests through CTest
         run: ctest --test-dir build/host --output-on-failure
+
+      - name: Report worst-case v1 snapshot payload size
+        run: ./build/host/native_ui_protocol_v1_snapshot_serializer_test
       - name: Compile all-track solo arbitration tests
         run: g++ -std=c++14 -Wall -Wextra -Werror -pedantic tests/audio_engine_solo_arbitration_test.cpp -o audio-engine-solo-arbitration-test
       - name: Run all-track solo arbitration tests
