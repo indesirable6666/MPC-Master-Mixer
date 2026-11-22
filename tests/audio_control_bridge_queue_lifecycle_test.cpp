@@ -9,6 +9,17 @@ int main() {
     using Bridge = mpcmixer::AudioEngineCommandBridge;
     using Engine = mpcmixer::AudioEngine;
 
+    // Ticket arithmetic must skip the reserved zero exactly once at wrap.
+    static_assert(mpcmixer::detail::nextAudioCommandTicket(0u) == 1u,
+                  "first command ticket must be one");
+    static_assert(mpcmixer::detail::nextAudioCommandTicket(UINT32_MAX - 1u) ==
+                      UINT32_MAX,
+                  "ticket before wrap must be UINT32_MAX");
+    static_assert(mpcmixer::detail::nextAudioCommandTicket(UINT32_MAX) == 1u,
+                  "wrapped ticket must skip zero");
+    static_assert(mpcmixer::detail::nextAudioCommandTicket(1u) == 2u,
+                  "ticket after wrap must advance normally");
+
     Bridge bridge;
     const float* inputs[Engine::kTrackCount]{};
     float left[1]{};
