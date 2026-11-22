@@ -116,11 +116,11 @@ void testTruncatedEof() {
 
 void testInvalidConfiguration() {
     NativeUiFrameReader noBuffer(nullptr, 8, 8);
-    assert(noBuffer.feed(nullptr, 0, *new std::size_t(0)) ==
+    std::size_t consumed = 0;
+    assert(noBuffer.feed(nullptr, 0, consumed) ==
            NativeUiFrameCodec::Status::InvalidConfiguration);
     std::array<std::uint8_t, 4> small{};
     NativeUiFrameReader tooLarge(small.data(), small.size(), 5);
-    std::size_t consumed = 0;
     assert(tooLarge.feed(nullptr, 0, consumed) ==
            NativeUiFrameCodec::Status::InvalidConfiguration);
 }
