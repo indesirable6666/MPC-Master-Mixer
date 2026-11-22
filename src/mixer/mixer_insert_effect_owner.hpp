@@ -84,7 +84,11 @@ public:
         for (std::size_t track = 0; track < kTrackCount; ++track) {
             for (std::size_t slot = 0; slot < kSlotCount; ++slot) {
                 Slot& state = slots_[track][slot];
-                if (state.pendingActive || !state.current) continue;
+                if (state.pendingActive) {
+                    complete = false;
+                    continue;
+                }
+                if (!state.current) continue;
                 std::uint32_t ignoredTicket = 0;
                 if (!clear(track, slot, ignoredTicket)) complete = false;
             }
@@ -92,7 +96,11 @@ public:
         for (std::size_t side = 0; side < 2; ++side) {
             for (std::size_t slot = 0; slot < kSlotCount; ++slot) {
                 Slot& state = audioInputSlots_[side][slot];
-                if (state.pendingActive || !state.current) continue;
+                if (state.pendingActive) {
+                    complete = false;
+                    continue;
+                }
+                if (!state.current) continue;
                 std::uint32_t ignoredTicket = 0;
                 if (!clearAudioInputPair(side, slot, ignoredTicket))
                     complete = false;
