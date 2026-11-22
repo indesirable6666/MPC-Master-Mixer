@@ -8,6 +8,7 @@ on:
       - "src/audio/**"
       - "src/mixer/**"
       - "tests/audio_engine_test.cpp"
+      - "tests/audio_output_headroom_test.cpp"
       - "tests/meter_model_test.cpp"
       - "tests/audio_block_meter_test.cpp"
       - "tests/audio_meter_snapshot_bridge_test.cpp"
@@ -29,6 +30,7 @@ on:
       - "src/audio/**"
       - "src/mixer/**"
       - "tests/audio_engine_test.cpp"
+      - "tests/audio_output_headroom_test.cpp"
       - "tests/meter_model_test.cpp"
       - "tests/audio_block_meter_test.cpp"
       - "tests/audio_meter_snapshot_bridge_test.cpp"
@@ -98,6 +100,10 @@ jobs:
           arm-linux-gnueabihf-g++ $COMMON_FLAGS -std=c++14 \
             -Isrc/audio tests/audio_engine_test.cpp \
             -o build/mpc-audio-engine-test-armv7
+
+          arm-linux-gnueabihf-g++ $COMMON_FLAGS -std=c++14 \
+            tests/audio_output_headroom_test.cpp \
+            -o build/mpc-audio-output-headroom-test-armv7
 
           arm-linux-gnueabihf-g++ $COMMON_FLAGS -std=c++14 \
             tests/audio_input_pair_host_test.cpp \
@@ -208,7 +214,7 @@ jobs:
           arm-linux-gnueabihf-g++ -print-file-name=libc.so.6
 
           echo "=== Reject runtime requirements newer than the MPC ==="
-          for binary in build/mpc-arm-probe-cpp build/mpc-arm-graphics-probe-v2 build/mpc-arm-egl-client-extension-probe build/mpc-arm-egl-gbm-symbol-probe build/mpc-arm-gles2-symbol-probe build/mpc-arm-egl-offscreen-pbuffer-probe build/mpc-audio-engine-test-armv7 build/mpc-audio-engine-benchmark-armv7 build/mpc-meter-model-test-armv7 build/mpc-audio-block-meter-test-armv7 build/mpc-audio-meter-snapshot-bridge-test-armv7 build/mpc-audio-duplex-meter-tap-test-armv7 build/mpc-audio-meter-ui-consumer-test-armv7 build/mpc-meter-presentation-adapter-test-armv7 build/mpc-audio-meter-end-to-end-test-armv7 build/mpc-mixer-controller-test-armv7 build/mpc-audio-input-pair-host-test-armv7 build/mpc-audio-native-signal-scenarios-test-armv7 build/mpc-audio-signal-reference-test-armv7 build/mpc-mixer-presentation-snapshot-test-armv7 build/mpc-mixer-ui-command-dispatcher-test-armv7; do
+          for binary in build/mpc-arm-probe-cpp build/mpc-arm-graphics-probe-v2 build/mpc-arm-egl-client-extension-probe build/mpc-arm-egl-gbm-symbol-probe build/mpc-arm-gles2-symbol-probe build/mpc-arm-egl-offscreen-pbuffer-probe build/mpc-audio-engine-test-armv7 build/mpc-audio-output-headroom-test-armv7 build/mpc-audio-engine-benchmark-armv7 build/mpc-meter-model-test-armv7 build/mpc-audio-block-meter-test-armv7 build/mpc-audio-meter-snapshot-bridge-test-armv7 build/mpc-audio-duplex-meter-tap-test-armv7 build/mpc-audio-meter-ui-consumer-test-armv7 build/mpc-meter-presentation-adapter-test-armv7 build/mpc-audio-meter-end-to-end-test-armv7 build/mpc-mixer-controller-test-armv7 build/mpc-audio-input-pair-host-test-armv7 build/mpc-audio-native-signal-scenarios-test-armv7 build/mpc-audio-signal-reference-test-armv7 build/mpc-mixer-presentation-snapshot-test-armv7 build/mpc-mixer-ui-command-dispatcher-test-armv7; do
             if arm-linux-gnueabihf-readelf --version-info "$binary" | \
               grep -E 'GLIBCXX_3\.4\.(29|[3-9][0-9])|GLIBC_2\.(33|[4-9][0-9])'; then
               echo "ERROR: $binary requires a newer runtime than the MPC audit found."
