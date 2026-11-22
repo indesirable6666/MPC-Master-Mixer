@@ -150,3 +150,33 @@ when Solo is active, only soloed and non-muted tracks contribute; Mute takes
 precedence over Solo; clearing the final Solo restores all non-muted tracks;
 and multiple Solo tracks remain active independently when one is cleared.
 This is a deterministic host DSP test, not a physical-device validation.
+
+
+## Audio In DSP parity
+
+The host-side `AudioInputPair` now runs each side through its own six-band EQ
+and fixed two-slot insert chain before the stereo fader/balance or independent
+mono gain/pan stages. EQ coefficients are prepared off the audio thread and
+published through `AudioEngineCommandBridge`; a LINK transition seeds the
+right-side EQ and sample rate from the left in the same queued state change.
+While linked, controller EQ edits update both channels atomically. After
+unlinking, the two channel EQ configurations can be edited independently.
+
+Both linked stereo and independent mono modes expose four post-input-fader,
+post-pan, pre-Master stereo Aux sends. Linked mode uses one shared send level
+per bus; unlinked mode keeps one level per side and follows each side's pan.
+As with regular track sends, Master gain/mute do not alter these taps, while
+the input pair's mute and global Solo arbitration do. The command bridge can
+mix these pair sends into caller-provided Aux buffers and can add caller-provided
+Aux returns to the main stereo output. The current duplex host still exposes
+only its two main output channels, so this is a tested DSP/bridge path rather
+than a physical Aux output route.
+
+Audio In insert pointers are non-owning. `MixerInsertEffectOwner` now manages
+both regular track slots and the two Audio In sides. Keep the host stopped and
+shut down before destroying the owner; retire a replaced effect only after its
+block-boundary acknowledgement has been collected on the control thread.
+
+All of these additions are deterministic host-side processing. They do not
+open a capture device, provide a target ALSA backend, or establish MPC routing,
+latency, or hardware behavior.
