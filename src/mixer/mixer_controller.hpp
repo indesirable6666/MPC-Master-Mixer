@@ -34,6 +34,7 @@ public:
         std::array<AudioInputPair::Channel, 2> audioInputChannels{};
         std::array<std::array<SixBandEq::BandParameters, SixBandEq::kBandCount>, 2>
             audioInputEq{};
+        std::array<float, 2> audioInputEqSampleRates{{48000.0f, 48000.0f}};
         std::array<std::array<AudioInsert*, InsertChain::kSlotCount>, 2>
             audioInputInserts{};
         bool audioInputLinked = false;
@@ -194,9 +195,18 @@ public:
     bool setAudioInputPairEq(
         std::size_t side, float sampleRate,
         const std::array<SixBandEq::BandParameters, SixBandEq::kBandCount>& bands) noexcept {
-        if (side >= 2 || !bridge_.enqueueAudioInputPairEq(side, sampleRate, bands))
-            return false;
-        audioInputEqBands_[side] = bands;
+        if (side >= 2) return false;
+        if (audioInputLinked_) {
+            if (!bridge_.enqueueAudioInputPairEqState(sampleRate, bands))
+                return false;
+            audioInputEqBands_[0] = audioInputEqBands_[1] = bands;
+            audioInputEqSampleRates_[0] = audioInputEqSampleRates_[1] = sampleRate;
+        } else {
+            if (!bridge_.enqueueAudioInputPairEq(side, sampleRate, bands))
+                return false;
+            audioInputEqBands_[side] = bands;
+            audioInputEqSampleRates_[side] = sampleRate;
+        }
         return true;
     }
 
@@ -206,9 +216,7 @@ public:
         if (side >= 2 || band >= SixBandEq::kBandCount) return false;
         auto next = audioInputEqBands_[side];
         next[band] = parameters;
-        if (!bridge_.enqueueAudioInputPairEq(side, sampleRate, next)) return false;
-        audioInputEqBands_[side] = next;
-        return true;
+        return setAudioInputPairEq(side, sampleRate, next);
     }
 
     bool setAudioInputPairLinked(bool linked) noexcept {
@@ -234,11 +242,25 @@ public:
                 channel.auxSend = nextStereo.auxSend;
             }
         }
-        if (!bridge_.enqueueAudioInputPairState(linked, nextStereo, nextChannels))
+        auto nextEqBands = audioInputEqBands_;
+        auto nextEqSampleRates = audioInputEqSampleRates_;
+        if (linked) {
+            // The left strip seeds the shared stereo EQ as well as fader,
+            // mute, solo and Aux send state.
+            nextEqBands[1] = nextEqBands[0];
+            nextEqSampleRates[1] = nextEqSampleRates[0];
+            if (!bridge_.enqueueAudioInputPairState(
+                    linked, nextStereo, nextChannels, nextEqSampleRates[0],
+                    &nextEqBands[0])) return false;
+        } else if (!bridge_.enqueueAudioInputPairState(
+                       linked, nextStereo, nextChannels)) {
             return false;
+        }
         audioInputLinked_ = linked;
         audioInputStereo_ = nextStereo;
         audioInputChannels_ = nextChannels;
+        audioInputEqBands_ = nextEqBands;
+        audioInputEqSampleRates_ = nextEqSampleRates;
         return true;
     }
 
@@ -394,6 +416,7 @@ public:
         snapshot.audioInputStereo = audioInputStereo_;
         snapshot.audioInputChannels = audioInputChannels_;
         snapshot.audioInputEq = audioInputEqBands_;
+        snapshot.audioInputEqSampleRates = audioInputEqSampleRates_;
         snapshot.audioInputInserts = audioInputInserts_;
         snapshot.audioInputLinked = audioInputLinked_;
         return snapshot;
@@ -434,6 +457,7 @@ private:
     std::array<std::array<SixBandEq::BandParameters, SixBandEq::kBandCount>, 2>
         audioInputEqBands_{{SixBandEq::defaultBandParameters(),
                             SixBandEq::defaultBandParameters()}};
+    std::array<float, 2> audioInputEqSampleRates_{{48000.0f, 48000.0f}};
     std::array<std::array<AudioInsert*, InsertChain::kSlotCount>, 2>
         audioInputInserts_{};
     std::array<std::array<std::uint32_t, InsertChain::kSlotCount>, 2>
