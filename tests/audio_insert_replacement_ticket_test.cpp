@@ -33,8 +33,12 @@ int main() {
     oldEffect.setEnabled(true);
     replacement.setEnabled(true);
 
+    // Zero is reserved: it must never acknowledge an unissued ticket.
+    assert(!bridge.hasApplied(0));
+
     std::uint32_t initialTicket = 0;
     assert(bridge.enqueueTrackInsert(0, 0, &oldEffect, initialTicket));
+    assert(initialTicket != 0);
     assert(!bridge.hasApplied(initialTicket));
     assert(near(processOne(bridge), 0.25f));
     assert(bridge.hasApplied(initialTicket));
@@ -42,6 +46,7 @@ int main() {
     // The previous object must remain alive until this acknowledgement.
     std::uint32_t replacementTicket = 0;
     assert(bridge.enqueueTrackInsert(0, 0, &replacement, replacementTicket));
+    assert(replacementTicket != 0);
     assert(!bridge.hasApplied(replacementTicket));
     assert(!bridge.hasApplied(replacementTicket + 1));
     assert(near(processOne(bridge), 0.125f));
@@ -50,6 +55,7 @@ int main() {
     // Removing an insert is also a replacement and must be acknowledged.
     std::uint32_t removalTicket = 0;
     assert(bridge.enqueueTrackInsert(0, 0, nullptr, removalTicket));
+    assert(removalTicket != 0);
     assert(!bridge.hasApplied(removalTicket));
     assert(near(processOne(bridge), 0.5f));
     assert(bridge.hasApplied(removalTicket));
