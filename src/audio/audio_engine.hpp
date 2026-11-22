@@ -243,6 +243,7 @@ public:
         float pan = 0.0f;
         bool mute = false;
         bool solo = false;
+        std::array<float, AudioEngine::kAuxBusCount> auxSend{};
     };
 
     struct StereoControls {
@@ -250,14 +251,17 @@ public:
         float balance = 0.0f; // -1 attenuates right; +1 attenuates left.
         bool mute = false;
         bool solo = false;
+        std::array<float, AudioEngine::kAuxBusCount> auxSend{};
     };
 
     bool setChannel(std::size_t side, const Channel& channel) {
         if (side >= 2 || !std::isfinite(channel.gain) ||
             !std::isfinite(channel.pan) || channel.gain < 0.0f ||
             channel.gain > AudioEngine::kMaxFaderGain || channel.pan < -1.0f ||
-            channel.pan > 1.0f) {
-            return false;
+            channel.pan > 1.0f) return false;
+        for (float send : channel.auxSend) {
+            if (!std::isfinite(send) || send < 0.0f || send > 1.0f)
+                return false;
         }
         channels_[side] = channel;
         return true;
@@ -270,15 +274,43 @@ public:
     bool setStereoControls(const StereoControls& controls) {
         if (!std::isfinite(controls.gain) ||
             !std::isfinite(controls.balance) || controls.gain < 0.0f ||
-            controls.gain > AudioEngine::kMaxFaderGain || controls.balance < -1.0f ||
-            controls.balance > 1.0f) {
+            controls.gain > AudioEngine::kMaxFaderGain ||
+            controls.balance < -1.0f || controls.balance > 1.0f)
             return false;
+        for (float send : controls.auxSend) {
+            if (!std::isfinite(send) || send < 0.0f || send > 1.0f)
+                return false;
         }
         stereo_ = controls;
         return true;
     }
 
     const StereoControls& stereoControls() const { return stereo_; }
+
+    // EQ coefficients are prepared on the control thread and copied at a
+    // block boundary through AudioEngineCommandBridge.
+    bool setEq(std::size_t side, float sampleRate,
+               const std::array<SixBandEq::BandParameters,
+                                SixBandEq::kBandCount>& bands) {
+        if (side >= 2) return false;
+        return equalizers_[side].configure(sampleRate, bands);
+    }
+
+    bool setEqPrepared(
+        std::size_t side,
+        const SixBandEq::PreparedConfiguration& prepared) noexcept {
+        if (side >= 2) return false;
+        return equalizers_[side].applyPrepared(prepared);
+    }
+
+    // Insert pointers are non-owning. Keep the previous and replacement
+    // objects alive until the corresponding command ticket is acknowledged.
+    bool setInsert(std::size_t side, std::size_t slot,
+                   AudioInsert* effect) noexcept {
+        if (side >= 2) return false;
+        return inserts_[side].setSlot(slot, effect);
+    }
+
     void setLinked(bool linked) { linked_ = linked; }
     bool linked() const { return linked_; }
 
@@ -291,26 +323,32 @@ public:
                  float* outputLeft, float* outputRight,
                  std::size_t frameCount) const {
         processImpl(inputLeft, inputRight, outputLeft, outputRight,
-                    frameCount, false, 1.0f, false, false);
+                    frameCount, false, 1.0f, false, false, nullptr, nullptr);
     }
 
     // Adds the pair to an existing stereo mix. postGain/postMute represent
-    // the shared Master stage, which must affect this source just like tracks.
+    // the shared Master stage. Aux sends are post-input-fader/pan but pre-Master,
+    // matching the regular track-strip send convention.
     void processAndMix(const float* inputLeft, const float* inputRight,
                        float* outputLeft, float* outputRight,
                        std::size_t frameCount, float postGain,
-                       bool postMute, bool otherSolo = false) const {
+                       bool postMute, bool otherSolo = false,
+                       float* const* auxLeft = nullptr,
+                       float* const* auxRight = nullptr) const {
         if (!std::isfinite(postGain) || postGain < 0.0f ||
             postGain > AudioEngine::kMaxFaderGain) return;
         processImpl(inputLeft, inputRight, outputLeft, outputRight,
-                    frameCount, true, postGain, postMute, otherSolo);
+                    frameCount, true, postGain, postMute, otherSolo,
+                    auxLeft, auxRight);
     }
 
 private:
     void processImpl(const float* inputLeft, const float* inputRight,
                      float* outputLeft, float* outputRight,
                      std::size_t frameCount, bool add,
-                     float postGain, bool postMute, bool otherSolo) const {
+                     float postGain, bool postMute, bool otherSolo,
+                     float* const* auxLeft,
+                     float* const* auxRight) const {
         if (outputLeft == nullptr || outputRight == nullptr) return;
 
         if (linked_) {
@@ -318,17 +356,20 @@ private:
                 ? 1.0f - stereo_.balance : 1.0f;
             const float rightBalance = stereo_.balance < 0.0f
                 ? 1.0f + stereo_.balance : 1.0f;
-            const float gain = (postMute || (otherSolo && !stereo_.solo))
-                ? 0.0f : stereo_.gain * postGain;
+            const bool soloSuppressed = otherSolo && !stereo_.solo;
             for (std::size_t frame = 0; frame < frameCount; ++frame) {
-                const float left = inputLeft != nullptr &&
+                float left = inputLeft != nullptr &&
                     std::isfinite(inputLeft[frame]) ? inputLeft[frame] : 0.0f;
-                const float right = inputRight != nullptr &&
+                float right = inputRight != nullptr &&
                     std::isfinite(inputRight[frame]) ? inputRight[frame] : 0.0f;
-                const float processedLeft = stereo_.mute ? 0.0f :
-                    left * gain * leftBalance;
-                const float processedRight = stereo_.mute ? 0.0f :
-                    right * gain * rightBalance;
+                left = inserts_[0].processSample(equalizers_[0].processSample(left, 0));
+                right = inserts_[1].processSample(equalizers_[1].processSample(right, 1));
+
+                const bool audible = !stereo_.mute && !postMute && !soloSuppressed;
+                const float processedLeft = audible
+                    ? left * stereo_.gain * postGain * leftBalance : 0.0f;
+                const float processedRight = audible
+                    ? right * stereo_.gain * postGain * rightBalance : 0.0f;
                 if (add) {
                     outputLeft[frame] += processedLeft;
                     outputRight[frame] += processedRight;
@@ -336,13 +377,24 @@ private:
                     outputLeft[frame] = processedLeft;
                     outputRight[frame] = processedRight;
                 }
+
+                // Master mute/gain do not change pre-Master Aux sends.
+                if (!stereo_.mute && !soloSuppressed) {
+                    for (std::size_t bus = 0; bus < AudioEngine::kAuxBusCount; ++bus) {
+                        if (auxLeft != nullptr && auxLeft[bus] != nullptr)
+                            auxLeft[bus][frame] += left * stereo_.gain *
+                                leftBalance * stereo_.auxSend[bus];
+                        if (auxRight != nullptr && auxRight[bus] != nullptr)
+                            auxRight[bus][frame] += right * stereo_.gain *
+                                rightBalance * stereo_.auxSend[bus];
+                    }
+                }
             }
             return;
         }
 
         const bool anySolo = channels_[0].solo || channels_[1].solo;
-        // As with track strips, independent Audio In pan controls are fixed
-        // for the block, so prepare their constant-power gains once.
+        const bool soloSuppressed = otherSolo && !anySolo;
         std::array<float, 2> leftPanGains{};
         std::array<float, 2> rightPanGains{};
         for (std::size_t side = 0; side < 2; ++side) {
@@ -350,21 +402,33 @@ private:
             leftPanGains[side] = std::sqrt((1.0f - pan) * 0.5f);
             rightPanGains[side] = std::sqrt((1.0f + pan) * 0.5f);
         }
+
         for (std::size_t frame = 0; frame < frameCount; ++frame) {
             float leftOut = 0.0f;
             float rightOut = 0.0f;
-            if (!postMute && !(otherSolo && !anySolo)) {
-                for (std::size_t side = 0; side < 2; ++side) {
-                    const Channel& state = channels_[side];
-                    const float* input = side == 0 ? inputLeft : inputRight;
-                    if (state.mute || ((anySolo || otherSolo) && !state.solo) ||
-                        input == nullptr)
-                        continue;
-                    const float sample = std::isfinite(input[frame])
-                        ? input[frame] : 0.0f;
-                    const float scaled = sample * state.gain * postGain;
+            std::array<float, AudioEngine::kAuxBusCount> sendLeft{};
+            std::array<float, AudioEngine::kAuxBusCount> sendRight{};
+            for (std::size_t side = 0; side < 2; ++side) {
+                const Channel& state = channels_[side];
+                const float* input = side == 0 ? inputLeft : inputRight;
+                if (input == nullptr) continue;
+                float sample = std::isfinite(input[frame]) ? input[frame] : 0.0f;
+                sample = equalizers_[side].processSample(sample, side);
+                sample = inserts_[side].processSample(sample);
+                if (state.mute || (anySolo && !state.solo) || soloSuppressed)
+                    continue;
+
+                const float preMaster = sample * state.gain;
+                if (!postMute) {
+                    const float scaled = preMaster * postGain;
                     leftOut += scaled * leftPanGains[side];
                     rightOut += scaled * rightPanGains[side];
+                }
+                for (std::size_t bus = 0; bus < AudioEngine::kAuxBusCount; ++bus) {
+                    sendLeft[bus] += preMaster * leftPanGains[side] *
+                                     state.auxSend[bus];
+                    sendRight[bus] += preMaster * rightPanGains[side] *
+                                      state.auxSend[bus];
                 }
             }
             if (add) {
@@ -374,12 +438,19 @@ private:
                 outputLeft[frame] = leftOut;
                 outputRight[frame] = rightOut;
             }
+            for (std::size_t bus = 0; bus < AudioEngine::kAuxBusCount; ++bus) {
+                if (auxLeft != nullptr && auxLeft[bus] != nullptr)
+                    auxLeft[bus][frame] += sendLeft[bus];
+                if (auxRight != nullptr && auxRight[bus] != nullptr)
+                    auxRight[bus][frame] += sendRight[bus];
+            }
         }
     }
 
     std::array<Channel, 2> channels_{};
     StereoControls stereo_{};
+    std::array<SixBandEq, 2> equalizers_{};
+    std::array<InsertChain, 2> inserts_{};
     bool linked_ = false;
 };
-
 } // namespace mpcmixer
