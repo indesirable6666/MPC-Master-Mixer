@@ -90,7 +90,8 @@ public:
                 }
                 if (!state.current) continue;
                 std::uint32_t ignoredTicket = 0;
-                if (!clear(track, slot, ignoredTicket)) complete = false;
+                complete = false;
+                (void)clear(track, slot, ignoredTicket);
             }
         }
         for (std::size_t side = 0; side < 2; ++side) {
@@ -102,8 +103,8 @@ public:
                 }
                 if (!state.current) continue;
                 std::uint32_t ignoredTicket = 0;
-                if (!clearAudioInputPair(side, slot, ignoredTicket))
-                    complete = false;
+                complete = false;
+                (void)clearAudioInputPair(side, slot, ignoredTicket);
             }
         }
         return complete;
