@@ -133,6 +133,10 @@ public:
         return bridge_.lastEnqueuedTicket();
     }
 
+    bool isAudioCommandApplied(std::uint32_t ticket) const noexcept {
+        return bridge_.hasApplied(ticket);
+    }
+
     // Query an insert replacement ticket from the serialized control thread.
     // Once true, the previous object is no longer referenced by the audio engine
     // and may be retired here (never from the audio callback).
