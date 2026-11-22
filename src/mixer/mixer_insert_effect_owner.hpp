@@ -62,6 +62,17 @@ public:
                 ++count;
             }
         }
+        for (auto& side : audioInputSlots_) {
+            for (auto& slot : side) {
+                if (!slot.pendingActive ||
+                    !controller_.isAudioInputPairInsertUpdateApplied(slot.ticket))
+                    continue;
+                slot.current = std::move(slot.pending);
+                slot.ticket = 0;
+                slot.pendingActive = false;
+                ++count;
+            }
+        }
         return count;
     }
 
@@ -70,6 +81,43 @@ public:
     }
     AudioInsert* current(std::size_t track, std::size_t slot) const noexcept {
         return validSlot(track, slot) ? slots_[track][slot].current.get() : nullptr;
+    }
+
+    bool publishAudioInputPair(std::size_t side, std::size_t slot,
+                               std::unique_ptr<AudioInsert>& candidate,
+                               std::uint32_t& ticket) noexcept {
+        if (!validPairSlot(side, slot) || !candidate ||
+            audioInputSlots_[side][slot].pendingActive) return false;
+        Slot& state = audioInputSlots_[side][slot];
+        if (!controller_.setAudioInputPairInsert(side, slot, candidate.get(), ticket))
+            return false;
+        state.pending = std::move(candidate);
+        state.ticket = ticket;
+        state.pendingActive = true;
+        return true;
+    }
+
+    bool clearAudioInputPair(std::size_t side, std::size_t slot,
+                             std::uint32_t& ticket) noexcept {
+        if (!validPairSlot(side, slot) ||
+            audioInputSlots_[side][slot].pendingActive) return false;
+        Slot& state = audioInputSlots_[side][slot];
+        if (!controller_.setAudioInputPairInsert(side, slot, nullptr, ticket))
+            return false;
+        state.ticket = ticket;
+        state.pendingActive = true;
+        return true;
+    }
+
+    bool hasPendingAudioInputPair(std::size_t side, std::size_t slot) const noexcept {
+        return validPairSlot(side, slot) &&
+            audioInputSlots_[side][slot].pendingActive;
+    }
+
+    AudioInsert* currentAudioInputPair(std::size_t side,
+                                       std::size_t slot) const noexcept {
+        return validPairSlot(side, slot)
+            ? audioInputSlots_[side][slot].current.get() : nullptr;
     }
 
 private:
@@ -82,7 +130,11 @@ private:
     static bool validSlot(std::size_t track, std::size_t slot) noexcept {
         return track < kTrackCount && slot < kSlotCount;
     }
+    static bool validPairSlot(std::size_t side, std::size_t slot) noexcept {
+        return side < 2 && slot < kSlotCount;
+    }
     MixerController& controller_;
     std::array<std::array<Slot, kSlotCount>, kTrackCount> slots_{};
+    std::array<std::array<Slot, kSlotCount>, 2> audioInputSlots_{};
 };
 } // namespace mpcmixer
