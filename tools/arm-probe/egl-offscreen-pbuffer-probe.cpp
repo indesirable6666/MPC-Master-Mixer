@@ -42,7 +42,7 @@ static bool commContainsMpcOrIsUnreadable(const char* path) {
     if (!std::fgets(name, sizeof(name), f)) {
         unsafe = std::ferror(f) != 0;
     } else {
-        name[std::strcspn(name, "\\r\\n")] = '\\0';
+        name[std::strcspn(name, "\r\n")] = '\0';
         // Linux task names may be truncated to TASK_COMM_LEN - 1.
         if (std::strstr(name, "MPC") != nullptr) unsafe = true;
     }
@@ -65,7 +65,7 @@ static bool mpcProcessPresent() {
 
         char* end = nullptr;
         std::strtol(entry->d_name, &end, 10);
-        if (!end || *end != '\\0' || end == entry->d_name) continue;
+        if (!end || *end != '\0' || end == entry->d_name) continue;
 
         char processPath[512];
         std::snprintf(processPath, sizeof(processPath), "/proc/%s", entry->d_name);
@@ -103,7 +103,7 @@ static bool mpcProcessPresent() {
             }
             char* taskEnd = nullptr;
             std::strtol(task->d_name, &taskEnd, 10);
-            if (!taskEnd || *taskEnd != '\\0' || taskEnd == task->d_name) continue;
+            if (!taskEnd || *taskEnd != '\0' || taskEnd == task->d_name) continue;
 
             char taskCommPath[512];
             std::snprintf(taskCommPath, sizeof(taskCommPath),
