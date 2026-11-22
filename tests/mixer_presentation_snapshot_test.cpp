@@ -24,6 +24,8 @@ int main() {
     assert(!initial.tracks[0].mute);
     assert(!initial.tracks[0].solo);
     assert(!initial.tracks[0].hasInsert[0]);
+    assert(!initial.tracks[0].eqConfigured);
+    assert(initial.tracks[0].eqSampleRate == 0.0f);
     assert(!initial.audioInputPair.linked);
     assert(initial.audioInputPair.stereoGainValue == 100);
     assert(initial.audioInputPair.balancePercent == 0);
@@ -75,6 +77,8 @@ int main() {
     assert(changed.tracks[5].auxSendPercent[3] == 42);
     assert(std::fabs(changed.tracks[5].eq[2].frequencyHz - 850.0f) < 0.001f);
     assert(std::fabs(changed.tracks[5].eq[2].gainDb - 5.5f) < 0.001f);
+    assert(changed.tracks[5].eqConfigured);
+    assert(changed.tracks[5].eqSampleRate == 48000.0f);
     assert(changed.tracks[5].hasInsert[1]);
     assert(!changed.tracks[5].hasInsert[0]);
     assert(changed.auxReturns[2].levelValue == 64);
