@@ -69,9 +69,21 @@ to a DOM and inspecting the resulting object:
 The decoder must report a decode error separately from dispatcher statuses.
 The existing typed adapter remains the second validation boundary.
 
+## Implementation status
+
+- Pinned upstream source: tag `v3.12.0`.
+- Vendored single header: `third_party/nlohmann/json.hpp`.
+- Vendored MIT license: `third_party/nlohmann/LICENSE.MIT`.
+- Decoder: `src/mixer/native_ui_json_decoder.hpp`.
+- Decoder tests: `tests/native_ui_json_decoder_test.cpp`.
+- Host CMake target: `native_ui_json_decoder_test`.
+- ARMv7 workflow compile and runtime-symbol audit: registered; CI result pending.
+- The published upstream SHA-256 above is recorded as provenance; this session
+  has not independently recomputed the digest of the vendored bytes.
+
 ## Required validation before merging the decoder
 
-- Vendor only the pinned v3.12.0 header and its license notice; do not fetch a
+- Keep only the pinned v3.12.0 header and its license notice; do not fetch a
   dependency at configure/build time.
 - Add a dedicated decoder test target and run the full host CTest suite.
 - Add the decoder source and test to the ARMv7 workflow's compile list and
