@@ -60,6 +60,51 @@ Example decoded message:
 }
 ```
 
+### Normative decoder rules
+
+A future JSON decoder must enforce these rules before constructing the typed
+message. They are part of the wire contract, not optional parser preferences.
+
+- The top-level value must be exactly one JSON object. Reject trailing
+  non-whitespace data, malformed JSON, arrays, scalars, and `null`.
+- Accept only the fields `sequence`, `type`, `track`, `value`, and
+  `flag`. Reject unknown fields and duplicate keys; do not use
+  last-key-wins or first-key-wins behavior.
+- `sequence` is required and must be a JSON integer in the range
+  1..`UINT64_MAX`. Reject negative values, fractions, exponent notation,
+  strings, booleans, null, and values that cannot be represented exactly as
+  an unsigned 64-bit integer. Do not parse through a floating-point type.
+- `type` is required and must be a string matching one of the six command
+  names exactly. Reject case variants, whitespace-padded names, non-strings,
+  and unknown names.
+- `track`, when present, must be a non-negative JSON integer representable
+  as `std::size_t`; command-specific range validation then limits it to
+  0..15. Reject fractions, exponent notation, negative values, booleans,
+  strings, and overflow.
+- `value`, when present, must be a signed JSON integer representable as
+  `int`; command-specific validation then applies the fader or pan range.
+  Reject fractions, exponent notation, booleans, strings, null, and overflow.
+- `flag`, when present, must be a JSON boolean. Do not coerce 0/1, strings,
+  or null to booleans.
+- Required fields are command-specific as shown in the mapping table. Reject
+  missing required fields. Also reject fields that are not defined for the
+  selected command, rather than silently ignoring contradictory payload data.
+- Set each `hasTrack`, `hasValue`, and `hasFlag` flag only after the
+  corresponding field has passed exact JSON type and representability checks.
+  Never manufacture a default value to make a missing field appear present.
+- Bound the transport frame size before parsing. The transport owner must
+  choose and document a conservative maximum suitable for these small control
+  messages; oversized frames must be rejected before allocating an unbounded
+  parse buffer.
+- Parsing, allocation, and decoding occur only on the serialized control
+  thread, never in the audio callback. The decoder must not call controller
+  or engine APIs itself.
+
+The decoder should return a distinct transport/decode error to its caller.
+Only successfully decoded messages are passed to
+`NativeUiCommandAdapter::dispatch()`. The adapter's `Invalid` result remains
+the final defense for command-specific presence and range validation.
+
 Call `NativeUiCommandAdapter::dispatch()` from one serialized control
 thread. Do not call it from the audio callback or multiple concurrent
 transport callbacks.
@@ -103,9 +148,14 @@ producer/control-thread rule.
 ## Acceptance tests and remaining work
 
 `tests/native_ui_command_adapter_test.cpp` covers command mapping, required
-field presence, invalid ranges, unknown command names, and state publication.
-The existing dispatcher tests cover sequence ordering, queue backpressure,
-and audio-ticket application.
+field presence, invalid ranges, unknown command names, sequence ordering,
+retry after rejection, and state publication. The existing dispatcher tests
+cover sequence ordering, queue backpressure, and audio-ticket application.
+
+A future decoder test suite must additionally cover malformed/trailing JSON,
+top-level non-objects, duplicate and unknown keys, every wrong JSON type,
+integer boundaries and overflow, missing and command-inapplicable fields,
+oversized frames, and exact command-name matching.
 
 Still not implemented: JSON decoding, IPC, reconnect/snapshot transport,
 native UI toolkit integration, and live-device validation. No hardware tests
