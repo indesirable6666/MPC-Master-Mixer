@@ -1,75 +1,33 @@
-# Insert effect replacement lifecycle
+# Native insert-effect ownership
 
-## Ownership and publication
+## Owner component
 
-`AudioInsert` instances are caller-owned. `MixerController::setTrackInsert()`
-and `AudioEngineCommandBridge::enqueueTrackInsert()` enqueue a non-owning
-pointer; neither takes ownership, copies the object, nor deletes it.
+`MixerInsertEffectOwner` is the control-thread ownership layer for the
+non-owning pointers published by `MixerController`. It owns one current and
+at most one pending `std::unique_ptr<AudioInsert>` per track/slot.
 
-Treat a slot update as a two-phase handoff:
+- `publish(track, slot, candidate, ticket)` transfers ownership only after
+  the controller successfully queues the pointer. On failure, the caller
+  retains the candidate.
+- `clear(track, slot, ticket)` queues a null pointer but retains the current
+  effect until acknowledgement.
+- `collectApplied()` polls tickets and promotes pending to current only after
+  acknowledgement. The replaced effect is destroyed on the control thread.
+- Slots are independent; calls must still be serialized on the one SPSC
+  producer/control thread.
 
-1. On the serialized control thread, construct and fully configure the new
-   effect. Do not change its parameters after publication.
-2. Enqueue the pointer and retain both the old and new objects.
-3. Let the audio callback drain the command at a block boundary.
-4. Poll `MixerController::isInsertUpdateApplied(ticket)` (or
-   `AudioEngineCommandBridge::hasApplied(ticket)`) from the control thread.
-5. Only after it returns true may the old object be destroyed or reused.
-   The new object must remain alive until a later replacement is acknowledged
-   and the callback has stopped referencing it.
+Do not mutate a published effect. Prepare a replacement and publish it.
+Queue-full rejection leaves the candidate and current slot unchanged.
 
-Do not block or wait for the acknowledgement on the audio thread. Do not
-allocate or destroy effects in the callback. Do not mutate a published effect:
-to change gain, drive, or bypass, prepare a replacement object and repeat the
-handoff.
+## Shutdown ordering
 
-## Serialize updates per slot
+The owner cannot stop an arbitrary audio backend. Stop and shut down the audio
+host, ensuring no callback can still dereference inserts, before destroying
+this owner. A queued clear alone is not a shutdown barrier.
 
-The native `MixerController` enforces at most one unacknowledged replacement
-per insert slot: a second call for that slot returns `false` until the first
-ticket is acknowledged. This keeps the ownership handoff unambiguous and avoids
-accidentally retiring an intermediate effect while a later queued command still
-refers to it. Direct users of `AudioEngineCommandBridge` must enforce the same
-rule themselves. The command bridge is
-SPSC: all enqueue and acknowledgement polling for a controller must be
-serialized on its one producer/control thread.
+## Validation
 
-`MixerController::desiredStateSnapshot()` is a producer-side desired-state
-view. Its insert pointers reflect successfully enqueued requests, not
-necessarily the effect currently active in the audio engine. The ticket
-acknowledgement is the signal that the queued pointer swap has actually
-happened.
-
-## Clearing a slot
-
-Pass `nullptr` to enqueue a clear. Retain the previous object until the clear
-ticket is acknowledged, then destroy it off the audio thread.
-
-## Example: prepare and publish a Gain insert
-
-```cpp
-// All operations below are on the serialized control thread.
-// `current` owns the effect currently published in this slot.
-// Keep `candidate` alive while its pointer is queued and until it becomes current.
-auto candidate = std::unique_ptr<GainInsert>(new GainInsert());
-candidate->setGain(1.5f);
-candidate->setEnabled(true);
-
-std::uint32_t ticket = 0;
-if (controller.setTrackInsert(track, slot, candidate.get(), ticket)) {
-    // Keep current and candidate alive. Poll on a later control/UI iteration.
-    // Once controller.isInsertUpdateApplied(ticket) is true:
-    //     current = std::move(candidate); // old current is retired here
-}
-```
-
-The example intentionally leaves polling to the host's control loop. Do not
-spin-wait on the UI thread, and do not infer application merely because enqueue
-returned true. If enqueue returns false (for example, a full queue), the
-candidate was not published and may be discarded on the control thread.
-
-## Scope
-
-This is a native C++ ownership/synchronization contract only. It does not
-connect the browser prototype to the controller, instantiate effects in the
-MPC application, or provide live MPC audio I/O.
+`mixer_insert_effect_owner_test` uses the offline command bridge to verify
+replacement and clear acknowledgements, delayed destruction, independent
+slots, queue-full rollback, and invalid-coordinate rejection. It does not
+open an audio device or exercise MPC hardware.
