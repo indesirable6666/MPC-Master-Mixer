@@ -19,6 +19,8 @@ int main() {
     auto result = dispatcher.dispatch(command);
     assert(result.accepted());
     assert(result.sequence == 1);
+    assert(result.audioTicket != 0);
+    assert(!controller.isAudioCommandApplied(result.audioTicket));
 
     command.sequence = 2;
     command.type = mpcmixer::MixerUiCommandType::SetTrackPan;
@@ -136,6 +138,14 @@ int main() {
     assert(snapshot.audioInputPair.channels[1].mute);
     assert(snapshot.audioInputPair.channels[0].solo);
     assert(snapshot.audioInputPair.channels[1].solo);
+
+    // Dispatcher acknowledgements refer to audio-thread application, not
+    // merely acceptance into the producer queue.
+    const float* appliedInputs[mpcmixer::AudioEngine::kTrackCount]{};
+    float appliedLeft[1]{};
+    float appliedRight[1]{};
+    bridge.process(appliedInputs, appliedLeft, appliedRight, 1);
+    assert(controller.isAudioCommandApplied(result.audioTicket));
 
     // Zero, repeated, and older sequence numbers are rejected.
     command.sequence = 0;
