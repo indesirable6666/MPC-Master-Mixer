@@ -166,7 +166,8 @@ int main() {
     pairBands[3].gainDb = 6.0f; // 1.5 kHz band, at its centre frequency below.
     assert(pairController.setAudioInputPairEq(0, 48000.0f, pairBands));
     mpcmixer::MixerInsertEffectOwner pairInsertOwner(pairController);
-    auto rightTrim = std::make_unique<mpcmixer::GainInsert>();
+    std::unique_ptr<mpcmixer::AudioInsert> rightTrim =
+        std::make_unique<mpcmixer::GainInsert>();
     assert(rightTrim->setGain(0.5f));
     rightTrim->setEnabled(true);
     std::uint32_t pairInsertTicket = 0;
