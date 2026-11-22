@@ -88,13 +88,56 @@ int main() {
     assert(result.accepted());
     assert(result.audioTicket != 0);
 
-    // Stale disconnect cannot invalidate the newer epoch.
-    assert(!session.invalidate(epoch));
-    assert(session.isReady(nextEpoch));
+    // Leave epoch 2's accepted command outstanding across disconnect. The
+    // tracker must retain its ticket, but never expose its ACK to epoch 3.
+    const std::uint32_t obsoleteTicket = result.audioTicket;
+    assert(session.pendingAcknowledgements() == 1);
+    assert(session.invalidate(nextEpoch));
+
+    std::uint64_t thirdEpoch = 0;
+    assert(session.beginConnection(thirdEpoch));
+    assert(thirdEpoch == 3);
+    assert(!session.updateSnapshot(nextEpoch, snapshot, true));
+    command.sequence = 3;
+    result = session.dispatch(thirdEpoch, dispatcher, command);
+    assert(result.status == mpcmixer::MixerUiCommandStatus::Invalid);
+    assert(dispatcher.lastAcceptedSequence() == 2);
+
+    // The old ticket is still pending, so epoch 3 cannot become ready from a
+    // snapshot whose audio watermark has not caught up.
+    snapshot = publisher.publish();
+    assert(!snapshot.audioStateCaughtUp);
+    assert(session.updateSnapshot(thirdEpoch, snapshot, true));
+    assert(!session.isReady(thirdEpoch));
+    assert(!session.popApplied(controller, ack));
+
+    // Once the callback applies the obsolete ticket, a newer full snapshot
+    // opens epoch 3. The next command is queued behind the old completion.
+    bridge.process(inputs, left, right, 1);
+    snapshot = publisher.publish();
+    assert(snapshot.audioStateCaughtUp);
+    assert(session.updateSnapshot(thirdEpoch, snapshot, true));
+    assert(session.isReady(thirdEpoch));
+
+    command.sequence = 3;
+    result = session.dispatch(thirdEpoch, dispatcher, command);
+    assert(result.accepted() && result.audioTicket != 0);
+    assert(result.audioTicket != obsoleteTicket);
+    assert(session.pendingAcknowledgements() == 2);
+
+    // A stale disconnect cannot invalidate epoch 3. When both tickets have
+    // completed, FIFO draining discards epoch 2's ACK and exposes only epoch 3.
+    assert(!session.invalidate(nextEpoch));
+    assert(session.isReady(thirdEpoch));
     bridge.process(inputs, left, right, 1);
     assert(session.popApplied(controller, ack));
-    assert(ack.sequence == 2);
-    assert(ack.connectionEpoch == nextEpoch);
-    assert(session.invalidate(nextEpoch));
+    assert(ack.sequence == 3);
+    assert(ack.connectionEpoch == thirdEpoch);
+    assert(ack.audioTicket == result.audioTicket);
+    assert(!session.popApplied(controller, ack));
+    assert(session.pendingAcknowledgements() == 0);
+
+    assert(session.invalidate(thirdEpoch));
     assert(session.activeEpoch() == 0);
+    return 0;
 }
