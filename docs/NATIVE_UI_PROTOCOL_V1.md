@@ -286,7 +286,11 @@ is the cross-connection boundary.
 
 ## Implementation and acceptance checklist
 
-Before implementing v1:
+The protocol codecs, snapshot serialization, session coordination, and host-side
+framing primitives are implemented and tested. Endpoint lifecycle and device
+integration remain unimplemented and require a separately approved deployment
+model.
+
 - [x] Resolve track EQ sample-rate provenance in the presentation snapshot;
       unconfigured tracks expose `eq_configured:false` and rate `0`, while
       successfully queued configurations publish their actual requested rate.
