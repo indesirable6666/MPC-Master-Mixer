@@ -105,17 +105,19 @@ audio acknowledgements returned for the active epoch.
 3. Specify and test versioned command, snapshot, result, and acknowledgement
    schemas independently of sockets.
 4. Implement a bounded framing codec and unit tests on the host. The frame
-   codec, partial-I/O adapter, and bounded framed-stream channel are now
-   implemented and covered by host tests.
-5. Implement descriptor lifecycle and a host-side socket endpoint behind a
-   narrow interface; test endpoint permissions, partial reads/writes,
-   disconnects, malformed frames, and reconnects using local test processes.
+   codec, partial-I/O adapter, bounded framed-stream channel, and RAII
+   descriptor owner are now implemented and covered by host tests.
+5. Implement socket creation/bind/listen/accept/connect lifecycle and a
+   host-side endpoint behind a narrow interface; test endpoint permissions,
+   partial reads/writes, disconnects, malformed frames, and reconnects using
+   local test processes.
 6. Cross-compile against the confirmed target toolchain.
 7. Only then consider device validation, with separate explicit authorization.
 
-An isolated POSIX stream-I/O adapter and bounded framed-stream channel now
-exist for already-open descriptors. The channel provides a single-frame
+An isolated POSIX stream-I/O adapter, bounded framed-stream channel, and
+move-only descriptor owner now exist. The channel provides a single-frame
 caller-owned transmit queue and an incremental receive pump that preserves
-bytes across concatenated frames. It does not create, connect, listen, accept,
-or own sockets. No filesystem socket, device connection, or hardware
-validation is implemented.
+bytes across concatenated frames; the descriptor wrapper adopts an existing
+file descriptor and closes it through RAII. None of these components creates,
+binds, connects, listens, or accepts sockets, or selects a filesystem path.
+No endpoint, device connection, or hardware validation is implemented.
