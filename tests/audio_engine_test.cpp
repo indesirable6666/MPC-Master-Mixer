@@ -672,7 +672,7 @@ int main() {
     const auto desiredSnapshot = controller.desiredStateSnapshot();
     assert(near(desiredSnapshot.tracks[2].controls.gain, 1.27f));
     assert(near(desiredSnapshot.tracks[2].eq[1].gainDb, 4.0f));
-    assert(desiredSnapshot.tracks[2].inserts[1] == controllerInsert.get());
+    assert(desiredSnapshot.tracks[2].inserts[1] == controllerInsertOwner.current(2, 1));
     assert(near(desiredSnapshot.auxReturns[1].gain, 0.75f));
     assert(near(desiredSnapshot.masterGain, 1.0f));
     assert(desiredSnapshot.masterMute);
