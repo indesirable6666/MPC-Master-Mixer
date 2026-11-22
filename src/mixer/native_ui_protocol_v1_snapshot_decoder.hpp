@@ -7,8 +7,10 @@
 #include <cstddef>
 #include <cstdint>
 #include <map>
+#include <limits>
 #include <set>
 #include <string>
+#include <stdexcept>
 
 namespace mpcmixer {
 
