@@ -69,8 +69,11 @@ int main() {
     assert(!owner.publish(mpcmixer::AudioEngine::kTrackCount, 0, rejected, ticket));
     assert(rejected.get() == rejectedPtr);
 
-    // The owner is destroyed only after the offline callback has stopped.
+    // Clear the other populated slot too; no engine slot may retain a pointer
+    // after the owner is destroyed.
+    assert(owner.clear(1, 1, ticket));
     processBlock(bridge);
-    assert(owner.collectApplied() == 0);
+    assert(owner.collectApplied() == 1);
+    assert(owner.current(1, 1) == nullptr);
     return 0;
 }
