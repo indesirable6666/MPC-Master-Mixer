@@ -2,7 +2,7 @@
 
 ## Status and scope
 
-**Partially implemented; transport and snapshots remain specification-only.** The repository now has strict decoders for v1 commands and client `hello` / `snapshot_request` messages, plus a server response serializer for `hello`, `command_result`, `audio_ack`, and `protocol_error`. Full snapshot serialization is implemented with a bounded 32 KiB payload; strict snapshot decoding, socket/IPC endpoint, UI integration, and device integration are not implemented. The target OS and process permissions remain unverified.
+**Protocol codecs and transport-neutral session logic implemented; transport and device integration remain unimplemented.** The repository has strict decoders for v1 commands, client `hello` / `snapshot_request`, and full snapshots; serializers cover full snapshots and the server responses `hello`, `command_result`, `audio_ack`, and `protocol_error`. A host integration test exercises snapshot decode, readiness gating, command dispatch, and audio acknowledgement. The socket/IPC endpoint, native UI integration, and device integration are not implemented. The target OS and process permissions remain unverified.
 
 Protocol v1 deliberately exposes only the six commands already supported by
 `NativeUiCommandAdapter`: track fader, pan, mute, solo, master fader, and master
