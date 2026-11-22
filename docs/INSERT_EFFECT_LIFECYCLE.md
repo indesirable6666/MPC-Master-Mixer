@@ -14,6 +14,13 @@ slot and each of the two Audio Input pair sides.
   effect until acknowledgement.
 - `collectApplied()` polls tickets and promotes pending to current only after
   acknowledgement. The replaced effect is destroyed on the control thread.
+- `requestClearAll()` incrementally queues null pointers for every populated
+  track and Audio Input pair slot. Call it repeatedly with `collectApplied()`
+  while the callback is running; a false return means retry later, including
+  when the bounded command queue is full.
+- `allCleared()` becomes true only when all current/pending owners are empty
+  and all pointer handoffs have been acknowledged. It is the owner's
+  pre-shutdown check, not a substitute for stopping the backend.
 - `publishAudioInputPair` and `clearAudioInputPair` provide the same contract
   for the two Audio Input pair sides.
 - Track and Audio Input pair slots are independent; calls must still be
@@ -24,13 +31,15 @@ Queue-full rejection leaves the candidate and current slot unchanged.
 
 ## Shutdown ordering
 
-The owner cannot stop an arbitrary audio backend. Before teardown, queue a
-clear for every populated track and Audio Input pair slot, and keep the owner
-and old effects alive until all clear tickets are acknowledged. Then stop and shut down the audio host
-before destroying the owner. This ordering ensures the engine no longer holds
-insert pointers and no callback can race destruction. A queued clear alone is
-not a shutdown barrier; if the callback is stopped before the clears are
-applied, the host must provide another safe way to drain them before teardown.
+The owner cannot stop an arbitrary audio backend. Before teardown, keep the
+callback running and repeat `requestClearAll()` followed by `collectApplied()`
+until `allCleared()` returns true. This drains existing pending publications,
+queues clears for populated track and Audio Input pair slots, and retries
+safely under queue backpressure. Then stop and shut down the audio host before
+destroying the owner. This ordering ensures the engine no longer holds insert
+pointers and no callback can race destruction. A queued clear alone is not a
+shutdown barrier; stopping the callback before the clears are applied leaves
+the engine's last insert pointers live.
 
 ## Validation
 
