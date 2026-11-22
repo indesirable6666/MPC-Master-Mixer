@@ -143,9 +143,20 @@ public:
             const Coefficients& c = coefficients_[band];
             State& z = state_[side][band];
             const float output = c.b0 * sample + z.z1;
-            z.z1 = c.b1 * sample - c.a1 * output + z.z2;
-            z.z2 = c.b2 * sample - c.a2 * output;
-            sample = std::isfinite(output) ? output : 0.0f;
+            const float nextZ1 = c.b1 * sample - c.a1 * output + z.z2;
+            const float nextZ2 = c.b2 * sample - c.a2 * output;
+            // A finite but extreme input can still overflow the recurrence.
+            // Never retain poisoned delay state: recover this band to silence
+            // and let subsequent samples restart from a clean state.
+            if (!std::isfinite(output) || !std::isfinite(nextZ1) ||
+                !std::isfinite(nextZ2)) {
+                z = State{};
+                sample = 0.0f;
+            } else {
+                z.z1 = nextZ1;
+                z.z2 = nextZ2;
+                sample = output;
+            }
         }
         return sample;
     }
