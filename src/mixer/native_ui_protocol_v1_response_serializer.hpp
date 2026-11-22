@@ -13,7 +13,8 @@ public:
  }
  static bool commandResult(std::uint64_t epoch,std::uint64_t sequence,NativeUiV1CommandResultStatus status,std::uint32_t audioTicket,std::string& output) {
   if(!epoch||!sequence)return false;
-  nlohmann::json j=envelope("command_result",epoch);j["sequence"]=sequence;j["status"]=commandStatus(status);j["audio_ticket"]=audioTicket;return commit(j,output);
+  const char* token=commandStatus(status);if(!token)return false;
+  nlohmann::json j=envelope("command_result",epoch);j["sequence"]=sequence;j["status"]=token;j["audio_ticket"]=audioTicket;return commit(j,output);
  }
  static bool audioAck(std::uint64_t epoch,std::uint64_t sequence,std::uint32_t audioTicket,std::string& output) {
   if(!epoch||!sequence||!audioTicket)return false;
@@ -21,7 +22,8 @@ public:
  }
  static bool protocolError(std::uint64_t epoch,NativeUiV1ProtocolErrorCode code,bool fatal,std::string& output) {
   if(!epoch)return false;
-  nlohmann::json j=envelope("protocol_error",epoch);j["code"]=errorCode(code);j["fatal"]=fatal;return commit(j,output);
+  const char* token=errorCode(code);if(!token)return false;
+  nlohmann::json j=envelope("protocol_error",epoch);j["code"]=token;j["fatal"]=fatal;return commit(j,output);
  }
 private:
  static nlohmann::json envelope(const char* kind,std::uint64_t epoch) {
