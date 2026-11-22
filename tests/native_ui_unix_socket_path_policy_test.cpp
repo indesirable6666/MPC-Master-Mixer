@@ -22,9 +22,15 @@ int main() {
     check("/run/../mixer.sock", NativeUiUnixSocketPathStatus::ParentComponent);
     check("/run//mixer.sock", NativeUiUnixSocketPathStatus::Valid);
     check("/run/mixer.sock", NativeUiUnixSocketPathStatus::Valid);
-    const std::string tooLong =
-        "/" + std::string(NativeUiUnixSocketPathPolicy::maximumPathBytes(), 'x');
+    const std::string maximumLength =
+        "/" + std::string(NativeUiUnixSocketPathPolicy::maximumPathBytes() - 1, 'x');
+    check(maximumLength, NativeUiUnixSocketPathStatus::Valid);
+    const std::string tooLong = maximumLength + "x";
     check(tooLong, NativeUiUnixSocketPathStatus::TooLong);
+    check("/run/mixer/../control.sock",
+          NativeUiUnixSocketPathStatus::ParentComponent);
+    check("/run/mixer/./control.sock",
+          NativeUiUnixSocketPathStatus::DotComponent);
 
     return 0;
 }
