@@ -57,18 +57,21 @@ private:
     public:
         bool accept(int depth, nlohmann::json::parse_event_t event,
                     nlohmann::json& parsed) {
+            (void)depth;
             if (event == nlohmann::json::parse_event_t::object_start) {
-                keys_[depth].clear();
+                keys_.emplace_back();
             } else if (event == nlohmann::json::parse_event_t::key) {
-                if (!keys_[depth].insert(parsed.get<std::string>()).second)
+                if (keys_.empty() ||
+                    !keys_.back().insert(parsed.get<std::string>()).second)
                     throw std::runtime_error("duplicate JSON key");
             } else if (event == nlohmann::json::parse_event_t::object_end) {
-                keys_.erase(depth);
+                if (keys_.empty()) throw std::runtime_error("invalid object scope");
+                keys_.pop_back();
             }
             return true;
         }
     private:
-        std::map<int, std::set<std::string>> keys_;
+        std::vector<std::set<std::string>> keys_;
     };
 
     static bool fields(const nlohmann::json& value,
