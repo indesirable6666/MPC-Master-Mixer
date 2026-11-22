@@ -60,6 +60,7 @@ mpc_add_host_test(mixer_presentation_all_tracks_test tests/mixer_presentation_al
 mpc_add_host_test(mixer_ui_command_dispatcher_test tests/mixer_ui_command_dispatcher_test.cpp)
 mpc_add_host_test(native_ui_command_adapter_test tests/native_ui_command_adapter_test.cpp)
 mpc_add_host_test(native_ui_json_decoder_test tests/native_ui_json_decoder_test.cpp)
+# Exercises strict SAX parsing, field validation, and bounded JSON frames.
 target_include_directories(native_ui_json_decoder_test PRIVATE src/mixer)
 mpc_add_host_test(midi_adapter_test tests/midi_adapter_test.cpp)
 target_include_directories(midi_adapter_test PRIVATE src/midi src/mixer)
