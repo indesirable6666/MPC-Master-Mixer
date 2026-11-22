@@ -109,6 +109,18 @@ int main() {
     assert(backend.stopCalls == 2); // Explicit stop and shutdown's safety stop.
     assert(backend.shutdownCalls == 1);
 
-    // Releasing a prepared host must always be an explicit lifecycle step.
+    // RAII shutdown also stops callbacks when the caller omits shutdown().
+    // Declare the backend first so it outlives the host, as required by contract.
+    RecordingBackend scopedBackend;
+    {
+        AudioDuplexEngineHost scopedHost(bridge);
+        assert(scopedHost.prepare(scopedBackend, format));
+        assert(scopedHost.start());
+    }
+    assert(!scopedBackend.running);
+    assert(!scopedBackend.prepared);
+    assert(scopedBackend.stopCalls == 1);
+    assert(scopedBackend.shutdownCalls == 1);
+
     return 0;
 }
