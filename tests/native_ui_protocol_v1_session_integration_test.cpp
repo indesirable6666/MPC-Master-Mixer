@@ -1,7 +1,8 @@
+#include "native_ui_protocol_v1_client_message_handler.hpp"
+#include "native_ui_protocol_v1_command_processor.hpp"
 #include "native_ui_protocol_v1_response_serializer.hpp"
-#include "native_ui_session_coordinator.hpp"
 #include "native_ui_protocol_v1_snapshot_decoder.hpp"
-#include "native_ui_protocol_v1_snapshot_serializer.hpp"
+#include "native_ui_protocol_v1_snapshot_delivery.hpp"
 
 #include "../../third_party/nlohmann/json.hpp"
 
@@ -17,91 +18,93 @@ int main() {
     MixerUiCommandDispatcher dispatcher(controller);
     MixerPresentationPublisher publisher(controller);
     NativeUiSessionCoordinator session;
+    NativeUiProtocolV1ClientMessageHandler ingress;
+    NativeUiProtocolV1SnapshotDelivery delivery;
+    NativeUiProtocolV1CommandProcessor commands;
 
-    std::uint64_t epoch = 0;
-    assert(session.beginConnection(epoch));
+    std::string outbound;
+    auto message = ingress.handle(
+        R"({"version":1,"kind":"hello","epoch":0,"client":"touch-mixer"})",
+        session, outbound);
+    assert(message.status == NativeUiProtocolV1ClientMessageStatus::HelloAccepted);
+    const std::uint64_t epoch = message.epoch;
     assert(epoch != 0);
+    auto hello = nlohmann::json::parse(outbound);
+    assert(hello["kind"] == "hello" && hello["epoch"] == epoch);
 
-    std::string serverHello;
-    assert(NativeUiProtocolV1ResponseSerializer::serverHello(epoch, serverHello));
-    const auto hello = nlohmann::json::parse(serverHello);
-    assert(hello["kind"] == "hello");
-    assert(hello["epoch"] == epoch);
-    assert(hello["status"] == "ready");
-
-    // A queued control makes the first presentation snapshot not yet applied.
+    // First full snapshot reflects a queued audio change, so delivery alone
+    // must not open the command gate.
     assert(controller.setTrackFader(0, 55));
-    auto snapshot = publisher.publish();
-    assert(!snapshot.audioStateCaughtUp);
+    const std::string requestOne =
+        std::string(R"({"version":1,"kind":"snapshot_request","epoch":)") +
+        std::to_string(epoch) + R"(,"request":1})";
+    message = ingress.handle(requestOne, session, outbound);
+    assert(message.status == NativeUiProtocolV1ClientMessageStatus::SnapshotRequested);
+    assert(delivery.prepare(epoch, message.request, publisher, session, outbound));
+    const std::uint64_t firstSequence = delivery.pendingSequence();
 
-    std::string wireSnapshot;
-    assert(NativeUiProtocolV1SnapshotSerializer::serialize(
-        epoch, 1, snapshot, wireSnapshot));
     MixerPresentationSnapshot decoded;
     assert(NativeUiProtocolV1SnapshotDecoder::decode(
-        wireSnapshot, epoch, 1, decoded) ==
+        outbound, epoch, message.request, decoded) ==
         NativeUiProtocolV1SnapshotDecodeStatus::Ok);
-    assert(session.updateSnapshot(epoch, decoded, true));
+    assert(!decoded.audioStateCaughtUp);
+    assert(delivery.markDelivered(epoch, firstSequence, session));
     assert(!session.isReady(epoch));
 
-    MixerUiCommand command;
-    command.sequence = 1;
-    command.type = MixerUiCommandType::SetTrackFader;
-    command.track = 2;
-    command.value = 81;
-    auto result = session.dispatch(epoch, dispatcher, command);
-    assert(result.status == MixerUiCommandStatus::Invalid);
-    assert(dispatcher.lastAcceptedSequence() == 0);
+    const std::string command =
+        std::string(R"({"version":1,"kind":"command","epoch":)") +
+        std::to_string(epoch) +
+        R"(,"sequence":1,"type":"SetTrackFader","track":2,"value":81})";
+    auto commandResult = commands.process(command, session, dispatcher, outbound);
+    assert(commandResult.status == NativeUiProtocolV1CommandProcessStatus::NotReady);
 
-    // Callback applies the queued state; a newer full snapshot opens the gate.
+    // Simulate the audio callback applying the earlier ticket. A newer full
+    // snapshot is then delivered before commands are admitted.
     const float* inputs[AudioEngine::kTrackCount]{};
     float left[1]{};
     float right[1]{};
     bridge.process(inputs, left, right, 1);
-    snapshot = publisher.publish();
-    assert(snapshot.audioStateCaughtUp);
-    assert(NativeUiProtocolV1SnapshotSerializer::serialize(
-        epoch, 2, snapshot, wireSnapshot));
-    assert(NativeUiProtocolV1SnapshotDecoder::decode(
-        wireSnapshot, epoch, 2, decoded) ==
-        NativeUiProtocolV1SnapshotDecodeStatus::Ok);
-    assert(session.updateSnapshot(epoch, decoded, true));
+
+    const std::string requestTwo =
+        std::string(R"({"version":1,"kind":"snapshot_request","epoch":)") +
+        std::to_string(epoch) + R"(,"request":2})";
+    message = ingress.handle(requestTwo, session, outbound);
+    assert(message.status == NativeUiProtocolV1ClientMessageStatus::SnapshotRequested);
+    assert(delivery.prepare(epoch, message.request, publisher, session, outbound));
+    const std::uint64_t secondSequence = delivery.pendingSequence();
+    assert(secondSequence > firstSequence);
+    assert(delivery.markDelivered(epoch, secondSequence, session));
     assert(session.isReady(epoch));
 
-    result = session.dispatch(epoch, dispatcher, command);
-    assert(result.accepted());
-    assert(result.audioTicket != 0);
+    commandResult = commands.process(command, session, dispatcher, outbound);
+    assert(commandResult.status == NativeUiProtocolV1CommandProcessStatus::Accepted);
+    const auto accepted = nlohmann::json::parse(outbound);
+    assert(accepted["kind"] == "command_result");
+    assert(accepted["epoch"] == epoch);
+    assert(accepted["sequence"] == 1);
+    assert(accepted["status"] == "accepted");
 
-    std::string commandResult;
-    assert(NativeUiProtocolV1ResponseSerializer::commandResult(
-        epoch, result, commandResult));
-    const auto commandJson = nlohmann::json::parse(commandResult);
-    assert(commandJson["kind"] == "command_result");
-    assert(commandJson["epoch"] == epoch);
-    assert(commandJson["sequence"] == command.sequence);
-    assert(commandJson["status"] == "accepted");
-    assert(commandJson["audio_ticket"] == result.audioTicket);
-
-    // No ACK is visible before the audio callback applies the ticket.
+    // Acceptance and actual audio application remain separate events.
     NativeUiAudioAck ack;
     assert(!session.popApplied(controller, ack));
     bridge.process(inputs, left, right, 1);
     assert(session.popApplied(controller, ack));
-    assert(ack.sequence == command.sequence);
+    assert(ack.sequence == 1);
     assert(ack.connectionEpoch == epoch);
-    assert(ack.audioTicket == result.audioTicket);
+    assert(ack.audioTicket == commandResult.commandResult.audioTicket);
 
-    std::string audioAck;
     assert(NativeUiProtocolV1ResponseSerializer::audioAck(
-        ack.connectionEpoch, ack.sequence, ack.audioTicket, audioAck));
-    const auto ackJson = nlohmann::json::parse(audioAck);
-    assert(ackJson["kind"] == "audio_ack");
-    assert(ackJson["epoch"] == epoch);
-    assert(ackJson["sequence"] == command.sequence);
-    assert(ackJson["audio_ticket"] == result.audioTicket);
-    assert(ackJson["status"] == "applied");
+        ack.connectionEpoch, ack.sequence, ack.audioTicket, outbound));
+    const auto applied = nlohmann::json::parse(outbound);
+    assert(applied["kind"] == "audio_ack");
+    assert(applied["epoch"] == epoch);
+    assert(applied["sequence"] == 1);
+    assert(applied["audio_ticket"] == ack.audioTicket);
+    assert(applied["status"] == "applied");
 
-    assert(session.invalidate(epoch));
+    // Disconnect invalidates the session and its request sequence together.
+    assert(ingress.invalidate(epoch, session));
     assert(!session.isReady(epoch));
+    assert(session.activeEpoch() == 0);
     return 0;
 }
