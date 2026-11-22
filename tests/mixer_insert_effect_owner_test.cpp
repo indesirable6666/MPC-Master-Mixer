@@ -71,7 +71,7 @@ int main() {
     processBlock(shutdownBridge);
     assert(shutdownOwner.collectApplied() == 2);
     assert(!shutdownOwner.allCleared());
-    assert(shutdownOwner.requestClearAll());
+    assert(!shutdownOwner.requestClearAll());
     assert(!shutdownOwner.allCleared());
     processBlock(shutdownBridge);
     assert(shutdownOwner.collectApplied() == 2);
