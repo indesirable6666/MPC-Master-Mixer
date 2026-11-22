@@ -36,6 +36,8 @@ public:
         std::array<AudioInputPair::Channel, 2> audioInputChannels{};
         std::array<std::array<SixBandEq::BandParameters, SixBandEq::kBandCount>, 2>
             audioInputEq{};
+        std::array<float, AudioEngine::kTrackCount> trackEqSampleRates{};
+        std::array<bool, AudioEngine::kTrackCount> trackEqConfigured{};
         std::array<float, 2> audioInputEqSampleRates{{48000.0f, 48000.0f}};
         std::array<std::array<AudioInsert*, InsertChain::kSlotCount>, 2>
             audioInputInserts{};
@@ -92,6 +94,8 @@ public:
         if (track >= AudioEngine::kTrackCount ||
             !bridge_.enqueueTrackEq(track, sampleRate, bands)) return false;
         eqBands_[track] = bands;
+        trackEqSampleRates_[track] = sampleRate;
+        trackEqConfigured_[track] = true;
         return true;
     }
 
@@ -107,6 +111,8 @@ public:
         next[band] = parameters;
         if (!bridge_.enqueueTrackEq(track, sampleRate, next)) return false;
         eqBands_[track] = next;
+        trackEqSampleRates_[track] = sampleRate;
+        trackEqConfigured_[track] = true;
         return true;
     }
 
@@ -414,6 +420,8 @@ public:
         for (std::size_t track = 0; track < AudioEngine::kTrackCount; ++track) {
             snapshot.tracks[track].controls = tracks_[track];
             snapshot.tracks[track].eq = eqBands_[track];
+            snapshot.tracks[track].eqSampleRate = trackEqSampleRates_[track];
+            snapshot.tracks[track].eqConfigured = trackEqConfigured_[track];
             snapshot.tracks[track].inserts = inserts_[track];
         }
         snapshot.auxReturns = auxReturns_;
@@ -449,6 +457,8 @@ private:
     std::array<AudioEngine::Track, AudioEngine::kTrackCount> tracks_{};
     std::array<std::array<SixBandEq::BandParameters, SixBandEq::kBandCount>,
                AudioEngine::kTrackCount> eqBands_{};
+    std::array<float, AudioEngine::kTrackCount> trackEqSampleRates_{};
+    std::array<bool, AudioEngine::kTrackCount> trackEqConfigured_{};
     std::array<std::array<AudioInsert*, InsertChain::kSlotCount>,
                AudioEngine::kTrackCount> inserts_{};
     std::array<std::array<std::uint32_t, InsertChain::kSlotCount>,
