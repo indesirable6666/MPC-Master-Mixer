@@ -105,7 +105,7 @@ static bool mpcProcessPresent() {
             std::strtol(task->d_name, &taskEnd, 10);
             if (!taskEnd || *taskEnd != '\0' || taskEnd == task->d_name) continue;
 
-            char taskCommPath[1024];
+            char taskCommPath[2048];
             std::snprintf(taskCommPath, sizeof(taskCommPath),
                           "%s/%s/comm", taskPath, task->d_name);
             if (commContainsMpcOrIsUnreadable(taskCommPath)) {
