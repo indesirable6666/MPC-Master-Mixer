@@ -147,6 +147,17 @@ int main() {
     bridge.process(appliedInputs, appliedLeft, appliedRight, 1);
     assert(controller.isAudioCommandApplied(result.audioTicket));
 
+    // An idempotent link request is accepted as a no-op, but must not
+    // masquerade as a new audio command by returning the previous ticket.
+    const std::size_t pendingBeforeNoOp = bridge.pendingCountApprox();
+    command.sequence = 18;
+    command.type = mpcmixer::MixerUiCommandType::SetAudioInputPairLinked;
+    command.flag = true;
+    const auto noOpResult = dispatcher.dispatch(command);
+    assert(noOpResult.accepted());
+    assert(noOpResult.audioTicket == 0);
+    assert(bridge.pendingCountApprox() == pendingBeforeNoOp);
+
     // Zero, repeated, and older sequence numbers are rejected.
     command.sequence = 0;
     command.type = mpcmixer::MixerUiCommandType::SetMasterFader;
@@ -164,7 +175,7 @@ int main() {
     assert(controller.desiredMasterGain() == 1.23f);
 
     // Mono pan is disabled while linked and does not consume a sequence.
-    command.sequence = 18;
+    command.sequence = 19;
     command.type = mpcmixer::MixerUiCommandType::SetAudioInputChannelPan;
     command.track = 1;
     command.value = 10;
@@ -172,7 +183,7 @@ int main() {
            mpcmixer::MixerUiCommandStatus::Invalid);
 
     // Invalid values and unsupported insert requests do not consume sequence.
-    command.sequence = 18;
+    command.sequence = 19;
     command.type = static_cast<mpcmixer::MixerUiCommandType>(255);
     assert(dispatcher.dispatch(command).status ==
            mpcmixer::MixerUiCommandStatus::Invalid);
