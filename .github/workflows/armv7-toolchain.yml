@@ -32,6 +32,7 @@ on:
       - "tests/native_ui_connection_epoch_test.cpp"
       - "tests/native_ui_json_decoder_test.cpp"
       - "tests/native_ui_frame_codec_test.cpp"
+      - "tests/native_ui_protocol_v1_decoder_test.cpp"
       - "tools/audio-engine-benchmark.cpp"
       - ".github/workflows/armv7-toolchain.yml"
   pull_request:
@@ -195,6 +196,10 @@ jobs:
           arm-linux-gnueabihf-g++ $COMMON_FLAGS -std=c++14 -Isrc/mixer \
             tests/native_ui_frame_codec_test.cpp \
             -o build/mpc-native-ui-frame-codec-test-armv7
+
+          arm-linux-gnueabihf-g++ $COMMON_FLAGS -std=c++14 -Isrc/mixer \
+            tests/native_ui_protocol_v1_decoder_test.cpp \
+            -o build/mpc-native-ui-protocol-v1-decoder-test-armv7
 
           arm-linux-gnueabihf-g++ $COMMON_FLAGS -std=c++14 \
             tests/mixer_insert_effect_owner_test.cpp \
@@ -367,6 +372,12 @@ jobs:
           name: mpc-armv7-native-ui-session-coordinator-test
           path: build/mpc-native-ui-session-coordinator-test-armv7
           if-no-files-found: error
+
+      - name: Upload ARMv7 native UI protocol v1 decoder test binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: mpc-native-ui-protocol-v1-decoder-test-armv7
+          path: build/mpc-native-ui-protocol-v1-decoder-test-armv7
 
       - name: Upload ARMv7 native UI JSON decoder test binary
         uses: actions/upload-artifact@v4
