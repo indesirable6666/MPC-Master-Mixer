@@ -338,5 +338,36 @@ int main() {
     assert(replacementController.isInsertUpdateApplied(retriedTicket));
     assert(replacementController.desiredStateSnapshot().tracks[0].inserts[0] == &retriedInsert);
 
+    // Linking two previously independent Audio In strips seeds one shared
+    // EQ, sample rate and Aux-send state from the left strip atomically.
+    mpcmixer::AudioEngineCommandBridge inputPairBridge;
+    mpcmixer::MixerController inputPairController(inputPairBridge);
+    auto inputLeftEq = mpcmixer::SixBandEq::defaultBandParameters();
+    auto inputRightEq = mpcmixer::SixBandEq::defaultBandParameters();
+    inputLeftEq[0].gainDb = 3.0f;
+    inputRightEq[0].gainDb = -3.0f;
+    assert(inputPairController.setAudioInputPairEq(0, 48000.0f, inputLeftEq));
+    assert(inputPairController.setAudioInputPairEq(1, 44100.0f, inputRightEq));
+    assert(inputPairController.setAudioInputPairAuxSend(0, 1, 0.2f));
+    assert(inputPairController.setAudioInputPairAuxSend(1, 1, 0.7f));
+    assert(inputPairController.setAudioInputPairLinked(true));
+    const auto linkedInputState = inputPairController.desiredStateSnapshot();
+    assert(std::fabs(linkedInputState.audioInputEq[0][0].gainDb - 3.0f) < 0.0001f);
+    assert(std::fabs(linkedInputState.audioInputEq[1][0].gainDb - 3.0f) < 0.0001f);
+    assert(std::fabs(linkedInputState.audioInputEqSampleRates[0] - 48000.0f) < 0.0001f);
+    assert(std::fabs(linkedInputState.audioInputEqSampleRates[1] - 48000.0f) < 0.0001f);
+    assert(std::fabs(linkedInputState.audioInputStereo.auxSend[1] - 0.2f) < 0.0001f);
+    assert(std::fabs(linkedInputState.audioInputChannels[1].auxSend[1] - 0.2f) < 0.0001f);
+    const float inputPairLeft[] = {0.5f};
+    const float inputPairRight[] = {0.5f};
+    float inputPairOutLeft[] = {0.0f};
+    float inputPairOutRight[] = {0.0f};
+    const float* noInputPairTracks[mpcmixer::AudioEngine::kTrackCount]{};
+    inputPairBridge.processWithAudioInputPair(
+        noInputPairTracks, inputPairLeft, inputPairRight,
+        inputPairOutLeft, inputPairOutRight, 1);
+    assert(inputPairBridge.pendingCountApprox() == 0);
+    assert(std::isfinite(inputPairOutLeft[0]) &&
+           std::isfinite(inputPairOutRight[0]));
     return 0;
 }
