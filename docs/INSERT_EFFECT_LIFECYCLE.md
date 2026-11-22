@@ -17,9 +17,10 @@ slot and each of the two Audio Input pair sides.
 - `requestClearAll()` incrementally queues null pointers for every populated
   track and Audio Input pair slot. Call it repeatedly with `collectApplied()`
   while the callback is running; it returns false while any slot has a handoff
-  pending or a clear could not be queued (for example, the bounded command
-  queue is full). A true return means no handoff is pending and every populated
-  slot has a clear queued; wait for acknowledgements and check `allCleared()`.
+  pending, a populated slot needs a clear queued, or a clear could not be queued
+  (for example, the bounded command queue is full). It returns true only when
+  no current/pending effect remains and no handoff is outstanding. Check
+  `allCleared()` as the explicit teardown precondition.
 - `allCleared()` becomes true only when all current/pending owners are empty
   and all pointer handoffs have been acknowledged. It is the owner's
   pre-shutdown check, not a substitute for stopping the backend.
