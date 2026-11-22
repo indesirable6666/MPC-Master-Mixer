@@ -298,6 +298,9 @@ Before implementing v1:
 - [x] Test duplicate/unknown keys, exact field sets, fixed array lengths,
       integer-vs-float typing, EQ ranges, epoch/request mismatch, malformed JSON,
       and unchanged output on failure. Full boundary/fuzz coverage remains future work.
+- [x] Add a reconnect regression test: an unapplied old-epoch ticket remains
+      tracked across disconnect, blocks readiness until applied, and its ACK is
+      discarded rather than exposed to the next epoch.
 - [ ] Test epoch mismatch, snapshot sequencing, readiness gating, command
       sequence retry, queue-full behavior, and delayed audio acknowledgements.
 - [ ] Test worst-case frame sizes and partial framing independently of sockets.
