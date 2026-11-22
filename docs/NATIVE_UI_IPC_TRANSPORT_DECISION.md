@@ -120,7 +120,7 @@ channel provides a single-frame caller-owned transmit queue and an incremental
 receive pump that preserves bytes across concatenated frames; the descriptor
 wrapper adopts an existing file descriptor and closes it through RAII. The
 path policy rejects relative/root/trailing-slash paths, embedded NUL bytes,
-overlong paths, and explicit dot or parent components. It does not inspect the
+overlong paths, empty components (including repeated slashes), and explicit dot or parent components. It does not inspect the
 filesystem or prevent path races. None of these components creates, binds,
 connects, listens, or accepts sockets. No endpoint, device connection, or
 hardware validation is implemented.
