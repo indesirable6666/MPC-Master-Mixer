@@ -31,7 +31,7 @@ public:
         const std::string& path) noexcept {
         if (path.empty())
             return NativeUiUnixSocketPathStatus::Empty;
-        if (path.find('\\0') != std::string::npos)
+        if (path.find('\0') != std::string::npos)
             return NativeUiUnixSocketPathStatus::EmbeddedNull;
         if (path[0] != '/')
             return NativeUiUnixSocketPathStatus::NotAbsolute;
