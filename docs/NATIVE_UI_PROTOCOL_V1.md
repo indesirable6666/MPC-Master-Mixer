@@ -292,7 +292,8 @@ Before implementing v1:
       successfully queued configurations publish their actual requested rate.
 - [x] Set a separate 32 KiB full-snapshot payload ceiling; the worst-case valid fixture measured 8,653 bytes on the host CI runner and asserts the serialized payload remains within the limit.
 - [x] Implement strict v1 command/client-message decoders and server serializers for the four non-snapshot response kinds.
-- [x] Implement bounded full snapshot serialization after sample-rate provenance and payload ceiling are resolved.\n- [x] Implement strict full snapshot decoding with exact field sets, duplicate-key rejection, fixed array lengths, integer/float validation, EQ ranges, epoch/request matching, and unchanged output on failure.
+- [x] Implement bounded full snapshot serialization after sample-rate provenance and payload ceiling are resolved.
+- [x] Implement strict full snapshot decoding with exact field sets, duplicate-key rejection, fixed array lengths, integer/float validation, EQ ranges, epoch/request matching, and unchanged output on failure.
 - [x] Add focused golden JSON and malformed-input tests for command, client hello/snapshot request, and the four non-snapshot server response kinds.
 - [x] Add serializer fixtures for fixed array lengths, finite EQ values, range rejection, and worst-case maximum-size payload.
 - [x] Test duplicate/unknown keys, exact field sets, fixed array lengths,
