@@ -14,5 +14,5 @@ Invalid required identifiers are rejected without changing the caller's output.
 The serializer performs no I/O and must only be called on the serialized
 control/transport thread, never from the audio callback.
 
-This does not serialize full snapshots or implement a socket, IPC endpoint,
+The response-envelope serializer does not implement a socket, IPC endpoint,
 session policy, native UI, or target-device integration.
