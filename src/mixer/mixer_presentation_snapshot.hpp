@@ -37,6 +37,10 @@ struct MixerPresentationSnapshot {
         std::int16_t panPercent = 0;
         bool mute = false;
         bool solo = false;
+        float eqSampleRate = 48000.0f;
+        std::array<std::uint8_t, kAuxBusCount> auxSendPercent{};
+        std::array<SixBandEq::BandParameters, kEqBandCount> eq{};
+        std::array<bool, kInsertSlotCount> hasInsert{};
     };
 
     struct AudioInputPair {
@@ -45,6 +49,7 @@ struct MixerPresentationSnapshot {
         std::int16_t balancePercent = 0;
         bool stereoMute = false;
         bool stereoSolo = false;
+        std::array<std::uint8_t, kAuxBusCount> stereoAuxSendPercent{};
         std::array<AudioInputChannel, 2> channels{};
     };
 
@@ -99,6 +104,11 @@ inline MixerPresentationSnapshot makeMixerPresentationSnapshot(
         std::lround(desired.audioInputStereo.balance * 100.0f));
     result.audioInputPair.stereoMute = desired.audioInputStereo.mute;
     result.audioInputPair.stereoSolo = desired.audioInputStereo.solo;
+    for (std::size_t bus = 0; bus < AudioEngine::kAuxBusCount; ++bus) {
+        result.audioInputPair.stereoAuxSendPercent[bus] =
+            static_cast<std::uint8_t>(
+                std::lround(desired.audioInputStereo.auxSend[bus] * 100.0f));
+    }
     for (std::size_t side = 0; side < 2; ++side) {
         const auto& source = desired.audioInputChannels[side];
         auto& target = result.audioInputPair.channels[side];
@@ -108,6 +118,15 @@ inline MixerPresentationSnapshot makeMixerPresentationSnapshot(
             std::lround(source.pan * 100.0f));
         target.mute = source.mute;
         target.solo = source.solo;
+        target.eqSampleRate = desired.audioInputEqSampleRates[side];
+        target.eq = desired.audioInputEq[side];
+        for (std::size_t bus = 0; bus < AudioEngine::kAuxBusCount; ++bus) {
+            target.auxSendPercent[bus] = static_cast<std::uint8_t>(
+                std::lround(source.auxSend[bus] * 100.0f));
+        }
+        for (std::size_t slot = 0; slot < InsertChain::kSlotCount; ++slot)
+            target.hasInsert[slot] =
+                desired.audioInputInserts[side][slot] != nullptr;
     }
     return result;
 }
