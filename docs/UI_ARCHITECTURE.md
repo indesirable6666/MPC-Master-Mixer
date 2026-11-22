@@ -205,12 +205,19 @@ controller's serialized producer thread.
 
 
 The desired-state and presentation snapshots also carry a value-only Audio In
-pair section. It contains linked state, stereo gain/balance/mute and both
-independent channel states. Like track state, it is a producer-side desired
-copy: it is not proof that the audio callback has applied the command, and it
-is not hardware feedback. The dedicated duplex pair path currently bypasses
-per-track EQ, inserts and Aux sends; see
-`docs/AUDIO_DUPLEX_ENGINE_HOST.md` for that explicit limitation.
+pair section. It contains linked state, stereo gain/balance/mute/solo, both
+channel states, per-side six-band EQ parameters and sample rates, four Aux-send
+levels, and insert-occupancy flags (never raw effect pointers). LINK seeds the
+right-side EQ and Aux state from the left; linked EQ edits update both channels
+as one queued configuration. The pair DSP now runs its own EQ and insert chains
+and contributes to caller-provided stereo Aux-send buffers. The current duplex
+host still exposes only the two main output channels, so Aux routing beyond the
+DSP/bridge boundary is not yet a device output route.
+
+Like track state, the snapshot is a producer-side desired copy: it is not proof
+that the audio callback has applied a command, and it is not hardware feedback.
+The new EQ and Aux UI command types are transport-neutral dispatch operations;
+the browser prototype is not yet bound to this native dispatcher.
 
 
 ## All-track presentation consistency
