@@ -4,6 +4,7 @@ on:
   workflow_dispatch:
   push:
     paths:
+      - "CMakeLists.txt"
       - "tools/arm-probe/**"
       - "src/audio/**"
       - "src/mixer/**"
