@@ -7,12 +7,13 @@ The first transport-independent native command adapter is implemented in
 message into the first vertical slice of `MixerUiCommand` and dispatches it
 on the serialized control thread.
 
-This is **not** a JSON parser, IPC transport, native UI toolkit, or device
-integration. The browser prototype remains offline and simulated. A future
-transport decoder must validate JSON syntax, exact JSON value types, duplicate
-keys, and unknown fields before constructing `NativeUiCommandMessage`.
-Presence flags must reflect actual field presence; absent values must not be
-silently replaced with defaults.
+This is not an IPC transport, native UI toolkit, or device integration. The
+browser prototype remains offline and simulated. A strict JSON decoder is now
+implemented in `src/mixer/native_ui_json_decoder.hpp`; it validates JSON
+syntax, exact JSON value types, duplicate keys, unknown fields, and
+command-specific field sets before constructing `NativeUiCommandMessage`.
+Presence flags reflect actual field presence; absent values are never replaced
+with defaults.
 
 The native adapter is the only component allowed to own
 `MixerUiCommandDispatcher`, `MixerController`, and the audio command bridge.
@@ -102,10 +103,10 @@ in [JSON decoder dependency decision](JSON_DECODER_DEPENDENCY_DECISION.md).
   thread, never in the audio callback. The decoder must not call controller
   or engine APIs itself.
 
-The decoder should return a distinct transport/decode error to its caller.
+`NativeUiJsonDecoder::decode()` returns a distinct decode status to its caller.
 Only successfully decoded messages are passed to
 `NativeUiCommandAdapter::dispatch()`. The adapter's `Invalid` result remains
-the final defense for command-specific presence and range validation.
+the final defense for command-specific UI ranges and dispatch validation.
 
 Call `NativeUiCommandAdapter::dispatch()` from one serialized control
 thread. Do not call it from the audio callback or multiple concurrent
@@ -154,11 +155,12 @@ field presence, invalid ranges, unknown command names, sequence ordering,
 retry after rejection, and state publication. The existing dispatcher tests
 cover sequence ordering, queue backpressure, and audio-ticket application.
 
-A future decoder test suite must additionally cover malformed/trailing JSON,
-top-level non-objects, duplicate and unknown keys, every wrong JSON type,
-integer boundaries and overflow, missing and command-inapplicable fields,
-oversized frames, and exact command-name matching.
+`tests/native_ui_json_decoder_test.cpp` covers valid command envelopes,
+malformed/trailing input, top-level non-objects, duplicate and unknown keys,
+nested values, wrong JSON types, integer boundaries/overflow, missing and
+command-inapplicable fields, oversized frames, and exact command-name matching.
+The typed adapter remains responsible for fader/pan range validation after
+successful decoding.
 
-Still not implemented: JSON decoding, IPC, reconnect/snapshot transport,
-native UI toolkit integration, and live-device validation. No hardware tests
-have been performed.
+Still not implemented: IPC, reconnect/snapshot transport, native UI toolkit
+integration, and live-device validation. No hardware tests have been performed.
