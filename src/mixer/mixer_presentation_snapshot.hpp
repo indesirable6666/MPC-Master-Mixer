@@ -54,6 +54,12 @@ struct MixerPresentationSnapshot {
     };
 
     std::uint64_t sequence = 0;
+    // Highest audio-queue ticket included in this desired-state snapshot.
+    // Zero means no audio command has been queued since bridge initialization.
+    std::uint32_t audioTicketWatermark = 0;
+    // True only when the callback has acknowledged the watermark; false means
+    // some or all desired values may still be pending at a block boundary.
+    bool audioStateCaughtUp = true;
     std::array<Track, kTrackCount> tracks{};
     std::array<AuxReturn, kAuxBusCount> auxReturns{};
     std::uint8_t masterFaderValue = 100;
@@ -141,8 +147,12 @@ public:
     MixerPresentationSnapshot publish() noexcept {
         ++sequence_;
         if (sequence_ == 0) ++sequence_;
-        return makeMixerPresentationSnapshot(
+        auto snapshot = makeMixerPresentationSnapshot(
             controller_.desiredStateSnapshot(), sequence_);
+        snapshot.audioTicketWatermark = controller_.lastAudioCommandTicket();
+        snapshot.audioStateCaughtUp = snapshot.audioTicketWatermark == 0 ||
+            controller_.isAudioCommandApplied(snapshot.audioTicketWatermark);
+        return snapshot;
     }
 
     std::uint64_t lastSequence() const noexcept { return sequence_; }
