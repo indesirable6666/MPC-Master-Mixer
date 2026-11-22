@@ -243,3 +243,40 @@ successful decoding.
 
 Still not implemented: IPC, reconnect/snapshot transport, native UI toolkit
 integration, and live-device validation. No hardware tests have been performed.
+
+
+## Reconnect readiness gate
+
+`NativeUiSessionGate` is implemented as a small control-thread-only state
+machine layered beside `NativeUiConnectionEpoch`. The epoch source remains
+the sole issuer of connection epochs; the gate accepts the already-issued
+nonzero epoch and does not generate, persist, or compare epoch ordering.
+
+A new session begins in `Synchronizing`, where audio-affecting commands must
+remain disabled. The transport calls `updateSnapshot(epoch, true,
+audioStateCaughtUp)` only after it has received and validated a complete
+native snapshot for that connection. A full snapshot with
+`audioStateCaughtUp == false` updates displayed desired state but leaves the
+gate closed. A later complete snapshot whose audio watermark is acknowledged
+moves the gate to `Ready`; only then may the transport dispatch commands for
+that epoch. Partial snapshots, zero epochs, and snapshots tagged with a stale
+epoch are rejected without changing readiness.
+
+On disconnect, invalidate the same epoch in both the epoch source and the
+session gate. A delayed disconnect for an old epoch cannot close a newer
+session. On reconnect, begin a new epoch, fetch a fresh full native snapshot,
+and wait for its audio watermark to catch up. Do not replay client commands
+from the previous connection: a lost response does not prove that the native
+command was not applied. Continue draining the command tracker's old tickets
+after disconnect, but never forward acknowledgements tagged with an obsolete
+epoch.
+
+The gate is deliberately transport-neutral. It does not own the dispatcher,
+snapshot publisher, epoch source, tracker, socket, or UI; its caller is
+responsible for serializing calls on the control thread and checking
+`acceptsCommands(activeEpoch)` immediately before dispatch. It does not
+establish an IPC implementation or device integration.
+
+`tests/native_ui_session_gate_test.cpp` covers disconnected and synchronizing
+states, rejection of partial and stale snapshots, transition to ready only
+after audio catch-up, stale disconnect protection, and reconnect isolation.
