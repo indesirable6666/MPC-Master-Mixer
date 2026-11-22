@@ -28,9 +28,14 @@ int main() {
     assert(session.activeEpoch() == epoch);
     assert(!session.isReady(epoch));
 
+    // Seed a pending audio command so the first complete snapshot is valid
+    // but not yet caught up to its watermark.
+    assert(controller.setTrackFader(1, 60));
+
     // A partial snapshot and a snapshot whose audio watermark is pending keep
     // the command path closed.
     auto snapshot = publisher.publish();
+    assert(!snapshot.audioStateCaughtUp);
     assert(!session.updateSnapshot(epoch, snapshot, false));
     assert(session.updateSnapshot(epoch, snapshot, true));
     assert(!session.isReady(epoch));
