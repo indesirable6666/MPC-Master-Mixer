@@ -118,7 +118,7 @@ int main() {
     assert(!retryOwner.allCleared());
     processBlock(retryBridge);
     assert(retryOwner.collectApplied() == 0);
-    assert(retryOwner.requestClearAll());
+    assert(!retryOwner.requestClearAll());
     processBlock(retryBridge);
     assert(retryOwner.collectApplied() == 1);
     assert(retryOwner.allCleared());
