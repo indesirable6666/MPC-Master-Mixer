@@ -51,7 +51,7 @@ single-producer/single-consumer (SPSC) command queue:
   `isInsertUpdateApplied(ticket)` helper). The acknowledgement is published
   after the pointer swap at the block boundary; only then may the producer
   destroy the previous object. Never allocate, delete, or wait for
-  acknowledgement in the audio callback. Configure an effect before
+  acknowledgement in the audio callback. Tickets are 32-bit sequence numbers compared modulo 2^32: query only a ticket returned by a successful enqueue, ignore the output ticket on failure, and do not leave an unacknowledged ticket pending across 2^31 or more subsequent enqueues. The producer should poll and retire each replacement promptly. Configure an effect before
   enqueueing it and do not mutate it while the audio thread may process it.
 - Published insert instances are immutable while the audio engine may
   process them. To change an effect parameter (such as SoftClip drive or enable),
