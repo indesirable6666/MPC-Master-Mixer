@@ -90,8 +90,8 @@ inline MixerPresentationSnapshot makeMixerPresentationSnapshot(
                 std::lround(source.controls.auxSend[bus] * 100.0f));
         }
         target.eq = source.eq;
-        target.eqConfigured = desired.trackEqConfigured[index];
-        target.eqSampleRate = desired.trackEqSampleRates[index];
+        target.eqConfigured = source.eqConfigured;
+        target.eqSampleRate = source.eqSampleRate;
         for (std::size_t slot = 0; slot < InsertChain::kSlotCount; ++slot)
             target.hasInsert[slot] = source.inserts[slot] != nullptr;
     }
