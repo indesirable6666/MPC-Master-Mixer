@@ -134,6 +134,17 @@ public:
 
         const bool anySolo = externalSolo || hasSoloedTrack();
 
+        // Pan is constant for the duration of this block. Calculate the
+        // constant-power gains once instead of taking two square roots per
+        // track per sample in the real-time loop.
+        std::array<float, kTrackCount> leftPanGains{};
+        std::array<float, kTrackCount> rightPanGains{};
+        for (std::size_t channel = 0; channel < kTrackCount; ++channel) {
+            const float pan = tracks_[channel].pan;
+            leftPanGains[channel] = std::sqrt((1.0f - pan) * 0.5f);
+            rightPanGains[channel] = std::sqrt((1.0f + pan) * 0.5f);
+        }
+
         for (std::size_t frame = 0; frame < frameCount; ++frame) {
             float left = 0.0f;
             float right = 0.0f;
@@ -149,8 +160,8 @@ public:
                 sample = inserts_[channel].processSample(sample);
                 if (state.mute || (anySolo && !state.solo)) continue;
                 const float scaled = sample * state.gain;
-                const float leftPan = std::sqrt((1.0f - state.pan) * 0.5f);
-                const float rightPan = std::sqrt((1.0f + state.pan) * 0.5f);
+                const float leftPan = leftPanGains[channel];
+                const float rightPan = rightPanGains[channel];
                 if (!masterMute_) {
                     left += scaled * leftPan;
                     right += scaled * rightPan;
@@ -330,6 +341,15 @@ private:
         }
 
         const bool anySolo = channels_[0].solo || channels_[1].solo;
+        // As with track strips, independent Audio In pan controls are fixed
+        // for the block, so prepare their constant-power gains once.
+        std::array<float, 2> leftPanGains{};
+        std::array<float, 2> rightPanGains{};
+        for (std::size_t side = 0; side < 2; ++side) {
+            const float pan = channels_[side].pan;
+            leftPanGains[side] = std::sqrt((1.0f - pan) * 0.5f);
+            rightPanGains[side] = std::sqrt((1.0f + pan) * 0.5f);
+        }
         for (std::size_t frame = 0; frame < frameCount; ++frame) {
             float leftOut = 0.0f;
             float rightOut = 0.0f;
@@ -343,8 +363,8 @@ private:
                     const float sample = std::isfinite(input[frame])
                         ? input[frame] : 0.0f;
                     const float scaled = sample * state.gain * postGain;
-                    leftOut += scaled * std::sqrt((1.0f - state.pan) * 0.5f);
-                    rightOut += scaled * std::sqrt((1.0f + state.pan) * 0.5f);
+                    leftOut += scaled * leftPanGains[side];
+                    rightOut += scaled * rightPanGains[side];
                 }
             }
             if (add) {
