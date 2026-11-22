@@ -274,6 +274,8 @@ test('left and right arrow keys move focus between adjacent channels', () => {
 test('arrow keys on channel controls remain native and do not navigate strips', () => {
   const dom = loadPrototype();
   const channel = dom.window.document.querySelector('[data-channel="2"]');
+  channel.focus();
+  assert.equal(channel.getAttribute('aria-current'), 'true');
   const slider = channel.querySelector('[data-volume]');
   slider.focus();
   slider.dispatchEvent(new dom.window.KeyboardEvent('keydown', {
