@@ -40,7 +40,8 @@ static bool commContainsMpcOrIsUnreadable(const char* path) {
     char name[128] = {};
     bool unsafe = false;
     if (!std::fgets(name, sizeof(name), f)) {
-        unsafe = std::ferror(f) != 0;
+        // An empty or unreadable comm file is not proof that MPC is absent.
+        unsafe = true;
     } else {
         name[std::strcspn(name, "\r\n")] = '\0';
         // Linux task names may be truncated to TASK_COMM_LEN - 1.
