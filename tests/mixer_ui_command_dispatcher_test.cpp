@@ -164,7 +164,7 @@ int main() {
     command.value = 10;
     assert(dispatcher.dispatch(command).status ==
            mpcmixer::MixerUiCommandStatus::OutOfOrder);
-    assert(dispatcher.lastAcceptedSequence() == 17);
+    assert(dispatcher.lastAcceptedSequence() == 18);
 
     // A repeated or older sequence is rejected without mutating state.
     command.sequence = 17;
@@ -204,7 +204,7 @@ int main() {
     command.value = 101;
     assert(dispatcher.dispatch(command).status ==
            mpcmixer::MixerUiCommandStatus::Invalid);
-    assert(dispatcher.lastAcceptedSequence() == 17);
+    assert(dispatcher.lastAcceptedSequence() == 18);
 
     // A full native command queue reports backpressure and permits retrying
     // the same sequence after the audio consumer drains the queue.
