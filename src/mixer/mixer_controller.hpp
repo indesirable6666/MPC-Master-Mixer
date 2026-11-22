@@ -127,6 +127,12 @@ public:
         return true;
     }
 
+    // Latest successfully queued audio command. Read immediately after a
+    // successful setter on the serialized producer/control thread.
+    std::uint32_t lastAudioCommandTicket() const noexcept {
+        return bridge_.lastEnqueuedTicket();
+    }
+
     // Query an insert replacement ticket from the serialized control thread.
     // Once true, the previous object is no longer referenced by the audio engine
     // and may be retired here (never from the audio callback).
