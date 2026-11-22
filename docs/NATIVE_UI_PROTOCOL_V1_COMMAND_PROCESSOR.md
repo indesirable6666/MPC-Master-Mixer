@@ -22,8 +22,11 @@ and command-result serializer.
    applied it.
 
 The caller sends the returned response through the transport. Later, after the
-audio callback applies a ticket, it drains `session.popApplied()` and sends
-the corresponding `audio_ack` message. Queue-full rejection does not consume
+audio callback applies a ticket, the control thread drains the session through
+`NativeUiProtocolV1AudioAckPublisher::publishNext()`. That helper serializes the
+matching epoch, sequence, and audio ticket into an `audio_ack` payload; the
+transport then sends that payload. The audio callback never serializes or
+performs transport work. Queue-full rejection does not consume
 the command sequence, allowing the same sequence to be retried.
 
 ## Boundaries
@@ -37,3 +40,13 @@ The host test covers not-ready and stale-session rejection, accepted command
 dispatch, out-of-order results, malformed track index rejection, and delayed
 audio acknowledgement. The ARMv7 workflow compiles the same test; no MPC
 hardware execution is implied.
+
+## Applied audio acknowledgement publisher
+
+`NativeUiProtocolV1AudioAckPublisher` is a small control-thread-only bridge
+from `NativeUiSessionCoordinator::popApplied()` to the v1 `audio_ack`
+serializer. It emits at most one completed acknowledgement per call, keeps
+the output unchanged when no acknowledgement is ready, and leaves socket
+transmission to the future transport owner. The command processor test covers
+no-early-ACK behavior, the callback applying the ticket, and the serialized
+ACK envelope. This does not add endpoint lifecycle or hardware access.
