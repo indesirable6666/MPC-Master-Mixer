@@ -25,6 +25,11 @@ int main(){
  reject(NativeUiProtocolV1ResponseSerializer::commandResult(1,0,NativeUiV1CommandResultStatus::Accepted,0,wire));
  reject(NativeUiProtocolV1ResponseSerializer::audioAck(1,1,0,wire));
  reject(NativeUiProtocolV1ResponseSerializer::protocolError(0,NativeUiV1ProtocolErrorCode::ServerBusy,true,wire));
+ const auto beforeInvalidEnum=wire;
+ assert(!NativeUiProtocolV1ResponseSerializer::commandResult(1,1,static_cast<NativeUiV1CommandResultStatus>(255),0,wire));
+ assert(wire==beforeInvalidEnum);
+ assert(!NativeUiProtocolV1ResponseSerializer::protocolError(1,static_cast<NativeUiV1ProtocolErrorCode>(255),true,wire));
+ assert(wire==beforeInvalidEnum);
  assert(NativeUiProtocolV1ResponseSerializer::commandResult(
   (std::numeric_limits<std::uint64_t>::max)(),(std::numeric_limits<std::uint64_t>::max)(),
   NativeUiV1CommandResultStatus::Unsupported,(std::numeric_limits<std::uint32_t>::max)(),wire));
