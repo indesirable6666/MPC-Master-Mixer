@@ -3,7 +3,8 @@
 #include <cstdio>
 #include <cstring>
 #include <cstdlib>
-#include <string>
+#include <cerrno>
+#include <sys/stat.h>
 
 using EGLDisplay = void*;
 using EGLConfig = void*;
@@ -35,26 +36,56 @@ static T symbol(void* lib, const char* name) {
 static bool mpcProcessPresent() {
     DIR* proc = opendir("/proc");
     if (!proc) return true; // fail closed
+
     bool found = false;
-    dirent* entry = nullptr;
-    while ((entry = readdir(proc)) != nullptr) {
-        if (entry->d_type != DT_DIR) continue;
+    for (;;) {
+        errno = 0;
+        dirent* entry = readdir(proc);
+        if (!entry) {
+            // An enumeration error means the process list was not verified.
+            if (errno != 0) found = true;
+            break;
+        }
+
         char* end = nullptr;
         std::strtol(entry->d_name, &end, 10);
-        if (!end || *end != '\0' || end == entry->d_name) continue;
-        char path[512];
-        std::snprintf(path, sizeof(path), "/proc/%s/comm", entry->d_name);
-        FILE* f = std::fopen(path, "r");
-        if (!f) continue;
+        if (!end || *end != '\\0' || end == entry->d_name) continue;
+
+        // Do not trust dirent::d_type: procfs may report DT_UNKNOWN.
+        char processPath[512];
+        std::snprintf(processPath, sizeof(processPath), "/proc/%s", entry->d_name);
+        struct stat processInfo {};
+        if (stat(processPath, &processInfo) != 0) {
+            // A process can exit while scanning; other errors fail closed.
+            if (errno != ENOENT && errno != ESRCH) found = true;
+            if (found) break;
+            continue;
+        }
+        if (!S_ISDIR(processInfo.st_mode)) continue;
+
+        char commPath[512];
+        std::snprintf(commPath, sizeof(commPath), "%s/comm", processPath);
+        FILE* f = std::fopen(commPath, "r");
+        if (!f) {
+            // Ignore only the normal process-exit race.
+            if (errno != ENOENT && errno != ESRCH) found = true;
+            if (found) break;
+            continue;
+        }
+
         char name[128] = {};
-        if (std::fgets(name, sizeof(name), f)) {
-            name[std::strcspn(name, "\r\n")] = '\0';
-            if (std::strcmp(name, "MPC Main Thread") == 0 ||
-                std::strcmp(name, "MPC") == 0) found = true;
+        if (!std::fgets(name, sizeof(name), f)) {
+            if (std::ferror(f)) found = true; // unreadable process identity
+        } else {
+            name[std::strcspn(name, "\\r\\n")] = '\\0';
+            // Linux task names may be truncated to TASK_COMM_LEN - 1.
+            // A conservative substring match avoids missing "MPC Main Threa".
+            if (std::strstr(name, "MPC") != nullptr) found = true;
         }
         std::fclose(f);
         if (found) break;
     }
+
     closedir(proc);
     return found;
 }
