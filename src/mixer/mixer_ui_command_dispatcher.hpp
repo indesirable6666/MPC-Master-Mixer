@@ -72,6 +72,7 @@ public:
         if (command.sequence == 0 || command.sequence <= lastAcceptedSequence_)
             return {MixerUiCommandStatus::OutOfOrder, command.sequence};
 
+        const std::uint32_t previousAudioTicket = controller_.lastAudioCommandTicket();
         bool accepted = false;
         switch (command.type) {
         case MixerUiCommandType::SetTrackFader:
@@ -220,8 +221,10 @@ public:
             return {MixerUiCommandStatus::QueueFull, command.sequence};
 
         lastAcceptedSequence_ = command.sequence;
-        return {MixerUiCommandStatus::Accepted, command.sequence,
-                controller_.lastAudioCommandTicket()};
+        const std::uint32_t currentAudioTicket = controller_.lastAudioCommandTicket();
+        const std::uint32_t audioTicket =
+            currentAudioTicket == previousAudioTicket ? 0u : currentAudioTicket;
+        return {MixerUiCommandStatus::Accepted, command.sequence, audioTicket};
     }
 
     std::uint64_t lastAcceptedSequence() const noexcept {
