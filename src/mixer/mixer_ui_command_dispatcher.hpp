@@ -27,6 +27,8 @@ enum class MixerUiCommandType : std::uint8_t {
     SetAudioInputChannelPan,
     SetAudioInputChannelMute,
     SetAudioInputChannelSolo,
+    SetAudioInputChannelAuxSend,
+    SetAudioInputChannelEqBand,
     SetInsertEnabled
 };
 
@@ -207,6 +209,31 @@ public:
             accepted = controller_.setAudioInputPairChannelSolo(
                 command.track, command.flag);
             break;
+
+        case MixerUiCommandType::SetAudioInputChannelAuxSend:
+            if (!validAudioInputSide(command.track) ||
+                command.index >= AudioEngine::kAuxBusCount ||
+                command.value < 0 || command.value > MixerController::kAuxMaximum)
+                return {MixerUiCommandStatus::Invalid, command.sequence};
+            accepted = controller_.setAudioInputPairAuxSend(
+                command.track, command.index,
+                static_cast<float>(command.value) / 100.0f);
+            break;
+
+        case MixerUiCommandType::SetAudioInputChannelEqBand: {
+            if (!validAudioInputSide(command.track) ||
+                command.index >= SixBandEq::kBandCount)
+                return {MixerUiCommandStatus::Invalid, command.sequence};
+            auto bands = controller_.desiredStateSnapshot().audioInputEq[command.track];
+            bands[command.index] = command.eqBand;
+            SixBandEq::PreparedConfiguration prepared;
+            if (!SixBandEq::prepareConfiguration(
+                    command.sampleRate, bands, prepared))
+                return {MixerUiCommandStatus::Invalid, command.sequence};
+            accepted = controller_.setAudioInputPairEqBand(
+                command.track, command.index, command.sampleRate, command.eqBand);
+            break;
+        }
 
         case MixerUiCommandType::SetInsertEnabled:
             // Effect construction and lifetime are native-host responsibilities.
