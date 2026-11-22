@@ -24,6 +24,8 @@ public:
         AudioEngine::Track controls{};
         std::array<SixBandEq::BandParameters, SixBandEq::kBandCount> eq =
             SixBandEq::defaultBandParameters();
+        float eqSampleRate = 0.0f;
+        bool eqConfigured = false;
         std::array<AudioInsert*, InsertChain::kSlotCount> inserts{};
     };
 
@@ -36,8 +38,6 @@ public:
         std::array<AudioInputPair::Channel, 2> audioInputChannels{};
         std::array<std::array<SixBandEq::BandParameters, SixBandEq::kBandCount>, 2>
             audioInputEq{};
-        std::array<float, AudioEngine::kTrackCount> trackEqSampleRates{};
-        std::array<bool, AudioEngine::kTrackCount> trackEqConfigured{};
         std::array<float, 2> audioInputEqSampleRates{{48000.0f, 48000.0f}};
         std::array<std::array<AudioInsert*, InsertChain::kSlotCount>, 2>
             audioInputInserts{};
