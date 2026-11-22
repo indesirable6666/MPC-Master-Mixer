@@ -172,4 +172,32 @@ int main() {
     assert(independentFrame.audioInputPair.channels[1].gainValue == 33);
     assert(independentFrame.audioInputPair.channels[0].panPercent == -60);
     assert(independentFrame.audioInputPair.channels[1].panPercent == 12);
+    // Audio In presentation exposes per-side EQ, Aux levels and insert
+    // occupancy without leaking effect pointers into the UI snapshot.
+    auto leftInputEq = mpcmixer::SixBandEq::defaultBandParameters();
+    auto rightInputEq = mpcmixer::SixBandEq::defaultBandParameters();
+    leftInputEq[2].gainDb = 2.0f;
+    rightInputEq[2].gainDb = 4.0f;
+    assert(pairController.setAudioInputPairEq(0, 48000.0f, leftInputEq));
+    assert(pairController.setAudioInputPairEq(1, 44100.0f, rightInputEq));
+    assert(pairController.setAudioInputPairAuxSend(0, 1, 0.25f));
+    assert(pairController.setAudioInputPairAuxSend(1, 1, 0.75f));
+    const auto unlinkedDspFrame = pairPublisher.publish();
+    assert(unlinkedDspFrame.audioInputPair.channels[0].eqSampleRate == 48000.0f);
+    assert(unlinkedDspFrame.audioInputPair.channels[1].eqSampleRate == 44100.0f);
+    assert(unlinkedDspFrame.audioInputPair.channels[0].eq[2].gainDb == 2.0f);
+    assert(unlinkedDspFrame.audioInputPair.channels[1].eq[2].gainDb == 4.0f);
+    assert(unlinkedDspFrame.audioInputPair.channels[0].auxSendPercent[1] == 25);
+    assert(unlinkedDspFrame.audioInputPair.channels[1].auxSendPercent[1] == 75);
+
+    assert(pairController.setAudioInputPairLinked(true));
+    const auto linkedDspFrame = pairPublisher.publish();
+    assert(linkedDspFrame.audioInputPair.stereoAuxSendPercent[1] == 25);
+    assert(linkedDspFrame.audioInputPair.channels[0].auxSendPercent[1] == 25);
+    assert(linkedDspFrame.audioInputPair.channels[1].auxSendPercent[1] == 25);
+    assert(linkedDspFrame.audioInputPair.channels[0].eq[2].gainDb == 2.0f);
+    assert(linkedDspFrame.audioInputPair.channels[1].eq[2].gainDb == 2.0f);
+    assert(linkedDspFrame.audioInputPair.channels[0].eqSampleRate == 48000.0f);
+    assert(linkedDspFrame.audioInputPair.channels[1].eqSampleRate == 48000.0f);
+
 }
