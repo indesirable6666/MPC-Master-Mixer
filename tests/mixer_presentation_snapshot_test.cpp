@@ -1,13 +1,17 @@
 #include "../src/mixer/mixer_presentation_snapshot.hpp"
+#include "../src/mixer/mixer_insert_effect_owner.hpp"
 
 #include <cassert>
 #include <cmath>
 #include <cstdint>
+#include <memory>
+#include <utility>
 
 int main() {
     mpcmixer::AudioEngineCommandBridge bridge;
     mpcmixer::MixerController controller(bridge);
     mpcmixer::MixerPresentationPublisher publisher(controller);
+    mpcmixer::MixerInsertEffectOwner insertOwner(controller);
 
     const auto initial = publisher.publish();
     assert(initial.sequence == 1);
@@ -35,9 +39,10 @@ int main() {
     bands[2].gainDb = 5.5f;
     assert(controller.setTrackEq(5, 48000.0f, bands));
 
-    mpcmixer::GainInsert insert;
+    std::unique_ptr<mpcmixer::AudioInsert> insert =
+        std::make_unique<mpcmixer::GainInsert>();
     std::uint32_t ticket = 0;
-    assert(controller.setTrackInsert(5, 1, &insert, ticket));
+    assert(insertOwner.publish(5, 1, insert, ticket));
 
     mpcmixer::AudioEngine::AuxReturn aux;
     aux.gain = 0.64f;
@@ -94,7 +99,11 @@ int main() {
     float outputRight[1]{};
     bridge.process(inputs, outputLeft, outputRight, 1);
     assert(controller.isInsertUpdateApplied(ticket));
-    assert(controller.setTrackInsert(5, 1, nullptr, ticket));
+    assert(insertOwner.collectApplied() == 1);
+    assert(insertOwner.clear(5, 1, ticket));
+    bridge.process(inputs, outputLeft, outputRight, 1);
+    assert(controller.isInsertUpdateApplied(ticket));
+    assert(insertOwner.collectApplied() == 1);
     assert(changed.tracks[5].faderValue == 73);
     assert(changed.tracks[5].hasInsert[1]);
 
