@@ -107,7 +107,20 @@ The browser prototype controls are not yet wired to this engine. Host-side DSP t
 3. Only after explicit hardware authorization, implement and test a target backend without changing MPC startup, audio routing, or system files.
 4. Connect UI controls to the engine only after the backend and signal path are independently validated.
 
-## Host performance benchmark\n\n`tools/audio-engine-benchmark.cpp` is a standalone, host-only diagnostic. It\nprocesses 16 synthetic tracks through six-band EQ, two one-pole inserts per\ntrack, and four Aux sends at 48 kHz. It reports average block time, the\npercentage of each real-time block budget consumed, and frame throughput for\n64, 128, 256 and 512-frame blocks. All buffers and effects are prepared\nbefore timing; the measured loop performs only block processing. Build with\n`g++ -O3 -DNDEBUG -std=c++14 -Wall -Wextra -Werror -pedantic\ntools/audio-engine-benchmark.cpp -o audio-engine-benchmark` and run\n`./audio-engine-benchmark`. Results depend on the host CPU, compiler and load;\nthey are not a target-MPC performance claim or a real-time certification.\n\n## Host tests
+## Host performance benchmark
+
+`tools/audio-engine-benchmark.cpp` is a standalone, host-only diagnostic. It
+processes 16 synthetic tracks through six-band EQ, two one-pole inserts per
+track, and four Aux sends at 48 kHz. It reports average block time, the
+percentage of each real-time block budget consumed, and frame throughput for
+64, 128, 256 and 512-frame blocks. All buffers and effects are prepared
+before timing; the measured loop performs only block processing. Build with
+`g++ -O3 -DNDEBUG -std=c++14 -Wall -Wextra -Werror -pedantic
+tools/audio-engine-benchmark.cpp -o audio-engine-benchmark` and run
+`./audio-engine-benchmark`. Results depend on the host CPU, compiler and load;
+they are not a target-MPC performance claim or a real-time certification.
+
+## Host tests
 
 The `Audio engine tests` GitHub Actions workflow compiles with C++14, warnings-as-errors, and runs deterministic tests for summing, panning, gain, mute, solo, master controls, four stereo Aux sends and returns, six-band EQ frequency/Q/gain validation and signal processing, two-slot insert chains, soft clipping, and one-pole filter response, silent capture backend behavior, invalid parameters, and non-finite samples. These tests do not require audio hardware.
 
@@ -143,7 +156,12 @@ callback test driver only: it forwards caller-owned buffers and never opens a
 device. Its tests establish callback plumbing and validation, not hardware
 timing, latency or MPC routing. The earlier `AudioCaptureBackend` remains a
 capture-only legacy interface; actual target audio integration is still absent.
-\n\n## Block-level meter measurement\n\n`src/audio/audio_block_meter.hpp` provides a stateless, allocation-free helper to measure peak and RMS from a contiguous mono float block. It rejects null/empty blocks and any non-finite sample without modifying the caller's previous reading, and clamps display amplitudes to [0,1]. The helper does not capture audio, publish across threads, or connect the browser prototype to the DSP engine; callers must provide valid buffers and transfer readings through an explicitly synchronized path.\n
+
+
+## Block-level meter measurement
+
+`src/audio/audio_block_meter.hpp` provides a stateless, allocation-free helper to measure peak and RMS from a contiguous mono float block. It rejects null/empty blocks and any non-finite sample without modifying the caller's previous reading, and clamps display amplitudes to [0,1]. The helper does not capture audio, publish across threads, or connect the browser prototype to the DSP engine; callers must provide valid buffers and transfer readings through an explicitly synchronized path.
+
 
 The `audio_engine_solo_arbitration_test` regression covers all 16 strips:
 when Solo is active, only soloed and non-muted tracks contribute; Mute takes
