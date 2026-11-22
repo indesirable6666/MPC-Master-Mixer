@@ -163,6 +163,21 @@ public:
         return enqueue(command);
     }
 
+    // Linked stereo EQ uses one atomic queue item so both channels switch
+    // coefficients at the same audio-block boundary.
+    bool enqueueAudioInputPairEqState(
+        float sampleRate,
+        const std::array<SixBandEq::BandParameters, SixBandEq::kBandCount>& bands) noexcept {
+        SixBandEq::PreparedConfiguration prepared;
+        if (!SixBandEq::prepareConfiguration(sampleRate, bands, prepared))
+            return false;
+        Command command;
+        command.type = CommandType::AudioInputPairEqState;
+        command.inputPairEq[0] = prepared;
+        command.inputPairEq[1] = prepared;
+        return enqueue(command);
+    }
+
     // The caller retains both effect instances until hasApplied(ticket) is
     // true; retirement/destruction must happen on the control thread.
     bool enqueueAudioInputPairInsert(std::size_t side, std::size_t slot,
@@ -246,7 +261,8 @@ private:
     enum class CommandType : std::uint8_t {
         Track, TrackEq, TrackInsert, AuxReturn, MasterGain, MasterMute,
         AudioInputPairChannel, AudioInputPairStereoControls, AudioInputPairLinked,
-        AudioInputPairState, AudioInputPairEq, AudioInputPairInsert
+        AudioInputPairState, AudioInputPairEq, AudioInputPairEqState,
+        AudioInputPairInsert
     };
 
     struct Command {
@@ -261,6 +277,7 @@ private:
         AudioInputPair::Channel inputPairChannel{};
         std::array<AudioInputPair::Channel, 2> inputPairChannels{};
         AudioInputPair::StereoControls inputPairStereo{};
+        std::array<SixBandEq::PreparedConfiguration, 2> inputPairEq{};
         float value = 0.0f;
         bool flag = false;
     };
@@ -369,6 +386,10 @@ private:
                 break;
             case CommandType::AudioInputPairEq:
                 audioInputPair_.setEqPrepared(command.index, command.eq);
+                break;
+            case CommandType::AudioInputPairEqState:
+                audioInputPair_.setEqPrepared(0, command.inputPairEq[0]);
+                audioInputPair_.setEqPrepared(1, command.inputPairEq[1]);
                 break;
             case CommandType::AudioInputPairInsert:
                 audioInputPair_.setInsert(command.index, command.slot, command.effect);
