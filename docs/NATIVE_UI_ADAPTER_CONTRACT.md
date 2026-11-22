@@ -147,9 +147,10 @@ the transport may return its accepted response immediately. Rejected results
 must not be recorded. If the tracker is full, the caller must apply
 backpressure before dispatch rather than accept a command it cannot retain
 for acknowledgement. The tracker does not send network responses, create or validate epochs, persist
-requests, or own the dispatcher/controller. The transport supplies a new
-monotonic epoch on each connection and uses the epoch returned in each
-acknowledgement to prevent stale responses crossing reconnect boundaries.
+requests, or own the dispatcher/controller. The transport supplies a nonzero, monotonically increasing epoch on each
+connection and uses the epoch returned in each acknowledgement to prevent
+stale responses crossing reconnect boundaries. Epoch zero is rejected before
+dispatch and cannot consume a request sequence.
 
 ## State synchronization
 
