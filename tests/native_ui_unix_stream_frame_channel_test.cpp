@@ -44,7 +44,7 @@ int main() {
 
     // A concatenated pair remains buffered across frame acknowledgements.
     const char second[] = "second";
-    std::uint8_t pair[2 * (NativeUiFrameCodec::kHeaderBytes + sizeof(second))]{};
+    std::uint8_t pair[2 * NativeUiFrameCodec::kHeaderBytes + sizeof(first) + sizeof(second)]{};
     std::uint8_t h1[4]{}, h2[4]{};
     assert(NativeUiFrameCodec::encodeLength(sizeof(first), h1));
     assert(NativeUiFrameCodec::encodeLength(sizeof(second), h2));
