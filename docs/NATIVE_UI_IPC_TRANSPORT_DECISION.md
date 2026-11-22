@@ -114,10 +114,13 @@ audio acknowledgements returned for the active epoch.
 6. Cross-compile against the confirmed target toolchain.
 7. Only then consider device validation, with separate explicit authorization.
 
-An isolated POSIX stream-I/O adapter, bounded framed-stream channel, and
-move-only descriptor owner now exist. The channel provides a single-frame
-caller-owned transmit queue and an incremental receive pump that preserves
-bytes across concatenated frames; the descriptor wrapper adopts an existing
-file descriptor and closes it through RAII. None of these components creates,
-binds, connects, listens, or accepts sockets, or selects a filesystem path.
-No endpoint, device connection, or hardware validation is implemented.
+An isolated POSIX stream-I/O adapter, bounded framed-stream channel,
+move-only descriptor owner, and pure Unix socket path policy now exist. The
+channel provides a single-frame caller-owned transmit queue and an incremental
+receive pump that preserves bytes across concatenated frames; the descriptor
+wrapper adopts an existing file descriptor and closes it through RAII. The
+path policy rejects relative/root/trailing-slash paths, embedded NUL bytes,
+overlong paths, and explicit dot or parent components. It does not inspect the
+filesystem or prevent path races. None of these components creates, binds,
+connects, listens, or accepts sockets. No endpoint, device connection, or
+hardware validation is implemented.
