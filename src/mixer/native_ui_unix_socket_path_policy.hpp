@@ -16,7 +16,8 @@ enum class NativeUiUnixSocketPathStatus {
     EmbeddedNull,
     TooLong,
     DotComponent,
-    ParentComponent
+    ParentComponent,
+    EmptyComponent
 };
 
 // Pure validation only: this does not inspect the filesystem, reserve a path,
@@ -48,6 +49,8 @@ public:
             const std::size_t componentEnd =
                 slash == std::string::npos ? path.size() : slash;
             const std::size_t componentLength = componentEnd - componentStart;
+            if (componentLength == 0)
+                return NativeUiUnixSocketPathStatus::EmptyComponent;
             if (componentLength == 1 && path[componentStart] == '.')
                 return NativeUiUnixSocketPathStatus::DotComponent;
             if (componentLength == 2 &&
