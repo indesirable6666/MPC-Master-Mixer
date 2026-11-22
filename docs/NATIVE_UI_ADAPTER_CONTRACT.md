@@ -130,19 +130,26 @@ It also returns an `audioTicket` when nonzero.
 ### Pending audio acknowledgement ledger
 
 `NativeUiCommandTracker` is implemented as a fixed-capacity,
-allocation-free, control-thread-only ledger. The transport owner should check
-`canTrackAudioCommand()` before dispatching a command that can enqueue audio
-work, then call `recordAccepted()` for the accepted result before yielding
-control. It stores the accepted request sequence and nonzero audio ticket.
+allocation-free, control-thread-only ledger. Use its `dispatch(dispatcher,
+command, connectionEpoch)` method rather than calling the dispatcher directly:
+it checks capacity before dispatch, so an accepted command can never be left
+without a retained acknowledgement ticket. A full ledger returns `QueueFull`
+before consuming the request sequence. The ledger stores the accepted request
+sequence, nonzero audio ticket, and opaque connection epoch.
 `popApplied(controller, ack)` releases completed acknowledgements in FIFO
 order only after the controller reports the corresponding ticket applied.
+The transport must send an acknowledgement only if its stored epoch still
+matches the active connection; stale-epoch acknowledgements are discarded,
+not forwarded to a reconnected client.
 
 A command accepted with ticket zero has no asynchronous audio work to track;
 the transport may return its accepted response immediately. Rejected results
 must not be recorded. If the tracker is full, the caller must apply
 backpressure before dispatch rather than accept a command it cannot retain
-for acknowledgement. The tracker does not send network responses, manage
-connection epochs, persist requests, or own the dispatcher/controller.
+for acknowledgement. The tracker does not send network responses, create or validate epochs, persist
+requests, or own the dispatcher/controller. The transport supplies a new
+monotonic epoch on each connection and uses the epoch returned in each
+acknowledgement to prevent stale responses crossing reconnect boundaries.
 
 ## State synchronization
 
