@@ -57,6 +57,27 @@ int main() {
     assert(owner.collectApplied() == 1);
     assert(owner.current(0, 0) == nullptr && destroyed == 2);
 
+    // Bulk shutdown clearing is incremental and covers track plus pair slots.
+    mpcmixer::AudioEngineCommandBridge shutdownBridge;
+    mpcmixer::MixerController shutdownController(shutdownBridge);
+    mpcmixer::MixerInsertEffectOwner shutdownOwner(shutdownController);
+    int shutdownDestroyed = 0;
+    auto shutdownTrack = std::unique_ptr<mpcmixer::AudioInsert>(
+        new CountingInsert(shutdownDestroyed));
+    auto shutdownPair = std::unique_ptr<mpcmixer::AudioInsert>(
+        new CountingInsert(shutdownDestroyed));
+    assert(shutdownOwner.publish(2, 0, shutdownTrack, ticket));
+    assert(shutdownOwner.publishAudioInputPair(1, 1, shutdownPair, ticket));
+    processBlock(shutdownBridge);
+    assert(shutdownOwner.collectApplied() == 2);
+    assert(!shutdownOwner.allCleared());
+    assert(shutdownOwner.requestClearAll());
+    assert(!shutdownOwner.allCleared());
+    processBlock(shutdownBridge);
+    assert(shutdownOwner.collectApplied() == 2);
+    assert(shutdownOwner.allCleared());
+    assert(shutdownDestroyed == 2);
+
     mpcmixer::AudioEngineCommandBridge fullBridge;
     mpcmixer::MixerController fullController(fullBridge);
     mpcmixer::MixerInsertEffectOwner fullOwner(fullController);
