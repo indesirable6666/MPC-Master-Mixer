@@ -34,7 +34,7 @@ private:
   catch(...) { return false; }
  }
  static const char* commandStatus(MixerUiCommandStatus s) {
-  switch(s){case MixerUiCommandStatus::Accepted:return "accepted";case NativeUiV1CommandResultStatus::Invalid:return "invalid";case NativeUiV1CommandResultStatus::OutOfOrder:return "out_of_order";case NativeUiV1CommandResultStatus::QueueFull:return "queue_full";case NativeUiV1CommandResultStatus::Unsupported:return "unsupported";}
+  switch(s){case MixerUiCommandStatus::Accepted:return "accepted";case MixerUiCommandStatus::Invalid:return "invalid";case MixerUiCommandStatus::OutOfOrder:return "out_of_order";case MixerUiCommandStatus::QueueFull:return "queue_full";case MixerUiCommandStatus::Unsupported:return "unsupported";}
   return nullptr;
  }
  static const char* errorCode(NativeUiV1ProtocolErrorCode c) {
