@@ -23,6 +23,27 @@ on:
       - "tests/mixer_ui_command_dispatcher_test.cpp"
       - "tools/audio-engine-benchmark.cpp"
       - ".github/workflows/armv7-toolchain.yml"
+  pull_request:
+    paths:
+      - "tools/arm-probe/**"
+      - "src/audio/**"
+      - "src/mixer/**"
+      - "tests/audio_engine_test.cpp"
+      - "tests/meter_model_test.cpp"
+      - "tests/audio_block_meter_test.cpp"
+      - "tests/audio_meter_snapshot_bridge_test.cpp"
+      - "tests/audio_duplex_meter_tap_test.cpp"
+      - "tests/audio_input_pair_host_test.cpp"
+      - "tests/audio_native_signal_scenarios_test.cpp"
+      - "tests/audio_signal_reference_test.cpp"
+      - "tests/audio_meter_ui_consumer_test.cpp"
+      - "tests/meter_presentation_adapter_test.cpp"
+      - "tests/audio_meter_end_to_end_test.cpp"
+      - "tests/mixer_controller_test.cpp"
+      - "tests/mixer_presentation_snapshot_test.cpp"
+      - "tests/mixer_ui_command_dispatcher_test.cpp"
+      - "tools/audio-engine-benchmark.cpp"
+      - ".github/workflows/armv7-toolchain.yml"
 
 permissions:
   contents: read
