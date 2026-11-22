@@ -16,10 +16,9 @@ struct NativeUiAudioAck {
     std::uint64_t connectionEpoch = 0;
 };
 
-// Fixed-capacity, allocation-free pending ledger. Call canTrackAudioCommand()
-// before dispatching a command that may enqueue audio work. After an Accepted
-// result, recordAccepted() must be called before returning to the transport.
-// Commands with ticket zero need no asynchronous audio acknowledgement.
+// Fixed-capacity, allocation-free pending ledger. dispatch() reserves tracking
+// capacity before invoking the dispatcher and retains every accepted nonzero
+// audio ticket before returning. Commands with ticket zero are synchronous.
 class NativeUiCommandTracker {
 public:
     static constexpr std::size_t kCapacity =
