@@ -47,11 +47,11 @@ public:
             const std::size_t slash = path.find('/', componentStart);
             const std::size_t componentEnd =
                 slash == std::string::npos ? path.size() : slash;
-            const std::string component =
-                path.substr(componentStart, componentEnd - componentStart);
-            if (component == ".")
+            const std::size_t componentLength = componentEnd - componentStart;
+            if (componentLength == 1 && path[componentStart] == '.')
                 return NativeUiUnixSocketPathStatus::DotComponent;
-            if (component == "..")
+            if (componentLength == 2 &&
+                path.compare(componentStart, 2, "..") == 0)
                 return NativeUiUnixSocketPathStatus::ParentComponent;
             componentStart = componentEnd + 1;
         }
