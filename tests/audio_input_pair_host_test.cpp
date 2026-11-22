@@ -5,6 +5,7 @@
 #include <limits>
 #include <memory>
 #include <vector>
+#include <utility>
 #include "../src/mixer/mixer_controller.hpp"
 #include "../src/mixer/mixer_insert_effect_owner.hpp"
 
