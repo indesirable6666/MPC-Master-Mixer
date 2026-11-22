@@ -17,7 +17,7 @@ Implemented on the master bus:
 - Master gain (0.0–1.27, +2.1 dB maximum)
 - Master mute
 
-The core ignores non-finite input samples and rejects invalid control values. The stereo float bus is not clipped; a future output stage must define limiting and sample-format conversion. Aux sends are post-fader and post-pan, pre-master; stereo returns are summed into the main bus before master gain/mute and are never fed back into sends. Aux output and return buffers are caller-owned and optional.
+The core ignores non-finite input samples and rejects invalid control values. Constant-power pan coefficients are prepared once at the start of each processing block (including independent Audio In channels), then reused for every sample in that block; this keeps square-root work out of the per-sample mixing loop without changing the pan law. The DSP currently has no explicit flush-to-zero policy for subnormal filter state, so denormal behavior remains a target-CPU measurement item. The stereo float bus is not clipped; a future output stage must define limiting and sample-format conversion. Aux sends are post-fader and post-pan, pre-master; stereo returns are summed into the main bus before master gain/mute and are never fed back into sends. Aux output and return buffers are caller-owned and optional.
 
 ## Current signal flow
 
