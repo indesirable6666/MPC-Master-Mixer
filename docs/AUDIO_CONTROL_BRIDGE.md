@@ -85,3 +85,7 @@ device, or send output to the MPC. The browser prototype still has local demo
 state and needs a native host/controller adapter before it can enqueue these
 commands. A target audio backend and real MPC routing remain unimplemented and
 require a separately authorized, reversible hardware validation phase.
+
+## Touchscreen/native adapter boundary
+
+The browser-to-native command and response contract, including the first fader/pan/Mute/Solo vertical slice, sequence handling, queue backpressure, snapshot synchronization, and adapter acceptance tests, is specified in [`NATIVE_UI_ADAPTER_CONTRACT.md`](NATIVE_UI_ADAPTER_CONTRACT.md). That document is a specification only; no browser IPC transport is implemented yet.
