@@ -1,4 +1,4 @@
-#include "mixer/native_ui_unix_socket_path_policy.hpp"
+#include "native_ui_unix_socket_path_policy.hpp"
 
 #include <cassert>
 #include <string>
