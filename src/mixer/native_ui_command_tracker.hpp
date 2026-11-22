@@ -35,6 +35,8 @@ public:
         MixerUiCommandDispatcher& dispatcher,
         const MixerUiCommand& command,
         std::uint64_t connectionEpoch) noexcept {
+        if (connectionEpoch == 0)
+            return {MixerUiCommandStatus::Invalid, command.sequence};
         if (!canTrackAudioCommand())
             return {MixerUiCommandStatus::QueueFull, command.sequence};
 
