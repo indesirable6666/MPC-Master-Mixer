@@ -15,6 +15,8 @@ int main() {
 
     const auto initial = publisher.publish();
     assert(initial.sequence == 1);
+    assert(initial.audioTicketWatermark == 0);
+    assert(initial.audioStateCaughtUp);
     assert(initial.masterFaderValue == 100);
     assert(!initial.masterMute);
     assert(initial.tracks[0].faderValue == 100);
@@ -63,6 +65,8 @@ int main() {
 
     const auto changed = publisher.publish();
     assert(changed.sequence == 2);
+    assert(changed.audioTicketWatermark != 0);
+    assert(!changed.audioStateCaughtUp);
     assert(publisher.lastSequence() == 2);
     assert(changed.tracks[5].faderValue == 73);
     assert(changed.tracks[5].panPercent == -35);
@@ -109,6 +113,8 @@ int main() {
 
     const auto later = publisher.publish();
     assert(later.sequence == 3);
+    assert(later.audioTicketWatermark != 0);
+    assert(later.audioStateCaughtUp);
     assert(later.tracks[5].faderValue == 50);
     assert(!later.tracks[5].hasInsert[1]);
 
