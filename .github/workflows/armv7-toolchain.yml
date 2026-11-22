@@ -206,7 +206,8 @@ jobs:
           arm-linux-gnueabihf-g++ $COMMON_FLAGS -std=c++14 -Isrc/mixer \
             tests/native_ui_protocol_v1_decoder_test.cpp \
             -o build/mpc-native-ui-protocol-v1-decoder-test-armv7
-\
+
+          arm-linux-gnueabihf-g++ $COMMON_FLAGS -std=c++14 -Isrc/mixer \
             tests/native_ui_protocol_v1_client_message_decoder_test.cpp \
             -o build/mpc-native-ui-protocol-v1-client-message-decoder-test-armv7
 
