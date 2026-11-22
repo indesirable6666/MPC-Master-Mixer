@@ -5,6 +5,7 @@
 #include <limits>
 #include <vector>
 #include "../src/mixer/mixer_controller.hpp"
+#include "../src/mixer/mixer_insert_effect_owner.hpp"
 
 namespace {
 bool near(float actual, float expected, float tolerance = 0.0001f) {
@@ -163,12 +164,13 @@ int main() {
     auto pairBands = mpcmixer::SixBandEq::defaultBandParameters();
     pairBands[3].gainDb = 6.0f; // 1.5 kHz band, at its centre frequency below.
     assert(pairController.setAudioInputPairEq(0, 48000.0f, pairBands));
-    mpcmixer::GainInsert rightTrim;
-    assert(rightTrim.setGain(0.5f));
-    rightTrim.setEnabled(true);
+    mpcmixer::MixerInsertEffectOwner pairInsertOwner(pairController);
+    auto rightTrim = std::make_unique<mpcmixer::GainInsert>();
+    assert(rightTrim->setGain(0.5f));
+    rightTrim->setEnabled(true);
     std::uint32_t pairInsertTicket = 0;
-    assert(pairController.setAudioInputPairInsert(
-        1, 0, &rightTrim, pairInsertTicket));
+    assert(pairInsertOwner.publishAudioInputPair(
+        1, 0, rightTrim, pairInsertTicket));
 
     constexpr std::size_t pairFrames = 48000;
     std::vector<float> pairInputLeft(pairFrames);
