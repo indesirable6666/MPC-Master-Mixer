@@ -30,6 +30,7 @@ on:
       - "tests/native_ui_protocol_v1_snapshot_serializer_test.cpp"
       - "tests/native_ui_protocol_v1_snapshot_decoder_test.cpp"
       - "tests/native_ui_protocol_v1_snapshot_request_tracker_test.cpp"
+      - "tests/native_ui_protocol_v1_client_message_handler_test.cpp"
       - "tests/native_ui_protocol_v1_session_integration_test.cpp"
       - "tests/native_ui_session_gate_test.cpp"
       - "tests/native_ui_session_coordinator_test.cpp"
