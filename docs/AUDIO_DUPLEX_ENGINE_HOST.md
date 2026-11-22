@@ -48,10 +48,11 @@ well.
 
 For meter presentation, the pair's pre-control input readings occupy the
 prototype Audio In 1/2 meter slots (track indices 13 and 14); Master remains
-post-mix. This dedicated pair path currently provides gain, balance/pan, mute
-and solo only. It does not yet run the per-track six-band EQ, insert chain or
-Aux sends for those two strips; those controls are not claimed as part of this
-native pair path.
+post-mix. The stereo pair DSP applies its own six-band EQ and insert chains,
+and contributes to caller-provided stereo Aux-send buffers. Aux sends are
+processed at the DSP/bridge boundary, but the duplex host currently exposes
+only the two main output channels: no physical or additional device output
+route for Aux buses is implemented.
 
 ## Thread and lifecycle contract
 
@@ -67,6 +68,13 @@ native pair path.
   engine setters concurrently with processing.
 - Keep the host and command bridge alive until the backend has stopped and
   shutdown has completed.
+- Insert pointers are non-owning. When using `MixerInsertEffectOwner`, queue
+  a clear for every populated track and Audio In pair slot while callbacks are
+  still running, call `collectApplied()` until every clear is acknowledged,
+  then call host `stop()`/`shutdown()`. Destroy the owner only after shutdown
+  has completed. A queued clear is not itself a shutdown barrier: stopping the
+  callback before it processes the clears leaves the engine's last insert
+  pointers live. The owner does not stop or drain the host automatically.
 
 ## Current implementation boundary
 
