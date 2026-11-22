@@ -62,6 +62,21 @@ int main() {
     assert(decoded.audioInputPair.channels[0].gainValue == 62);
     assert(decoded.audioInputPair.channels[0].panPercent == -45);
 
+    MixerPresentationSnapshot boundary = source;
+    boundary.sequence = (std::numeric_limits<std::uint64_t>::max)();
+    boundary.audioTicketWatermark = (std::numeric_limits<std::uint32_t>::max)();
+    std::string boundaryWire;
+    const auto uint64Max = (std::numeric_limits<std::uint64_t>::max)();
+    assert(NativeUiProtocolV1SnapshotSerializer::serialize(
+        uint64Max, uint64Max, boundary, boundaryWire));
+    MixerPresentationSnapshot boundaryDecoded;
+    assert(NativeUiProtocolV1SnapshotDecoder::decode(
+        boundaryWire, uint64Max, uint64Max, boundaryDecoded) ==
+        NativeUiProtocolV1SnapshotDecodeStatus::Ok);
+    assert(boundaryDecoded.sequence == uint64Max);
+    assert(boundaryDecoded.audioTicketWatermark ==
+        (std::numeric_limits<std::uint32_t>::max)());
+
     const auto reject = [&decoded, &wire](const std::string& payload,
                                           std::uint64_t epoch = 7,
                                           std::uint64_t request = 3) {
