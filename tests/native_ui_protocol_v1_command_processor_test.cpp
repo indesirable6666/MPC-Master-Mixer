@@ -1,3 +1,4 @@
+#include "native_ui_protocol_v1_audio_ack_publisher.hpp"
 #include "native_ui_protocol_v1_command_processor.hpp"
 #include "native_ui_protocol_v1_response_serializer.hpp"
 #include "native_ui_session_coordinator.hpp"
@@ -17,6 +18,7 @@ int main() {
     MixerPresentationPublisher publisher(controller);
     NativeUiSessionCoordinator session;
     NativeUiProtocolV1CommandProcessor processor;
+    NativeUiProtocolV1AudioAckPublisher ackPublisher;
 
     std::uint64_t epoch = 0;
     assert(session.beginConnection(epoch));
@@ -75,14 +77,21 @@ int main() {
 
     // Audio callback completion is reported separately by the session ACK
     // tracker; command_result is not an audio-applied acknowledgement.
-    NativeUiAudioAck ack;
-    assert(!session.popApplied(controller, ack));
+    std::string ackPayload = "keep";
+    assert(!ackPublisher.publishNext(controller, session, ackPayload));
+    assert(ackPayload == "keep");
     const float* inputs[AudioEngine::kTrackCount]{};
     float left[1]{};
     float right[1]{};
     bridge.process(inputs, left, right, 1);
-    assert(session.popApplied(controller, ack));
-    assert(ack.sequence == 1 && ack.connectionEpoch == epoch);
+    assert(ackPublisher.publishNext(controller, session, ackPayload));
+    const auto ackJson = nlohmann::json::parse(ackPayload);
+    assert(ackJson["kind"] == "audio_ack");
+    assert(ackJson["epoch"] == epoch);
+    assert(ackJson["sequence"] == 1);
+    assert(ackJson["audio_ticket"] == result.commandResult.audioTicket);
+    assert(ackJson["status"] == "applied");
+    assert(!ackPublisher.publishNext(controller, session, ackPayload));
 
     assert(session.invalidate(epoch));
     return 0;
