@@ -1,5 +1,5 @@
 #include "native_ui_protocol_v1_response_serializer.hpp"
-#include "native_ui_protocol_v1_session_coordinator.hpp"
+#include "native_ui_session_coordinator.hpp"
 #include "native_ui_protocol_v1_snapshot_decoder.hpp"
 #include "native_ui_protocol_v1_snapshot_serializer.hpp"
 
