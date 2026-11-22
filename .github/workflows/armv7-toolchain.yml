@@ -225,6 +225,10 @@ jobs:
             tests/native_ui_protocol_v1_snapshot_serializer_test.cpp \
             -o build/mpc-native-ui-protocol-v1-snapshot-serializer-test-armv7
 
+          arm-linux-gnueabihf-g++ $COMMON_FLAGS -std=c++14 -Isrc/mixer \
+            tests/native_ui_protocol_v1_snapshot_decoder_test.cpp \
+            -o build/mpc-native-ui-protocol-v1-snapshot-decoder-test-armv7
+
           arm-linux-gnueabihf-g++ $COMMON_FLAGS -std=c++14 \
             tests/mixer_insert_effect_owner_test.cpp \
             -o build/mpc-mixer-insert-effect-owner-test-armv7
