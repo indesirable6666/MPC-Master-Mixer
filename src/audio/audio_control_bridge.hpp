@@ -10,6 +10,13 @@
 
 namespace mpcmixer {
 
+namespace detail {
+// Advance the public acknowledgement ticket while reserving zero as invalid.
+constexpr std::uint32_t nextAudioCommandTicket(std::uint32_t current) noexcept {
+    return current == UINT32_MAX ? 1u : current + 1u;
+}
+} // namespace detail
+
 // Single-producer/single-consumer command bridge between UI/control code and
 // the real-time audio callback. The producer only enqueues value objects;
 // the audio thread applies them immediately before processing a block.
@@ -264,8 +271,7 @@ private:
         Command queued = command;
         // Tickets are independent of the ring index: skipping zero must not
         // cause a duplicate ticket on the command immediately after wrap.
-        ++nextTicket_;
-        if (nextTicket_ == 0) ++nextTicket_;
+        nextTicket_ = detail::nextAudioCommandTicket(nextTicket_);
         queued.sequence = nextTicket_;
         commands_[head % kQueueCapacity] = queued;
         head_.store(head + 1, std::memory_order_release);
