@@ -197,6 +197,7 @@ int main() {
         pairOutputLeft.data(), pairOutputRight.data(), pairFrames,
         pairAuxL.data(), pairAuxR.data());
     assert(pairController.isAudioInputPairInsertUpdateApplied(pairInsertTicket));
+    assert(pairInsertOwner.collectApplied() == 1);
 
     double leftEnergy = 0.0;
     double rightEnergy = 0.0;
