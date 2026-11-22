@@ -131,13 +131,43 @@ It also returns an `audioTicket` when nonzero.
 
 The native view model must be initialized from a
 `MixerPresentationPublisher` snapshot, not hard-coded browser defaults.
+The snapshot is a copy of **desired producer state**, not a direct readback of
+the audio engine. It now includes:
+
+- `sequence`: monotonically increasing presentation sequence for this
+  publisher instance (not a durable session identifier);
+- `audioTicketWatermark`: the latest audio command ticket included in the
+  snapshot, or zero if no audio command has been queued;
+- `audioStateCaughtUp`: true only if the audio callback has acknowledged that
+  watermark when the snapshot is published.
+
+Commands are consumed FIFO. Therefore a true `audioStateCaughtUp` means all
+audio commands enqueued through that watermark have been applied. If false,
+the snapshot still describes the latest desired values, but the consumer must
+not claim that all of them are audio-applied. The watermark does not identify
+which individual controls have already crossed the block boundary; present
+them as pending/unknown until a later snapshot reports caught-up.
+
 After an accepted command, the UI may display a pending state, but must
 distinguish it from the last audio-applied state until the returned ticket is
-acknowledged. On reconnect, discard stale in-flight requests and request a
-fresh snapshot before sending new controls.
+acknowledged. A transport owner should retain each accepted sequence and its
+nonzero audio ticket until acknowledgement; commands returning ticket zero
+have no asynchronous audio acknowledgement associated with them.
 
-Snapshot reads and dispatcher calls must follow the controller's serialized
-producer/control-thread rule.
+On reconnect, invalidate the old connection epoch and discard stale
+client-side in-flight request state. Request a fresh native snapshot before
+sending controls. Treat the new snapshot as authoritative for desired state.
+If its `audioStateCaughtUp` is false, poll/publish later snapshots on the
+serialized control thread until the watermark is acknowledged; do not replay
+old commands merely because their acknowledgements were lost during disconnect.
+A new transport connection must not reuse old request sequence numbers within
+the same adapter lifetime; a restarted adapter establishes a new connection
+epoch and starts a fresh sequence space.
+
+Snapshot reads, ticket polling, and dispatcher calls must follow the
+controller's serialized producer/control-thread rule. The presentation
+sequence is local to one publisher instance and must not be used as a
+cross-restart identity or as a substitute for the transport connection epoch.
 
 ## Safety and real-time boundaries
 
