@@ -68,6 +68,28 @@ int main() {
     assert(meters.consume(snapshot));
     assert(near(snapshot.channels[mpcmixer::AudioMeterSnapshot::kMasterIndex].peak, 0.375f));
 
+    // Negative balance attenuates the right input; the midpoint is linear.
+    stereo.balance = -1.0f;
+    assert(commands.enqueueAudioInputPairStereoControls(stereo));
+    assert(backend.processBlock(block) == mpcmixer::AudioDuplexStatus::Processed);
+    assert(near(outputLeft[0], 0.5f));
+    assert(near(outputRight[0], 0.0f));
+    assert(meters.consume(snapshot));
+
+    stereo.balance = -0.5f;
+    assert(commands.enqueueAudioInputPairStereoControls(stereo));
+    assert(backend.processBlock(block) == mpcmixer::AudioDuplexStatus::Processed);
+    assert(near(outputLeft[0], 0.5f));
+    assert(near(outputRight[0], -0.0625f));
+    assert(meters.consume(snapshot));
+
+    stereo.balance = 0.5f;
+    assert(commands.enqueueAudioInputPairStereoControls(stereo));
+    assert(backend.processBlock(block) == mpcmixer::AudioDuplexStatus::Processed);
+    assert(near(outputLeft[0], 0.25f));
+    assert(near(outputRight[0], -0.125f));
+    assert(meters.consume(snapshot));
+
     stereo.mute = true;
     assert(commands.enqueueAudioInputPairStereoControls(stereo));
     assert(backend.processBlock(block) == mpcmixer::AudioDuplexStatus::Processed);
