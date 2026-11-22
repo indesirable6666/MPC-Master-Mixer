@@ -449,8 +449,8 @@ private:
 
     std::array<Channel, 2> channels_{};
     StereoControls stereo_{};
-    std::array<SixBandEq, 2> equalizers_{};
-    std::array<InsertChain, 2> inserts_{};
+    mutable std::array<SixBandEq, 2> equalizers_{};
+    mutable std::array<InsertChain, 2> inserts_{};
     bool linked_ = false;
 };
 } // namespace mpcmixer
