@@ -178,10 +178,10 @@ The six supported command forms are exact:
 Reject any extra command field, including `track` on master commands, and any
 command name not listed. `track` is a nonnegative integer representable as
 `size_t`; `value` is an integer representable as `int`; `sequence` is
-exact unsigned 64-bit. The current `NativeUiJsonDecoder` accepts a legacy,
-unversioned five-field command object and cannot decode this v1 envelope.
-Implement a distinct strict v1 envelope decoder; do not weaken or silently
-reinterpret the existing decoder.
+exact unsigned 64-bit. The legacy `NativeUiJsonDecoder` accepts an unversioned command object and
+is intentionally kept separate. The dedicated `NativeUiProtocolV1CommandDecoder`
+validates this exact v1 envelope; do not weaken or silently reinterpret either
+decoder.
 
 ### 6. Command result
 
