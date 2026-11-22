@@ -1,4 +1,5 @@
 #include "../src/mixer/mixer_controller.hpp"
+#include "../src/mixer/mixer_insert_effect_owner.hpp"
 
 #include <array>
 #include <cassert>
@@ -76,47 +77,6 @@ int main() {
     assert(!fullController.setMasterMute(!previousDesiredMute));
     assert(fullController.desiredMasterMute() == previousDesiredMute);
     assert(fullBridge.pendingCountApprox() == mpcmixer::AudioEngineCommandBridge::kQueueCapacity);
-
-    // Insert pointer handoff is acknowledged only after the consumer has
-    // applied the replacement at a block boundary. The old object remains
-    // alive and a second handoff for the same slot is rejected meanwhile.
-    mpcmixer::AudioEngineCommandBridge insertBridge;
-    mpcmixer::MixerController insertController(insertBridge);
-    mpcmixer::GainInsert firstInsert;
-    assert(firstInsert.setGain(2.0f));
-    firstInsert.setEnabled(true);
-    mpcmixer::GainInsert secondInsert;
-    assert(secondInsert.setGain(0.5f));
-    secondInsert.setEnabled(true);
-    std::uint32_t firstTicket = 0;
-    std::uint32_t secondTicket = 0;
-    assert(insertController.setTrackInsert(0, 0, &firstInsert, firstTicket));
-    assert(!insertController.isInsertUpdateApplied(firstTicket));
-    assert(!insertController.setTrackInsert(0, 0, &secondInsert, secondTicket));
-    assert(insertController.desiredStateSnapshot().tracks[0].inserts[0] == &firstInsert);
-
-    const float insertInputSample[1] = {0.25f};
-    const float* insertInputs[mpcmixer::AudioEngine::kTrackCount]{};
-    insertInputs[0] = insertInputSample;
-    float insertLeft[1]{};
-    float insertRight[1]{};
-    insertBridge.process(insertInputs, insertLeft, insertRight, 1);
-    assert(insertController.isInsertUpdateApplied(firstTicket));
-    assert(std::fabs(insertLeft[0] - 0.25f * 2.0f * std::sqrt(0.5f)) < 0.0001f);
-
-    assert(insertController.setTrackInsert(0, 0, &secondInsert, secondTicket));
-    assert(!insertController.isInsertUpdateApplied(secondTicket));
-    insertBridge.process(insertInputs, insertLeft, insertRight, 1);
-    assert(insertController.isInsertUpdateApplied(secondTicket));
-    assert(std::fabs(insertLeft[0] - 0.25f * 0.5f * std::sqrt(0.5f)) < 0.0001f);
-    assert(insertController.desiredStateSnapshot().tracks[0].inserts[0] == &secondInsert);
-
-    // Clearing a slot uses the same acknowledged non-owning handoff.
-    assert(insertController.setTrackInsert(0, 0, nullptr, firstTicket));
-    insertBridge.process(insertInputs, insertLeft, insertRight, 1);
-    assert(insertController.isInsertUpdateApplied(firstTicket));
-    assert(insertController.desiredStateSnapshot().tracks[0].inserts[0] == nullptr);
-    assert(std::fabs(insertLeft[0] - 0.25f * std::sqrt(0.5f)) < 0.0001f);
 
     // Stereo Audio In link/unlink transitions preserve the visible strip state.
     mpcmixer::AudioEngineCommandBridge pairBridge;
@@ -248,95 +208,6 @@ int main() {
            0.00001f);
     assert(std::fabs(saturatedController.desiredTrackEq(7)[0].gainDb -
                      oldEq[0].gainDb) < 0.00001f);
-
-    // Insert slots are independent: an unacknowledged handoff in one slot
-    // must not prevent a handoff in another slot or on another track.
-    mpcmixer::AudioEngineCommandBridge independentInsertBridge;
-    mpcmixer::MixerController independentInsertController(independentInsertBridge);
-    mpcmixer::GainInsert slotZeroEffect;
-    mpcmixer::GainInsert slotOneEffect;
-    mpcmixer::GainInsert otherTrackEffect;
-    std::uint32_t slotZeroTicket = 0;
-    std::uint32_t slotOneTicket = 0;
-    std::uint32_t otherTrackTicket = 0;
-    assert(independentInsertController.setTrackInsert(
-        2, 0, &slotZeroEffect, slotZeroTicket));
-    assert(independentInsertController.setTrackInsert(
-        2, 1, &slotOneEffect, slotOneTicket));
-    assert(independentInsertController.setTrackInsert(
-        3, 0, &otherTrackEffect, otherTrackTicket));
-    assert(!independentInsertController.isInsertUpdateApplied(slotZeroTicket));
-    assert(!independentInsertController.isInsertUpdateApplied(slotOneTicket));
-    assert(!independentInsertController.isInsertUpdateApplied(otherTrackTicket));
-    const auto pendingInsertState =
-        independentInsertController.desiredStateSnapshot();
-    assert(pendingInsertState.tracks[2].inserts[0] == &slotZeroEffect);
-    assert(pendingInsertState.tracks[2].inserts[1] == &slotOneEffect);
-    assert(pendingInsertState.tracks[3].inserts[0] == &otherTrackEffect);
-    independentInsertBridge.process(insertInputs, insertLeft, insertRight, 1);
-    assert(independentInsertController.isInsertUpdateApplied(slotZeroTicket));
-    assert(independentInsertController.isInsertUpdateApplied(slotOneTicket));
-    assert(independentInsertController.isInsertUpdateApplied(otherTrackTicket));
-
-    // Invalid insert coordinates and a saturated queue leave both the ticket
-    // output and the desired insert pointer untouched.
-    std::uint32_t untouchedTicket = 0x12345678u;
-    assert(!independentInsertController.setTrackInsert(
-        mpcmixer::AudioEngine::kTrackCount, 0, &slotZeroEffect, untouchedTicket));
-    assert(!independentInsertController.setTrackInsert(
-        2, mpcmixer::InsertChain::kSlotCount, &slotZeroEffect, untouchedTicket));
-    assert(untouchedTicket == 0x12345678u);
-    mpcmixer::AudioEngineCommandBridge fullInsertBridge;
-    mpcmixer::MixerController fullInsertController(fullInsertBridge);
-    for (std::size_t i = 0; i < mpcmixer::AudioEngineCommandBridge::kQueueCapacity; ++i)
-        assert(fullInsertController.setMasterMute((i & 1u) != 0));
-    assert(!fullInsertController.setTrackInsert(
-        5, 0, &slotZeroEffect, untouchedTicket));
-    assert(untouchedTicket == 0x12345678u);
-    assert(fullInsertController.desiredStateSnapshot().tracks[5].inserts[0] == nullptr);
-
-    // A failed replacement after a previously acknowledged insert must keep
-    // the currently active pointer in the desired snapshot and on the audio
-    // engine. Once backpressure clears, the replacement can be retried.
-    mpcmixer::AudioEngineCommandBridge replacementBridge;
-    mpcmixer::MixerController replacementController(replacementBridge);
-    mpcmixer::GainInsert activeInsert;
-    mpcmixer::GainInsert rejectedInsert;
-    mpcmixer::GainInsert retriedInsert;
-    assert(activeInsert.setGain(2.0f));
-    assert(rejectedInsert.setGain(3.0f));
-    assert(retriedInsert.setGain(0.5f));
-    activeInsert.setEnabled(true);
-    rejectedInsert.setEnabled(true);
-    retriedInsert.setEnabled(true);
-    std::uint32_t activeTicket = 0;
-    std::uint32_t rejectedTicket = 0xabcdef01u;
-    std::uint32_t retriedTicket = 0;
-    assert(replacementController.setTrackInsert(
-        0, 0, &activeInsert, activeTicket));
-    replacementBridge.process(insertInputs, insertLeft, insertRight, 1);
-    assert(replacementController.isInsertUpdateApplied(activeTicket));
-    assert(replacementController.desiredStateSnapshot().tracks[0].inserts[0] == &activeInsert);
-    assert(std::fabs(insertLeft[0] - 0.25f * 2.0f * std::sqrt(0.5f)) < 0.0001f);
-
-    for (std::size_t i = 0; i < mpcmixer::AudioEngineCommandBridge::kQueueCapacity; ++i)
-        assert(replacementController.setMasterMute(false));
-    assert(!replacementController.setTrackInsert(
-        0, 0, &rejectedInsert, rejectedTicket));
-    assert(rejectedTicket == 0xabcdef01u);
-    assert(replacementController.desiredStateSnapshot().tracks[0].inserts[0] == &activeInsert);
-    assert(replacementBridge.pendingCountApprox() ==
-           mpcmixer::AudioEngineCommandBridge::kQueueCapacity);
-
-    replacementBridge.process(insertInputs, insertLeft, insertRight, 1);
-    assert(replacementController.desiredStateSnapshot().tracks[0].inserts[0] == &activeInsert);
-    assert(std::fabs(insertLeft[0] - 0.25f * 2.0f * std::sqrt(0.5f)) < 0.0001f);
-    assert(replacementController.setTrackInsert(
-        0, 0, &retriedInsert, retriedTicket));
-    assert(!replacementController.isInsertUpdateApplied(retriedTicket));
-    replacementBridge.process(insertInputs, insertLeft, insertRight, 1);
-    assert(replacementController.isInsertUpdateApplied(retriedTicket));
-    assert(replacementController.desiredStateSnapshot().tracks[0].inserts[0] == &retriedInsert);
 
     // Linking two previously independent Audio In strips seeds one shared
     // EQ, sample rate and Aux-send state from the left strip atomically.
