@@ -30,7 +30,7 @@ public:
 
         pendingEpoch_ = epoch;
         pendingSequence_ = snapshot.sequence;
-        pendingAudioStateCaughtUp_ = snapshot.audioStateCaughtUp;
+        pendingSnapshot_ = snapshot;
         pending_ = true;
         output.swap(candidate);
         return true;
@@ -44,10 +44,14 @@ public:
             session.activeEpoch() != epoch)
             return false;
 
-        const bool accepted = session.updateSnapshot(
-            epoch, snapshotForGate_, true);
-        (void)accepted;
-        return false;
+        if (!session.updateSnapshot(epoch, pendingSnapshot_, true))
+            return false;
+
+        pendingSnapshot_ = MixerPresentationSnapshot{};
+        pendingEpoch_ = 0;
+        pendingSequence_ = 0;
+        pending_ = false;
+        return true;
     }
 
     bool hasPendingDelivery() const noexcept { return pending_; }
@@ -57,7 +61,7 @@ public:
 private:
     std::uint64_t pendingEpoch_ = 0;
     std::uint64_t pendingSequence_ = 0;
-    bool pendingAudioStateCaughtUp_ = false;
+    MixerPresentationSnapshot pendingSnapshot_{};
     bool pending_ = false;
 };
 
