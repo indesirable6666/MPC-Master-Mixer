@@ -60,7 +60,16 @@ private:
             return true;
         }
         bool number_integer(number_integer_t value) override {
-            if (value < 0) return false;
+            if (value < 0) {
+                if (!beginValue() || field_ != Field::Value ||
+                    value < static_cast<number_integer_t>(
+                        (std::numeric_limits<int>::min)()))
+                    return false;
+                command_.value = static_cast<int>(value);
+                command_.hasValue = true;
+                finishValue();
+                return true;
+            }
             return number_unsigned(static_cast<number_unsigned_t>(value));
         }
         bool number_unsigned(number_unsigned_t value) override {
