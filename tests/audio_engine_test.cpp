@@ -647,18 +647,20 @@ int main() {
     assert(controller.desiredTrack(2).mute && controller.desiredTrack(2).solo);
     assert(near(controller.desiredTrack(2).auxSend[3], 0.75f));
     mpcmixer::MixerInsertEffectOwner controllerInsertOwner(controller);
+    auto controllerInsertCandidate = std::make_unique<mpcmixer::SoftClipInsert>();
+    assert(controllerInsertCandidate->setDrive(1.8f));
+    controllerInsertCandidate->setEnabled(true);
     std::unique_ptr<mpcmixer::AudioInsert> controllerInsert =
-        std::make_unique<mpcmixer::SoftClipInsert>();
-    assert(controllerInsert->setDrive(1.8f));
-    controllerInsert->setEnabled(true);
+        std::move(controllerInsertCandidate);
     std::uint32_t controllerInsertTicket = 0;
     assert(controllerInsertOwner.publish(2, 1, controllerInsert, controllerInsertTicket));
     assert(!controller.isInsertUpdateApplied(controllerInsertTicket));
     // The owner rejects a second replacement until the callback acknowledges
     // the first pointer swap.
+    auto prematureReplacementCandidate = std::make_unique<mpcmixer::GainInsert>();
+    assert(prematureReplacementCandidate->setGain(1.25f));
     std::unique_ptr<mpcmixer::AudioInsert> prematureReplacement =
-        std::make_unique<mpcmixer::GainInsert>();
-    assert(prematureReplacement->setGain(1.25f));
+        std::move(prematureReplacementCandidate);
     std::uint32_t prematureTicket = 0;
     assert(!controllerInsertOwner.publish(2, 1, prematureReplacement, prematureTicket));
     assert(controller.setMasterFader(100));
