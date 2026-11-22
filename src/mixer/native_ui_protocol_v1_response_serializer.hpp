@@ -1,9 +1,9 @@
 #pragma once
+#include "mixer_ui_command_dispatcher.hpp"
 #include "../../third_party/nlohmann/json.hpp"
 #include <cstdint>
 #include <string>
 namespace mpcmixer {
-enum class NativeUiV1CommandResultStatus : std::uint8_t { Accepted, Invalid, OutOfOrder, QueueFull, Unsupported };
 enum class NativeUiV1ProtocolErrorCode : std::uint8_t { UnsupportedVersion, InvalidMessage, StaleEpoch, NotSynchronized, MessageTooLarge, ServerBusy };
 class NativeUiProtocolV1ResponseSerializer {
 public:
@@ -11,10 +11,10 @@ public:
   if(!epoch)return false;
   nlohmann::json j=envelope("hello",epoch);j["status"]="ready";return commit(j,output);
  }
- static bool commandResult(std::uint64_t epoch,std::uint64_t sequence,NativeUiV1CommandResultStatus status,std::uint32_t audioTicket,std::string& output) {
-  if(!epoch||!sequence)return false;
-  const char* token=commandStatus(status);if(!token)return false;
-  nlohmann::json j=envelope("command_result",epoch);j["sequence"]=sequence;j["status"]=token;j["audio_ticket"]=audioTicket;return commit(j,output);
+ static bool commandResult(std::uint64_t epoch,const MixerUiCommandResult& result,std::string& output) {
+  if(!epoch||!result.sequence)return false;
+  const char* token=commandStatus(result.status);if(!token)return false;
+  nlohmann::json j=envelope("command_result",epoch);j["sequence"]=result.sequence;j["status"]=token;j["audio_ticket"]=result.audioTicket;return commit(j,output);
  }
  static bool audioAck(std::uint64_t epoch,std::uint64_t sequence,std::uint32_t audioTicket,std::string& output) {
   if(!epoch||!sequence||!audioTicket)return false;
@@ -33,8 +33,8 @@ private:
   try { const std::string candidate=j.dump(-1,' ',false,nlohmann::json::error_handler_t::strict);output=candidate;return true; }
   catch(...) { return false; }
  }
- static const char* commandStatus(NativeUiV1CommandResultStatus s) {
-  switch(s){case NativeUiV1CommandResultStatus::Accepted:return "accepted";case NativeUiV1CommandResultStatus::Invalid:return "invalid";case NativeUiV1CommandResultStatus::OutOfOrder:return "out_of_order";case NativeUiV1CommandResultStatus::QueueFull:return "queue_full";case NativeUiV1CommandResultStatus::Unsupported:return "unsupported";}
+ static const char* commandStatus(MixerUiCommandStatus s) {
+  switch(s){case MixerUiCommandStatus::Accepted:return "accepted";case NativeUiV1CommandResultStatus::Invalid:return "invalid";case NativeUiV1CommandResultStatus::OutOfOrder:return "out_of_order";case NativeUiV1CommandResultStatus::QueueFull:return "queue_full";case NativeUiV1CommandResultStatus::Unsupported:return "unsupported";}
   return nullptr;
  }
  static const char* errorCode(NativeUiV1ProtocolErrorCode c) {
