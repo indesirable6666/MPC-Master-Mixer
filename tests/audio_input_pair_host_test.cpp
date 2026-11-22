@@ -3,6 +3,7 @@
 #include <cassert>
 #include <cmath>
 #include <limits>
+#include <memory>
 #include <vector>
 #include "../src/mixer/mixer_controller.hpp"
 #include "../src/mixer/mixer_insert_effect_owner.hpp"
