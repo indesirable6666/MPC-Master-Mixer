@@ -6,11 +6,12 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
-#include <map>
+#include <initializer_list>
 #include <limits>
 #include <set>
 #include <string>
 #include <stdexcept>
+#include <vector>
 
 namespace mpcmixer {
 
