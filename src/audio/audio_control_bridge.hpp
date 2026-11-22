@@ -63,6 +63,10 @@ public:
     // comparisons are modulo 2^32 and remain unambiguous within half-range.
     // Once true, the audio thread has replaced the slot and will not
     // dereference the previous effect again.
+    // Latest successfully enqueued command ticket, for the serialized producer thread.
+    // This is distinct from the ring-buffer head index and skips zero on wrap.
+    std::uint32_t lastEnqueuedTicket() const noexcept { return nextTicket_; }
+
     bool hasApplied(std::uint32_t ticket) const noexcept {
         if (ticket == 0) return false;
         const std::uint32_t applied =
@@ -258,9 +262,11 @@ private:
         const std::uint32_t tail = tail_.load(std::memory_order_acquire);
         if (head - tail >= kQueueCapacity) return false;
         Command queued = command;
-        queued.sequence = head + 1;
-        // Reserve zero as an invalid ticket even when the 32-bit counter wraps.
-        if (queued.sequence == 0) queued.sequence = 1;
+        // Tickets are independent of the ring index: skipping zero must not
+        // cause a duplicate ticket on the command immediately after wrap.
+        ++nextTicket_;
+        if (nextTicket_ == 0) ++nextTicket_;
+        queued.sequence = nextTicket_;
         commands_[head % kQueueCapacity] = queued;
         head_.store(head + 1, std::memory_order_release);
         if (ticket != nullptr) *ticket = queued.sequence;
@@ -324,6 +330,8 @@ private:
     alignas(64) std::atomic<std::uint32_t> head_{0};
     alignas(64) std::atomic<std::uint32_t> tail_{0};
     alignas(64) std::atomic<std::uint32_t> appliedSequence_{0};
+    // Written/read only by the single serialized producer/control thread.
+    std::uint32_t nextTicket_ = 0;
     AudioEngine engine_{};
     AudioInputPair audioInputPair_{};
 };
