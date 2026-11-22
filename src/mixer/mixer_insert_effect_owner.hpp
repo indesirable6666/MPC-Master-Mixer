@@ -9,6 +9,8 @@
 namespace mpcmixer {
 
 // Control-thread owner for insert pointers published through MixerController.
+// Route every insert-pointer update for managed slots through this owner;
+// bypassing it with MixerController's raw-pointer setters breaks ownership.
 // Stop and shut down the audio host before destroying this owner.
 class MixerInsertEffectOwner {
 public:
