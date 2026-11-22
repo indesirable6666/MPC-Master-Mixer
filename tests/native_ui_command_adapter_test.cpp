@@ -77,7 +77,11 @@ int main() {
            mpcmixer::MixerUiCommandStatus::Invalid);
     assert(dispatcher.lastAcceptedSequence() == 6);
 
-    // Sequence zero and already accepted sequence numbers are rejected.
+    // Sequence checks happen in the dispatcher after the adapter has decoded
+    // a valid typed command. Use a valid payload to isolate ordering behavior.
+    message.type = "SetMasterMute";
+    message.hasFlag = true;
+    message.flag = false;
     message.sequence = 0;
     assert(mpcmixer::NativeUiCommandAdapter::dispatch(message, dispatcher).status ==
            mpcmixer::MixerUiCommandStatus::OutOfOrder);
