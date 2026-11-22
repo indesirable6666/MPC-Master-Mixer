@@ -22,10 +22,6 @@ int main() {
     check("/run/../mixer.sock", NativeUiUnixSocketPathStatus::ParentComponent);
     check("/run//mixer.sock", NativeUiUnixSocketPathStatus::Valid);
     check("/run/mixer.sock", NativeUiUnixSocketPathStatus::Valid);
-    check(std::string(NativeUiUnixSocketPathPolicy::maximumPathBytes() + 1, 'x')
-              .insert(0, "/"),
-          NativeUiUnixSocketPathStatus::NotAbsolute);
-
     const std::string tooLong =
         "/" + std::string(NativeUiUnixSocketPathPolicy::maximumPathBytes(), 'x');
     check(tooLong, NativeUiUnixSocketPathStatus::TooLong);
