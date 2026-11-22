@@ -33,6 +33,10 @@ public:
             route.store(kUnmappedTrack, std::memory_order_relaxed);
     }
 
+    // The backend must outlive this host. Destruction stops callbacks and
+    // releases backend resources if shutdown() was not called explicitly.
+    ~AudioDuplexEngineHost() noexcept { shutdown(); }
+
     AudioDuplexEngineHost(const AudioDuplexEngineHost&) = delete;
     AudioDuplexEngineHost& operator=(const AudioDuplexEngineHost&) = delete;
 
