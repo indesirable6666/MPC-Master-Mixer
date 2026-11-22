@@ -105,11 +105,13 @@ audio acknowledgements returned for the active epoch.
 3. Specify and test versioned command, snapshot, result, and acknowledgement
    schemas independently of sockets.
 4. Implement a bounded framing codec and unit tests on the host.
-5. Implement a host-side socket transport behind a narrow interface and test
-   partial reads/writes, disconnects, malformed frames, and reconnects using
-   local test processes.
+5. Implement descriptor lifecycle and a host-side socket transport behind a
+   narrow interface; test partial reads/writes, disconnects, malformed frames,
+   and reconnects using local test processes. The current I/O helper is only
+   the partial-transfer primitive, not that complete transport.
 6. Cross-compile against the confirmed target toolchain.
 7. Only then consider device validation, with separate explicit authorization.
 
-No IPC transport, device connection, or hardware validation is implemented
-by this decision record.
+An isolated POSIX stream-I/O adapter now exists for already-open descriptors;
+it does not create or own sockets and is not a complete IPC transport. No
+filesystem socket, device connection, or hardware validation is implemented.
