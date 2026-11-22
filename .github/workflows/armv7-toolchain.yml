@@ -177,6 +177,10 @@ jobs:
             tests/native_ui_connection_epoch_test.cpp \
             -o build/mpc-native-ui-connection-epoch-test-armv7
 
+          arm-linux-gnueabihf-g++ $COMMON_FLAGS -std=c++14 \
+            tests/native_ui_session_gate_test.cpp \
+            -o build/mpc-native-ui-session-gate-test-armv7
+
           arm-linux-gnueabihf-g++ $COMMON_FLAGS -std=c++14 -Isrc/mixer \
             tests/native_ui_json_decoder_test.cpp \
             -o build/mpc-native-ui-json-decoder-test-armv7
