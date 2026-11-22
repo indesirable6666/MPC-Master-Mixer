@@ -2,7 +2,7 @@
 
 ## Status and scope
 
-**Partially implemented; transport and snapshots remain specification-only.** The repository now has strict decoders for v1 commands and client `hello` / `snapshot_request` messages, plus a server response serializer for `hello`, `command_result`, `audio_ack`, and `protocol_error`. Full snapshot serialization/decoding, socket/IPC endpoint, UI integration, and device integration are not implemented. The target OS and process permissions remain unverified.
+**Partially implemented; transport and snapshots remain specification-only.** The repository now has strict decoders for v1 commands and client `hello` / `snapshot_request` messages, plus a server response serializer for `hello`, `command_result`, `audio_ack`, and `protocol_error`. Full snapshot serialization is implemented with a bounded 32 KiB payload; strict snapshot decoding, socket/IPC endpoint, UI integration, and device integration are not implemented. The target OS and process permissions remain unverified.
 
 Protocol v1 deliberately exposes only the six commands already supported by
 `NativeUiCommandAdapter`: track fader, pan, mute, solo, master fader, and master
@@ -290,11 +290,11 @@ Before implementing v1:
 - [x] Resolve track EQ sample-rate provenance in the presentation snapshot;
       unconfigured tracks expose `eq_configured:false` and rate `0`, while
       successfully queued configurations publish their actual requested rate.
-- [ ] Choose and document the measured full-snapshot byte limit.
+- [x] Set a separate 32 KiB full-snapshot payload ceiling; a worst-case valid fixture exercises all fixed arrays and numeric fields and asserts the serialized payload remains within the limit.
 - [x] Implement strict v1 command/client-message decoders and server serializers for the four non-snapshot response kinds.
-- [ ] Implement full snapshot serialization/decoding after sample-rate provenance and the measured payload limit are resolved.
+- [x] Implement bounded full snapshot serialization after sample-rate provenance and payload ceiling are resolved.\n- [ ] Implement strict full snapshot decoding.
 - [x] Add focused golden JSON and malformed-input tests for command, client hello/snapshot request, and the four non-snapshot server response kinds.
-- [ ] Add full snapshot fixtures, including fixed array lengths, finite EQ values, and maximum-size payload tests.
+- [x] Add serializer fixtures for fixed array lengths, finite EQ values, range rejection, and worst-case maximum-size payload.
 - [ ] Test integer boundaries, duplicate/unknown keys, exact field sets,
       fixed array lengths, finite floats, and EQ ranges.
 - [ ] Test epoch mismatch, snapshot sequencing, readiness gating, command
