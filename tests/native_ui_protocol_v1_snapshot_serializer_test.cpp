@@ -75,7 +75,7 @@ int main() {
     assert(state["tracks"][0]["eq"].size() == 6);
     assert(state["tracks"][0]["eq_configured"] == true);
     assert(state["tracks"][0]["eq_sample_rate"] == 48000.0);
-    assert(state["tracks"][0]["has_insert"].size() == 4);
+    assert(state["tracks"][0]["has_insert"].size() == MixerPresentationSnapshot::kInsertSlotCount);
     assert(state["tracks"][0]["has_insert"][1] == true);
     assert(state["aux_returns"][2]["level"] == 64);
     assert(state["audio_input_pair"].size() == 7);
