@@ -53,6 +53,7 @@ enum class MixerUiCommandStatus : std::uint8_t {
 struct MixerUiCommandResult {
     MixerUiCommandStatus status = MixerUiCommandStatus::Invalid;
     std::uint64_t sequence = 0;
+    std::uint32_t audioTicket = 0;
 
     bool accepted() const noexcept {
         return status == MixerUiCommandStatus::Accepted;
@@ -219,7 +220,8 @@ public:
             return {MixerUiCommandStatus::QueueFull, command.sequence};
 
         lastAcceptedSequence_ = command.sequence;
-        return {MixerUiCommandStatus::Accepted, command.sequence};
+        return {MixerUiCommandStatus::Accepted, command.sequence,
+                controller_.lastAudioCommandTicket()};
     }
 
     std::uint64_t lastAcceptedSequence() const noexcept {
