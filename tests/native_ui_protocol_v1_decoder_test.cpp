@@ -18,6 +18,12 @@ int main() {
     assert(decoded.command.hasTrack && decoded.command.track == 2);
     assert(decoded.command.hasValue && decoded.command.value == 96);
 
+    const std::string negativePan =
+        R"({"version":1,"kind":"command","epoch":7,"sequence":42,"type":"SetTrackPan","track":0,"value":-100})";
+    assert(NativeUiProtocolV1Decoder::decode(negativePan, decoded) ==
+        NativeUiProtocolV1DecodeStatus::Ok);
+    assert(decoded.command.hasValue && decoded.command.value == -100);
+
     const std::string masterMute =
         R"({"version":1,"kind":"command","epoch":18446744073709551615,"sequence":9,"type":"SetMasterMute","flag":true})";
     assert(NativeUiProtocolV1Decoder::decode(masterMute, decoded) ==
