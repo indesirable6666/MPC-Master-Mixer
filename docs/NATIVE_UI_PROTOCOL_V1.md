@@ -2,10 +2,7 @@
 
 ## Status and scope
 
-**Specification only.** This document defines a versioned JSON message contract for a
-future local transport. It does not implement a parser, serializer, socket, IPC
-endpoint, UI, or device integration. The target OS and process permissions remain
-unverified.
+**Partially implemented; transport and snapshots remain specification-only.** The repository now has strict decoders for v1 commands and client `hello` / `snapshot_request` messages, plus a server response serializer for `hello`, `command_result`, `audio_ack`, and `protocol_error`. Full snapshot serialization/decoding, socket/IPC endpoint, UI integration, and device integration are not implemented. The target OS and process permissions remain unverified.
 
 Protocol v1 deliberately exposes only the six commands already supported by
 `NativeUiCommandAdapter`: track fader, pan, mute, solo, master fader, and master
@@ -287,8 +284,10 @@ is the cross-connection boundary.
 Before implementing v1:
 - [ ] Resolve track EQ sample-rate provenance in the presentation snapshot.
 - [ ] Choose and document the measured full-snapshot byte limit.
-- [ ] Implement a separate strict versioned envelope decoder and serializer.
-- [ ] Add golden JSON fixtures for every message kind and malformed variants.
+- [x] Implement strict v1 command/client-message decoders and server serializers for the four non-snapshot response kinds.
+- [ ] Implement full snapshot serialization/decoding after sample-rate provenance and the measured payload limit are resolved.
+- [x] Add focused golden JSON and malformed-input tests for command, client hello/snapshot request, and the four non-snapshot server response kinds.
+- [ ] Add full snapshot fixtures, including fixed array lengths, finite EQ values, and maximum-size payload tests.
 - [ ] Test integer boundaries, duplicate/unknown keys, exact field sets,
       fixed array lengths, finite floats, and EQ ranges.
 - [ ] Test epoch mismatch, snapshot sequencing, readiness gating, command
