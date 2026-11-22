@@ -15,6 +15,10 @@ int main() {
     command.track = 0;
     command.value = 64;
 
+    const auto missingEpoch = tracker.dispatch(dispatcher, command, 0);
+    assert(missingEpoch.status == mpcmixer::MixerUiCommandStatus::Invalid);
+    assert(dispatcher.lastAcceptedSequence() == 0);
+
     const auto first = tracker.dispatch(dispatcher, command, 7);
     assert(first.accepted() && first.audioTicket != 0);
     assert(tracker.pendingCount() == 1);
