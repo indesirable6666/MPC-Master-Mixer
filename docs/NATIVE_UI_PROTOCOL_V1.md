@@ -110,7 +110,7 @@ Each track object has exactly:
 - `eq_sample_rate`: finite JSON number; exactly `0` while
   `eq_configured` is false, otherwise the actual sample rate supplied with the
   last successfully queued track EQ configuration (8000..192000 Hz);
-- `has_insert`: array of exactly 4 booleans.
+- `has_insert`: array of exactly 2 booleans (the engine's two insert slots).
 
 Each Aux return object has exactly `level` (integer 0..127),
 `balance` (integer -100..100), and `mute` (boolean).
