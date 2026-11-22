@@ -64,6 +64,25 @@ public:
         return true;
     }
 
+    // Drains completed acknowledgements from obsolete connections without
+    // exposing them to the active transport. FIFO is preserved: an unapplied
+    // oldest ticket still blocks later acknowledgements until it is applied.
+    bool popAppliedForEpoch(
+        const MixerController& controller,
+        std::uint64_t activeConnectionEpoch,
+        NativeUiAudioAck& acknowledgement) noexcept {
+        if (activeConnectionEpoch == 0) return false;
+
+        NativeUiAudioAck candidate;
+        while (popApplied(controller, candidate)) {
+            if (candidate.connectionEpoch == activeConnectionEpoch) {
+                acknowledgement = candidate;
+                return true;
+            }
+        }
+        return false;
+    }
+
     std::size_t pendingCount() const noexcept { return count_; }
 
 private:
