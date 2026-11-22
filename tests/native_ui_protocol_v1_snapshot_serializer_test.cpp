@@ -20,6 +20,10 @@ static void setWorstEq(
 
 int main() {
     MixerPresentationSnapshot snapshot;
+    const auto defaultBands = SixBandEq::defaultBandParameters();
+    for (auto& track : snapshot.tracks) track.eq = defaultBands;
+    for (auto& channel : snapshot.audioInputPair.channels)
+        channel.eq = defaultBands;
     snapshot.sequence = 12;
     snapshot.audioTicketWatermark = 77;
     snapshot.audioStateCaughtUp = false;
