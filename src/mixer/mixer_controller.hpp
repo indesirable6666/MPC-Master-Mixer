@@ -8,6 +8,8 @@
 
 namespace mpcmixer {
 
+class MixerInsertEffectOwner;
+
 // Framework-neutral control adapter for a native mixer UI. It owns the
 // producer-side desired-state snapshot and is intended to be called by one
 // serialized UI/control thread. It never touches the audio engine directly.
@@ -108,6 +110,9 @@ public:
         return true;
     }
 
+private:
+    friend class MixerInsertEffectOwner;
+
     // Insert objects are non-owning. Keep the current and replacement
     // objects alive until bridge.hasApplied(ticket) confirms the block-boundary
     // swap; retire the old object only on this control thread after that ack.
@@ -149,6 +154,7 @@ public:
         return true;
     }
 
+public:
     bool isAudioInputPairInsertUpdateApplied(std::uint32_t ticket) const noexcept {
         return bridge_.hasApplied(ticket);
     }
