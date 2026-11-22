@@ -249,4 +249,83 @@ int main() {
     assert(fullDispatcher.dispatch(retry).status ==
            mpcmixer::MixerUiCommandStatus::OutOfOrder);
     assert(fullController.desiredTrack(0).gain == 0.72f);
+    // Audio In EQ and Aux edits use the same ordered UI command transport.
+    mpcmixer::AudioEngineCommandBridge inputBridge;
+    mpcmixer::MixerController inputController(inputBridge);
+    mpcmixer::MixerUiCommandDispatcher inputDispatcher(inputController);
+    mpcmixer::MixerUiCommand inputCommand;
+    inputCommand.sequence = 1;
+    inputCommand.type = mpcmixer::MixerUiCommandType::SetAudioInputChannelAuxSend;
+    inputCommand.track = 0;
+    inputCommand.index = 1;
+    inputCommand.value = 25;
+    assert(inputDispatcher.dispatch(inputCommand).accepted());
+    inputCommand.sequence = 2;
+    inputCommand.track = 1;
+    inputCommand.value = 75;
+    assert(inputDispatcher.dispatch(inputCommand).accepted());
+
+    inputCommand.sequence = 3;
+    inputCommand.type = mpcmixer::MixerUiCommandType::SetAudioInputChannelEqBand;
+    inputCommand.track = 0;
+    inputCommand.index = 2;
+    inputCommand.sampleRate = 48000.0f;
+    inputCommand.eqBand = {500.0f, 1.0f, 2.0f};
+    assert(inputDispatcher.dispatch(inputCommand).accepted());
+    inputCommand.sequence = 4;
+    inputCommand.track = 1;
+    inputCommand.sampleRate = 44100.0f;
+    inputCommand.eqBand.gainDb = 4.0f;
+    assert(inputDispatcher.dispatch(inputCommand).accepted());
+    auto inputSnapshot = inputController.desiredStateSnapshot();
+    assert(inputSnapshot.audioInputChannels[0].auxSend[1] == 0.25f);
+    assert(inputSnapshot.audioInputChannels[1].auxSend[1] == 0.75f);
+    assert(inputSnapshot.audioInputEq[0][2].gainDb == 2.0f);
+    assert(inputSnapshot.audioInputEq[1][2].gainDb == 4.0f);
+
+    inputCommand.sequence = 5;
+    inputCommand.type = mpcmixer::MixerUiCommandType::SetAudioInputPairLinked;
+    inputCommand.flag = true;
+    assert(inputDispatcher.dispatch(inputCommand).accepted());
+    inputSnapshot = inputController.desiredStateSnapshot();
+    assert(inputSnapshot.audioInputLinked);
+    assert(inputSnapshot.audioInputStereo.auxSend[1] == 0.25f);
+    assert(inputSnapshot.audioInputEq[0][2].gainDb == 2.0f);
+    assert(inputSnapshot.audioInputEq[1][2].gainDb == 2.0f);
+    assert(inputSnapshot.audioInputEqSampleRates[0] == 48000.0f);
+    assert(inputSnapshot.audioInputEqSampleRates[1] == 48000.0f);
+
+    inputCommand.sequence = 6;
+    inputCommand.type = mpcmixer::MixerUiCommandType::SetAudioInputChannelAuxSend;
+    inputCommand.track = 1;
+    inputCommand.index = 1;
+    inputCommand.value = 60;
+    assert(inputDispatcher.dispatch(inputCommand).accepted());
+    inputCommand.sequence = 7;
+    inputCommand.type = mpcmixer::MixerUiCommandType::SetAudioInputChannelEqBand;
+    inputCommand.track = 1;
+    inputCommand.index = 2;
+    inputCommand.sampleRate = 48000.0f;
+    inputCommand.eqBand.gainDb = -3.0f;
+    const auto finalInputCommand = inputDispatcher.dispatch(inputCommand);
+    assert(finalInputCommand.accepted() && finalInputCommand.audioTicket != 0);
+    inputSnapshot = inputController.desiredStateSnapshot();
+    assert(inputSnapshot.audioInputStereo.auxSend[1] == 0.6f);
+    assert(inputSnapshot.audioInputEq[0][2].gainDb == -3.0f);
+    assert(inputSnapshot.audioInputEq[1][2].gainDb == -3.0f);
+
+    inputCommand.sequence = 8;
+    inputCommand.eqBand.frequencyHz = 24000.0f;
+    assert(inputDispatcher.dispatch(inputCommand).status ==
+           mpcmixer::MixerUiCommandStatus::Invalid);
+    assert(inputDispatcher.lastAcceptedSequence() == 7);
+    const float* noInputTracks[mpcmixer::AudioEngine::kTrackCount]{};
+    const float inputLeft[] = {0.25f};
+    const float inputRight[] = {0.25f};
+    float outputLeft[] = {0.0f};
+    float outputRight[] = {0.0f};
+    inputBridge.processWithAudioInputPair(
+        noInputTracks, inputLeft, inputRight, outputLeft, outputRight, 1);
+    assert(inputController.isAudioCommandApplied(finalInputCommand.audioTicket));
+
 }
