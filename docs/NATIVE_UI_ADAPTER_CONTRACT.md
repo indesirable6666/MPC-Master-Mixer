@@ -64,6 +64,8 @@ Example decoded message:
 
 A future JSON decoder must enforce these rules before constructing the typed
 message. They are part of the wire contract, not optional parser preferences.
+The selected parser dependency and SAX implementation constraints are recorded
+in [JSON decoder dependency decision](JSON_DECODER_DEPENDENCY_DECISION.md).
 
 - The top-level value must be exactly one JSON object. Reject trailing
   non-whitespace data, malformed JSON, arrays, scalars, and `null`.
