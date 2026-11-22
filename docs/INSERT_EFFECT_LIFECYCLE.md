@@ -27,7 +27,9 @@ slot and each of the two Audio Input pair sides.
 - `publishAudioInputPair` and `clearAudioInputPair` provide the same contract
   for the two Audio Input pair sides.
 - Track and Audio Input pair slots are independent; calls must still be
-  serialized on the one SPSC producer/control thread.
+  serialized on the one SPSC producer/control thread. All pointer updates for
+  slots managed by this owner must go through it; bypassing the owner with
+  `MixerController`'s raw-pointer setters invalidates its lifetime guarantees.
 
 Do not mutate a published effect. Prepare a replacement and publish it.
 Queue-full rejection leaves the candidate and current slot unchanged.
