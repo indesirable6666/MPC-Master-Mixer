@@ -207,7 +207,15 @@ int main() {
     }
     const double leftRms = std::sqrt(leftEnergy / (pairFrames / 2));
     const double rightRms = std::sqrt(rightEnergy / (pairFrames / 2));
-    assert(leftRms > rightRms * 3.7 && leftRms < rightRms * 4.3);
+    // LINK shares EQ coefficients across both stereo channels; the right
+    // channel's 0.5x insert is therefore the only 2:1 level difference.
+    assert(leftRms > rightRms * 1.85 && leftRms < rightRms * 2.15);
+    const auto pairState = pairController.desiredStateSnapshot();
+    assert(near(pairState.audioInputEq[0][3].gainDb, 6.0f));
+    assert(near(pairState.audioInputEq[1][3].gainDb, 6.0f));
+    assert(near(pairState.audioInputEqSampleRates[0], 48000.0f));
+    assert(near(pairState.audioInputEqSampleRates[1], 48000.0f));
+    assert(near(pairState.audioInputStereo.auxSend[0], 0.25f));
 
     // Master mute silences the direct pair but, like regular tracks, does not
     // remove its pre-Master Aux sends.
