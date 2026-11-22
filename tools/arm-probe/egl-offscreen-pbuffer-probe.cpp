@@ -77,7 +77,7 @@ static bool mpcProcessPresent() {
         }
         if (!S_ISDIR(processInfo.st_mode)) continue;
 
-        char commPath[512];
+        char commPath[1024];
         std::snprintf(commPath, sizeof(commPath), "%s/comm", processPath);
         if (commContainsMpcOrIsUnreadable(commPath)) {
             found = true;
@@ -85,7 +85,7 @@ static bool mpcProcessPresent() {
         }
 
         // The MPC UI thread can have a distinct comm name from its process leader.
-        char taskPath[512];
+        char taskPath[1024];
         std::snprintf(taskPath, sizeof(taskPath), "%s/task", processPath);
         DIR* tasks = opendir(taskPath);
         if (!tasks) {
@@ -105,7 +105,7 @@ static bool mpcProcessPresent() {
             std::strtol(task->d_name, &taskEnd, 10);
             if (!taskEnd || *taskEnd != '\0' || taskEnd == task->d_name) continue;
 
-            char taskCommPath[512];
+            char taskCommPath[1024];
             std::snprintf(taskCommPath, sizeof(taskCommPath),
                           "%s/%s/comm", taskPath, task->d_name);
             if (commContainsMpcOrIsUnreadable(taskCommPath)) {
