@@ -3,6 +3,8 @@
 #include <cassert>
 #include <cmath>
 #include <limits>
+#include <vector>
+#include "../src/mixer/mixer_controller.hpp"
 
 namespace {
 bool near(float actual, float expected, float tolerance = 0.0001f) {
@@ -148,5 +150,108 @@ int main() {
     assert(!host.stereoInputPairEnabled());
     assert(host.setInputRoute(0, 3));
     assert(host.inputRoute(0) == 3);
+
+    // Audio In now shares the track DSP stages: per-side six-band EQ and
+    // insert chains run before the linked stereo fader and Aux send taps.
+    mpcmixer::AudioEngineCommandBridge pairBridge;
+    mpcmixer::MixerController pairController(pairBridge);
+    assert(pairController.setAudioInputPairLinked(true));
+    assert(pairController.setAudioInputPairAuxSend(0, 0, 0.25f));
+    assert(!pairController.setAudioInputPairAuxSend(2, 0, 0.25f));
+    assert(!pairController.setAudioInputPairAuxSend(0, 0, 1.01f));
+
+    auto pairBands = mpcmixer::SixBandEq::defaultBandParameters();
+    pairBands[3].gainDb = 6.0f; // 1.5 kHz band, at its centre frequency below.
+    assert(pairController.setAudioInputPairEq(0, 48000.0f, pairBands));
+    mpcmixer::GainInsert rightTrim;
+    assert(rightTrim.setGain(0.5f));
+    rightTrim.setEnabled(true);
+    std::uint32_t pairInsertTicket = 0;
+    assert(pairController.setAudioInputPairInsert(
+        1, 0, &rightTrim, pairInsertTicket));
+
+    constexpr std::size_t pairFrames = 48000;
+    std::vector<float> pairInputLeft(pairFrames);
+    std::vector<float> pairInputRight(pairFrames);
+    std::vector<float> pairOutputLeft(pairFrames, 0.0f);
+    std::vector<float> pairOutputRight(pairFrames, 0.0f);
+    std::vector<float> pairAuxLeft(pairFrames, 0.0f);
+    std::vector<float> pairAuxRight(pairFrames, 0.0f);
+    constexpr float pairPi = 3.14159265358979323846f;
+    for (std::size_t frame = 0; frame < pairFrames; ++frame) {
+        const float sample = 0.1f * std::sin(
+            2.0f * pairPi * 1500.0f * static_cast<float>(frame) / 48000.0f);
+        pairInputLeft[frame] = sample;
+        pairInputRight[frame] = sample;
+    }
+    const float* noTrackInputs[mpcmixer::AudioEngine::kTrackCount]{};
+    std::array<float*, mpcmixer::AudioEngine::kAuxBusCount> pairAuxL{};
+    std::array<float*, mpcmixer::AudioEngine::kAuxBusCount> pairAuxR{};
+    pairAuxL[0] = pairAuxLeft.data();
+    pairAuxR[0] = pairAuxRight.data();
+    pairBridge.processWithAudioInputPair(
+        noTrackInputs, pairInputLeft.data(), pairInputRight.data(),
+        pairOutputLeft.data(), pairOutputRight.data(), pairFrames,
+        pairAuxL.data(), pairAuxR.data());
+    assert(pairController.isAudioInputPairInsertUpdateApplied(pairInsertTicket));
+
+    double leftEnergy = 0.0;
+    double rightEnergy = 0.0;
+    for (std::size_t frame = pairFrames / 2; frame < pairFrames; ++frame) {
+        leftEnergy += static_cast<double>(pairOutputLeft[frame]) *
+                      pairOutputLeft[frame];
+        rightEnergy += static_cast<double>(pairOutputRight[frame]) *
+                       pairOutputRight[frame];
+        assert(near(pairAuxLeft[frame], pairOutputLeft[frame] * 0.25f, 0.00001f));
+        assert(near(pairAuxRight[frame], pairOutputRight[frame] * 0.25f, 0.00001f));
+    }
+    const double leftRms = std::sqrt(leftEnergy / (pairFrames / 2));
+    const double rightRms = std::sqrt(rightEnergy / (pairFrames / 2));
+    assert(leftRms > rightRms * 3.7 && leftRms < rightRms * 4.3);
+
+    // Master mute silences the direct pair but, like regular tracks, does not
+    // remove its pre-Master Aux sends.
+    assert(pairController.setMasterMute(true));
+    pairBridge.processWithAudioInputPair(
+        noTrackInputs, pairInputLeft.data(), pairInputRight.data(),
+        pairOutputLeft.data(), pairOutputRight.data(), pairFrames,
+        pairAuxL.data(), pairAuxR.data());
+    bool foundPreMasterSend = false;
+    for (std::size_t frame = 0; frame < pairFrames; ++frame) {
+        assert(near(pairOutputLeft[frame], 0.0f));
+        assert(near(pairOutputRight[frame], 0.0f));
+        if (std::fabs(pairAuxLeft[frame]) > 0.001f) foundPreMasterSend = true;
+    }
+    assert(foundPreMasterSend);
+
+    // Unlinked mono sends follow each channel's independent constant-power pan.
+    mpcmixer::AudioInputPair unlinkedPair;
+    mpcmixer::AudioInputPair::Channel unlinkedLeft;
+    unlinkedLeft.gain = 0.5f;
+    unlinkedLeft.pan = -1.0f;
+    unlinkedLeft.auxSend[0] = 0.5f;
+    mpcmixer::AudioInputPair::Channel unlinkedRight;
+    unlinkedRight.gain = 0.25f;
+    unlinkedRight.pan = 1.0f;
+    unlinkedRight.auxSend[0] = 1.0f;
+    assert(unlinkedPair.setChannel(0, unlinkedLeft));
+    assert(unlinkedPair.setChannel(1, unlinkedRight));
+    const float monoLeftInput[] = {1.0f};
+    const float monoRightInput[] = {0.5f};
+    float monoLeftOutput[] = {0.0f};
+    float monoRightOutput[] = {0.0f};
+    float monoAuxLeft[] = {0.0f};
+    float monoAuxRight[] = {0.0f};
+    std::array<float*, mpcmixer::AudioEngine::kAuxBusCount> monoAuxL{};
+    std::array<float*, mpcmixer::AudioEngine::kAuxBusCount> monoAuxR{};
+    monoAuxL[0] = monoAuxLeft;
+    monoAuxR[0] = monoAuxRight;
+    unlinkedPair.processAndMix(
+        monoLeftInput, monoRightInput, monoLeftOutput, monoRightOutput,
+        1, 1.0f, false, false, monoAuxL.data(), monoAuxR.data());
+    assert(near(monoLeftOutput[0], 0.5f));
+    assert(near(monoRightOutput[0], 0.125f));
+    assert(near(monoAuxLeft[0], 0.25f));
+    assert(near(monoAuxRight[0], 0.125f));
     return 0;
 }
