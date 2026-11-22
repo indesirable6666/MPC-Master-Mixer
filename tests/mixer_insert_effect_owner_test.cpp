@@ -69,8 +69,21 @@ int main() {
     assert(!owner.publish(mpcmixer::AudioEngine::kTrackCount, 0, rejected, ticket));
     assert(rejected.get() == rejectedPtr);
 
-    // Clear the other populated slot too; no engine slot may retain a pointer
-    // after the owner is destroyed.
+    // Audio Input pair inserts use the same ownership/acknowledgement path.
+    auto inputInsert = std::unique_ptr<mpcmixer::AudioInsert>(new CountingInsert(destroyed));
+    auto* inputPtr = inputInsert.get();
+    assert(owner.publishAudioInputPair(0, 1, inputInsert, ticket));
+    assert(!inputInsert && owner.hasPendingAudioInputPair(0, 1));
+    processBlock(bridge);
+    assert(owner.collectApplied() == 1);
+    assert(owner.currentAudioInputPair(0, 1) == inputPtr);
+    assert(owner.clearAudioInputPair(0, 1, ticket));
+    assert(owner.currentAudioInputPair(0, 1) == inputPtr);
+    processBlock(bridge);
+    assert(owner.collectApplied() == 1);
+    assert(owner.currentAudioInputPair(0, 1) == nullptr);
+
+    // Clear the other populated track slot too before owner teardown.
     assert(owner.clear(1, 1, ticket));
     processBlock(bridge);
     assert(owner.collectApplied() == 1);
