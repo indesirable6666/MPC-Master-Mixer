@@ -269,6 +269,10 @@ jobs:
             -o build/mpc-native-ui-protocol-v1-snapshot-delivery-test-armv7
 
           arm-linux-gnueabihf-g++ $COMMON_FLAGS -std=c++14 -Isrc/mixer \
+            tests/native_ui_protocol_v1_command_processor_test.cpp \
+            -o build/mpc-native-ui-protocol-v1-command-processor-test-armv7
+
+          arm-linux-gnueabihf-g++ $COMMON_FLAGS -std=c++14 -Isrc/mixer \
             tests/native_ui_protocol_v1_session_integration_test.cpp \
             -o build/mpc-native-ui-protocol-v1-session-integration-test-armv7
 
@@ -337,7 +341,7 @@ jobs:
           arm-linux-gnueabihf-g++ -print-file-name=libc.so.6
 
           echo "=== Reject runtime requirements newer than the MPC ==="
-          for binary in build/mpc-arm-probe-cpp build/mpc-arm-graphics-probe-v2 build/mpc-arm-egl-client-extension-probe build/mpc-arm-egl-gbm-symbol-probe build/mpc-arm-gles2-symbol-probe build/mpc-arm-egl-offscreen-pbuffer-probe build/mpc-audio-engine-test-armv7 build/mpc-audio-output-headroom-test-armv7 build/mpc-audio-engine-benchmark-armv7 build/mpc-meter-model-test-armv7 build/mpc-audio-block-meter-test-armv7 build/mpc-audio-meter-snapshot-bridge-test-armv7 build/mpc-audio-duplex-meter-tap-test-armv7 build/mpc-audio-meter-ui-consumer-test-armv7 build/mpc-meter-presentation-adapter-test-armv7 build/mpc-audio-meter-end-to-end-test-armv7 build/mpc-mixer-controller-test-armv7 build/mpc-native-ui-command-adapter-test-armv7 build/mpc-native-ui-command-tracker-test-armv7 build/mpc-native-ui-connection-epoch-test-armv7 build/mpc-native-ui-session-gate-test-armv7 build/mpc-native-ui-session-coordinator-test-armv7 build/mpc-native-ui-json-decoder-test-armv7 build/mpc-native-ui-frame-codec-test-armv7 build/mpc-native-ui-unix-stream-io-test-armv7 build/mpc-native-ui-unix-stream-frame-channel-test-armv7 build/mpc-native-ui-unix-socket-descriptor-test-armv7 build/mpc-native-ui-unix-socket-path-policy-test-armv7 build/mpc-native-ui-protocol-v1-decoder-test-armv7 build/mpc-native-ui-protocol-v1-client-message-decoder-test-armv7 build/mpc-native-ui-protocol-v1-response-serializer-test-armv7 build/mpc-native-ui-protocol-v1-snapshot-serializer-test-armv7 build/mpc-native-ui-protocol-v1-snapshot-decoder-test-armv7 build/mpc-native-ui-protocol-v1-snapshot-request-tracker-test-armv7 build/mpc-native-ui-protocol-v1-client-message-handler-test-armv7 build/mpc-native-ui-protocol-v1-snapshot-delivery-test-armv7 build/mpc-mixer-insert-effect-owner-test-armv7 build/mpc-audio-input-pair-host-test-armv7 build/mpc-audio-native-signal-scenarios-test-armv7 build/mpc-audio-signal-reference-test-armv7 build/mpc-mixer-presentation-snapshot-test-armv7 build/mpc-mixer-ui-command-dispatcher-test-armv7; do
+          for binary in build/mpc-arm-probe-cpp build/mpc-arm-graphics-probe-v2 build/mpc-arm-egl-client-extension-probe build/mpc-arm-egl-gbm-symbol-probe build/mpc-arm-gles2-symbol-probe build/mpc-arm-egl-offscreen-pbuffer-probe build/mpc-audio-engine-test-armv7 build/mpc-audio-output-headroom-test-armv7 build/mpc-audio-engine-benchmark-armv7 build/mpc-meter-model-test-armv7 build/mpc-audio-block-meter-test-armv7 build/mpc-audio-meter-snapshot-bridge-test-armv7 build/mpc-audio-duplex-meter-tap-test-armv7 build/mpc-audio-meter-ui-consumer-test-armv7 build/mpc-meter-presentation-adapter-test-armv7 build/mpc-audio-meter-end-to-end-test-armv7 build/mpc-mixer-controller-test-armv7 build/mpc-native-ui-command-adapter-test-armv7 build/mpc-native-ui-command-tracker-test-armv7 build/mpc-native-ui-connection-epoch-test-armv7 build/mpc-native-ui-session-gate-test-armv7 build/mpc-native-ui-session-coordinator-test-armv7 build/mpc-native-ui-json-decoder-test-armv7 build/mpc-native-ui-frame-codec-test-armv7 build/mpc-native-ui-unix-stream-io-test-armv7 build/mpc-native-ui-unix-stream-frame-channel-test-armv7 build/mpc-native-ui-unix-socket-descriptor-test-armv7 build/mpc-native-ui-unix-socket-path-policy-test-armv7 build/mpc-native-ui-protocol-v1-decoder-test-armv7 build/mpc-native-ui-protocol-v1-client-message-decoder-test-armv7 build/mpc-native-ui-protocol-v1-response-serializer-test-armv7 build/mpc-native-ui-protocol-v1-snapshot-serializer-test-armv7 build/mpc-native-ui-protocol-v1-snapshot-decoder-test-armv7 build/mpc-native-ui-protocol-v1-snapshot-request-tracker-test-armv7 build/mpc-native-ui-protocol-v1-client-message-handler-test-armv7 build/mpc-native-ui-protocol-v1-snapshot-delivery-test-armv7 build/mpc-native-ui-protocol-v1-command-processor-test-armv7 build/mpc-mixer-insert-effect-owner-test-armv7 build/mpc-audio-input-pair-host-test-armv7 build/mpc-audio-native-signal-scenarios-test-armv7 build/mpc-audio-signal-reference-test-armv7 build/mpc-mixer-presentation-snapshot-test-armv7 build/mpc-mixer-ui-command-dispatcher-test-armv7; do
             if arm-linux-gnueabihf-readelf --version-info "$binary" | \
               grep -E 'GLIBCXX_3\.4\.(29|[3-9][0-9])|GLIBC_2\.(33|[4-9][0-9])'; then
               echo "ERROR: $binary requires a newer runtime than the MPC audit found."
@@ -498,6 +502,13 @@ jobs:
         with:
           name: mpc-native-ui-protocol-v1-snapshot-delivery-test-armv7
           path: build/mpc-native-ui-protocol-v1-snapshot-delivery-test-armv7
+          if-no-files-found: error
+
+      - name: Upload ARMv7 native UI protocol v1 command processor test binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: mpc-native-ui-protocol-v1-command-processor-test-armv7
+          path: build/mpc-native-ui-protocol-v1-command-processor-test-armv7
           if-no-files-found: error
 
       - name: Upload ARMv7 native UI protocol v1 session integration test binary
