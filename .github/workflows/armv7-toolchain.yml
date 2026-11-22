@@ -23,6 +23,7 @@ on:
       - "tests/mixer_insert_effect_owner_test.cpp"
       - "tests/mixer_presentation_snapshot_test.cpp"
       - "tests/mixer_ui_command_dispatcher_test.cpp"
+      - "tests/native_ui_command_adapter_test.cpp"
       - "tools/audio-engine-benchmark.cpp"
       - ".github/workflows/armv7-toolchain.yml"
   pull_request:
@@ -46,6 +47,7 @@ on:
       - "tests/mixer_insert_effect_owner_test.cpp"
       - "tests/mixer_presentation_snapshot_test.cpp"
       - "tests/mixer_ui_command_dispatcher_test.cpp"
+      - "tests/native_ui_command_adapter_test.cpp"
       - "tools/audio-engine-benchmark.cpp"
       - ".github/workflows/armv7-toolchain.yml"
 
@@ -153,7 +155,11 @@ jobs:
 
           arm-linux-gnueabihf-g++ $COMMON_FLAGS -std=c++14 \
             tests/mixer_controller_test.cpp \
-            -o build/mpc-mixer-controller-test-armv7
+            -o build/mpc-mixer-controller-test-armv7 build/mpc-native-ui-command-adapter-test-armv7
+
+          arm-linux-gnueabihf-g++ $COMMON_FLAGS -std=c++14 \
+            tests/native_ui_command_adapter_test.cpp \
+            -o build/mpc-native-ui-command-adapter-test-armv7
 
           arm-linux-gnueabihf-g++ $COMMON_FLAGS -std=c++14 \
             tests/mixer_insert_effect_owner_test.cpp \
