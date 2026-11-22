@@ -3,6 +3,7 @@
 #include "audio_duplex_engine_host.hpp"
 #include "audio_control_bridge.hpp"
 #include "../src/mixer/mixer_controller.hpp"
+#include "../src/mixer/mixer_insert_effect_owner.hpp"
 #include "audio_backend.hpp"
 #include "six_band_eq.hpp"
 
@@ -11,6 +12,7 @@
 #include <cstddef>
 #include <iostream>
 #include <limits>
+#include <memory>
 #include <array>
 
 using mpcmixer::AudioEngine;
@@ -644,19 +646,19 @@ int main() {
     assert(near(controller.desiredTrack(2).pan, -0.5f));
     assert(controller.desiredTrack(2).mute && controller.desiredTrack(2).solo);
     assert(near(controller.desiredTrack(2).auxSend[3], 0.75f));
-    mpcmixer::SoftClipInsert controllerInsert;
-    assert(controllerInsert.setDrive(1.8f));
-    controllerInsert.setEnabled(true);
+    mpcmixer::MixerInsertEffectOwner controllerInsertOwner(controller);
+    auto controllerInsert = std::make_unique<mpcmixer::SoftClipInsert>();
+    assert(controllerInsert->setDrive(1.8f));
+    controllerInsert->setEnabled(true);
     std::uint32_t controllerInsertTicket = 0;
-    assert(controller.setTrackInsert(2, 1, &controllerInsert, controllerInsertTicket));
+    assert(controllerInsertOwner.publish(2, 1, controllerInsert, controllerInsertTicket));
     assert(!controller.isInsertUpdateApplied(controllerInsertTicket));
-    assert(!controller.setTrackInsert(2, 2, &controllerInsert, controllerInsertTicket));
-    // A second replacement of the same slot is rejected until the callback
-    // acknowledges the first pointer swap.
-    mpcmixer::GainInsert prematureReplacement;
-    assert(prematureReplacement.setGain(1.25f));
+    // The owner rejects a second replacement until the callback acknowledges
+    // the first pointer swap.
+    auto prematureReplacement = std::make_unique<mpcmixer::GainInsert>();
+    assert(prematureReplacement->setGain(1.25f));
     std::uint32_t prematureTicket = 0;
-    assert(!controller.setTrackInsert(2, 1, &prematureReplacement, prematureTicket));
+    assert(!controllerInsertOwner.publish(2, 1, prematureReplacement, prematureTicket));
     assert(controller.setMasterFader(100));
     assert(controller.setMasterMute(true));
     assert(near(controller.desiredMasterGain(), 1.0f));
@@ -666,7 +668,7 @@ int main() {
     const auto desiredSnapshot = controller.desiredStateSnapshot();
     assert(near(desiredSnapshot.tracks[2].controls.gain, 1.27f));
     assert(near(desiredSnapshot.tracks[2].eq[1].gainDb, 4.0f));
-    assert(desiredSnapshot.tracks[2].inserts[1] == &controllerInsert);
+    assert(desiredSnapshot.tracks[2].inserts[1] == controllerInsert.get());
     assert(near(desiredSnapshot.auxReturns[1].gain, 0.75f));
     assert(near(desiredSnapshot.masterGain, 1.0f));
     assert(desiredSnapshot.masterMute);
@@ -687,24 +689,27 @@ int main() {
     assert(near(controllerBridge.engineOnAudioThread().trackEq(2).bandParameters(1).gainDb, 4.0f));
     assert(near(controllerBridge.engineOnAudioThread().trackEq(2).bandParameters(4).gainDb, 2.5f));
     assert(controller.isInsertUpdateApplied(controllerInsertTicket));
+    assert(controllerInsertOwner.collectApplied() == 1);
     // Once acknowledged, a replacement may be queued. The old object remains
     // alive through this second handoff as well.
     std::uint32_t replacementControllerTicket = 0;
-    assert(controller.setTrackInsert(2, 1, &prematureReplacement,
-                                     replacementControllerTicket));
+    assert(controllerInsertOwner.publish(2, 1, prematureReplacement,
+                                         replacementControllerTicket));
     assert(!controller.isInsertUpdateApplied(replacementControllerTicket));
     controllerBridge.process(controllerInputs, controllerLeft, controllerRight, 1);
     assert(controller.isInsertUpdateApplied(replacementControllerTicket));
+    assert(controllerInsertOwner.collectApplied() == 1);
     assert(controllerBridge.engineOnAudioThread().track(2).gain == 1.27f);
     // A null replacement explicitly removes/bypasses the insert. The desired
     // snapshot changes when queued, but the old object must remain alive until
     // the audio callback acknowledges the pointer swap.
     std::uint32_t clearInsertTicket = 0;
-    assert(controller.setTrackInsert(2, 1, nullptr, clearInsertTicket));
+    assert(controllerInsertOwner.clear(2, 1, clearInsertTicket));
     assert(!controller.isInsertUpdateApplied(clearInsertTicket));
     assert(controller.desiredStateSnapshot().tracks[2].inserts[1] == nullptr);
     controllerBridge.process(controllerInputs, controllerLeft, controllerRight, 1);
     assert(controller.isInsertUpdateApplied(clearInsertTicket));
+    assert(controllerInsertOwner.collectApplied() == 1);
     assert(controllerBridge.engineOnAudioThread().track(2).gain == 1.27f);
     // A full queue does not advance the controller's cached desired state.
     mpcmixer::AudioEngineCommandBridge controllerFullBridge;
@@ -719,9 +724,10 @@ int main() {
     assert(near(fullController.desiredMasterGain(), 1.0f));
     assert(!fullController.setMasterMute(true));
     assert(!fullController.desiredMasterMute());
-    mpcmixer::SoftClipInsert rejectedInsert;
+    mpcmixer::MixerInsertEffectOwner fullInsertOwner(fullController);
+    auto rejectedInsert = std::make_unique<mpcmixer::SoftClipInsert>();
     std::uint32_t rejectedInsertTicket = 123u;
-    assert(!fullController.setTrackInsert(0, 0, &rejectedInsert, rejectedInsertTicket));
+    assert(!fullInsertOwner.publish(0, 0, rejectedInsert, rejectedInsertTicket));
     assert(fullController.desiredStateSnapshot().tracks[0].inserts[0] == nullptr);
     assert(rejectedInsertTicket == 123u);
     auto fullQueueEq = mpcmixer::SixBandEq::defaultBandParameters();
