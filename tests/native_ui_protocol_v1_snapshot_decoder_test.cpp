@@ -2,6 +2,7 @@
 #include "native_ui_protocol_v1_snapshot_serializer.hpp"
 
 #include <cassert>
+#include <cstdio>
 #include <cstdint>
 #include <limits>
 #include <string>
@@ -42,8 +43,9 @@ int main() {
     std::string wire;
     assert(NativeUiProtocolV1SnapshotSerializer::serialize(7, 3, source, wire));
     MixerPresentationSnapshot decoded;
-    assert(NativeUiProtocolV1SnapshotDecoder::decode(wire, 7, 3, decoded) ==
-        NativeUiProtocolV1SnapshotDecodeStatus::Ok);
+    const auto initialStatus = NativeUiProtocolV1SnapshotDecoder::decode(wire, 7, 3, decoded);
+    std::fprintf(stderr, "initial snapshot decode status: %d\\n", static_cast<int>(initialStatus));
+    assert(initialStatus == NativeUiProtocolV1SnapshotDecodeStatus::Ok);
     assert(decoded.sequence == source.sequence);
     assert(decoded.audioTicketWatermark == source.audioTicketWatermark);
     assert(!decoded.audioStateCaughtUp);
