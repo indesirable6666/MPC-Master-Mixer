@@ -198,3 +198,21 @@ block-boundary acknowledgement has been collected on the control thread.
 All of these additions are deterministic host-side processing. They do not
 open a capture device, provide a target ALSA backend, or establish MPC routing,
 latency, or hardware behavior.
+
+## Recorded host CI benchmark (2026-11-22)
+
+One successful run on the GitHub-hosted Ubuntu 22.04 runner (workflow run
+45003157727, source revision `ab22ccac9da3`) reported:
+
+| Block size | Average block time | 48 kHz block budget |
+|---:|---:|---:|
+| 64 frames | 34.38 µs | 2.58% |
+| 128 frames | 68.89 µs | 2.58% |
+| 256 frames | 137.70 µs | 2.58% |
+| 512 frames | 274.95 µs | 2.58% |
+
+The run reported approximately 1.86 million processed frames/second. The
+workflow did not record the runner CPU model, and this is a single hosted-runner
+measurement rather than a controlled benchmark series. Treat it only as a
+regression reference for similar CI runs; it is not a performance guarantee,
+real-time certification, or estimate for the MPC's ARM CPU.
