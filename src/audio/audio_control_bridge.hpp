@@ -137,15 +137,27 @@ public:
     // Backpressure cannot leave a partially linked stereo pair.
     bool enqueueAudioInputPairState(
         bool linked, const AudioInputPair::StereoControls& stereo,
-        const std::array<AudioInputPair::Channel, 2>& channels) noexcept {
+        const std::array<AudioInputPair::Channel, 2>& channels,
+        float eqSampleRate = 0.0f,
+        const std::array<SixBandEq::BandParameters, SixBandEq::kBandCount>*
+            eqBands = nullptr) noexcept {
         if (!validInputPairStereo(stereo) ||
             !validInputPairChannel(0, channels[0]) ||
             !validInputPairChannel(1, channels[1])) return false;
+        SixBandEq::PreparedConfiguration preparedEq;
+        if (eqBands != nullptr &&
+            !SixBandEq::prepareConfiguration(eqSampleRate, *eqBands, preparedEq))
+            return false;
         Command command;
         command.type = CommandType::AudioInputPairState;
         command.flag = linked;
         command.inputPairStereo = stereo;
         command.inputPairChannels = channels;
+        if (eqBands != nullptr) {
+            command.inputPairEq[0] = preparedEq;
+            command.inputPairEq[1] = preparedEq;
+            command.inputPairHasEq = true;
+        }
         return enqueue(command);
     }
 
@@ -278,6 +290,7 @@ private:
         std::array<AudioInputPair::Channel, 2> inputPairChannels{};
         AudioInputPair::StereoControls inputPairStereo{};
         std::array<SixBandEq::PreparedConfiguration, 2> inputPairEq{};
+        bool inputPairHasEq = false;
         float value = 0.0f;
         bool flag = false;
     };
@@ -383,6 +396,10 @@ private:
                 audioInputPair_.setChannel(1, command.inputPairChannels[1]);
                 audioInputPair_.setStereoControls(command.inputPairStereo);
                 audioInputPair_.setLinked(command.flag);
+                if (command.inputPairHasEq) {
+                    audioInputPair_.setEqPrepared(0, command.inputPairEq[0]);
+                    audioInputPair_.setEqPrepared(1, command.inputPairEq[1]);
+                }
                 break;
             case CommandType::AudioInputPairEq:
                 audioInputPair_.setEqPrepared(command.index, command.eq);
