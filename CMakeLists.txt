@@ -58,6 +58,7 @@ mpc_add_host_test(mixer_mute_solo_order_test tests/mixer_mute_solo_order_test.cp
 mpc_add_host_test(mixer_presentation_snapshot_test tests/mixer_presentation_snapshot_test.cpp)
 mpc_add_host_test(mixer_presentation_all_tracks_test tests/mixer_presentation_all_tracks_test.cpp)
 mpc_add_host_test(mixer_ui_command_dispatcher_test tests/mixer_ui_command_dispatcher_test.cpp)
+mpc_add_host_test(native_ui_command_adapter_test tests/native_ui_command_adapter_test.cpp)
 mpc_add_host_test(midi_adapter_test tests/midi_adapter_test.cpp)
 target_include_directories(midi_adapter_test PRIVATE src/midi src/mixer)
 
