@@ -83,4 +83,29 @@ int main() {
     assert(tracker.popApplied(controller, ack));
     assert(ack.sequence == command.sequence && ack.connectionEpoch == 7);
     assert(!tracker.popApplied(controller, ack));
+
+    // Reconnect with a new epoch while an old connection's command is still
+    // pending. Once both tickets apply, the epoch-aware drain discards the
+    // stale acknowledgement and returns only the new connection's result.
+    command.sequence += 1;
+    command.type = mpcmixer::MixerUiCommandType::SetTrackFader;
+    command.track = 1;
+    command.value = 80;
+    const auto stale = tracker.dispatch(dispatcher, command, 7);
+    assert(stale.accepted() && stale.audioTicket != 0);
+
+    command.sequence += 1;
+    command.value = 96;
+    const auto current = tracker.dispatch(dispatcher, command, 8);
+    assert(current.accepted() && current.audioTicket != 0);
+    assert(tracker.pendingCount() == 2);
+
+    bridge.process(inputs, left, right, 1);
+    assert(tracker.popAppliedForEpoch(controller, 8, ack));
+    assert(ack.sequence == command.sequence);
+    assert(ack.audioTicket == current.audioTicket);
+    assert(ack.connectionEpoch == 8);
+    assert(tracker.pendingCount() == 0);
+    assert(!tracker.popAppliedForEpoch(controller, 8, ack));
+    assert(!tracker.popAppliedForEpoch(controller, 0, ack));
 }
