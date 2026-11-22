@@ -86,5 +86,40 @@ int main() {
     // Bad descriptors surface as transport errors mapped to invalid config.
     status = reader.receiveNext(-1);
     assert(status == NativeUiFrameCodec::Status::InvalidConfiguration);
+
+    // EOF in a partial header is reported as a truncated frame.
+    int truncatedSockets[2] = {-1, -1};
+    assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, truncatedSockets) == 0);
+    const std::uint8_t partialHeader[2] = {0, 0};
+    auto partialSent = NativeUiUnixStreamIo::transmit(
+        truncatedSockets[0], partialHeader, sizeof(partialHeader));
+    assert(partialSent.status == NativeUiUnixStreamIo::Status::Progress);
+    assert(partialSent.bytes == sizeof(partialHeader));
+    ::close(truncatedSockets[0]);
+    std::uint8_t truncatedPayload[64]{};
+    std::uint8_t truncatedScratch[8]{};
+    NativeUiUnixStreamFrameReaderPump truncatedReader(
+        truncatedPayload, sizeof(truncatedPayload), sizeof(truncatedPayload),
+        truncatedScratch, sizeof(truncatedScratch));
+    assert(truncatedReader.receiveNext(truncatedSockets[1]) ==
+           NativeUiFrameCodec::Status::Truncated);
+    ::close(truncatedSockets[1]);
+
+    // A zero-length wire frame is terminally rejected.
+    int invalidSockets[2] = {-1, -1};
+    assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, invalidSockets) == 0);
+    const std::uint8_t zeroHeader[4] = {0, 0, 0, 0};
+    auto invalidSent = NativeUiUnixStreamIo::transmit(
+        invalidSockets[0], zeroHeader, sizeof(zeroHeader));
+    assert(invalidSent.status == NativeUiUnixStreamIo::Status::Progress);
+    std::uint8_t invalidPayload[64]{};
+    std::uint8_t invalidScratch[8]{};
+    NativeUiUnixStreamFrameReaderPump invalidReader(
+        invalidPayload, sizeof(invalidPayload), sizeof(invalidPayload),
+        invalidScratch, sizeof(invalidScratch));
+    assert(invalidReader.receiveNext(invalidSockets[1]) ==
+           NativeUiFrameCodec::Status::InvalidLength);
+    ::close(invalidSockets[0]);
+    ::close(invalidSockets[1]);
     return 0;
 }
