@@ -12,11 +12,10 @@ browser prototype remains offline and simulated. A strict JSON decoder is now
 implemented in `src/mixer/native_ui_json_decoder.hpp`; it validates JSON
 syntax, exact JSON value types, duplicate keys, unknown fields, and
 command-specific field sets before constructing `NativeUiCommandMessage`.
-Presence flags reflect actual field presence; absent values are never replaced
-with defaults.
+The transport-facing orchestration remains the responsibility of a future
+native adapter owner; the individual epoch, gate, decoder, command adapter,
+and acknowledgement tracker remain separate transport-neutral pieces.
 
-The native adapter is the only component allowed to own
-`MixerUiCommandDispatcher`, `MixerController`, and the audio command bridge.
 The browser must never call the DSP engine or audio callback directly.
 
 ## Implemented first vertical slice
@@ -244,7 +243,6 @@ successful decoding.
 Still not implemented: IPC, reconnect/snapshot transport, native UI toolkit
 integration, and live-device validation. No hardware tests have been performed.
 
-
 ## Reconnect readiness gate
 
 `NativeUiSessionGate` is implemented as a small control-thread-only state
@@ -253,14 +251,17 @@ the sole issuer of connection epochs; the gate accepts the already-issued
 nonzero epoch and does not generate, persist, or compare epoch ordering.
 
 A new session begins in `Synchronizing`, where audio-affecting commands must
-remain disabled. The transport calls `updateSnapshot(epoch, true,
-audioStateCaughtUp)` only after it has received and validated a complete
-native snapshot for that connection. A full snapshot with
-`audioStateCaughtUp == false` updates displayed desired state but leaves the
-gate closed. A later complete snapshot whose audio watermark is acknowledged
-moves the gate to `Ready`; only then may the transport dispatch commands for
-that epoch. Partial snapshots, zero epochs, and snapshots tagged with a stale
-epoch are rejected without changing readiness.
+remain disabled. The transport calls
+`updateSnapshot(epoch, snapshotSequence, true, audioStateCaughtUp)` only
+after it has received and validated a complete native snapshot for that
+connection. The snapshot sequence must be nonzero and strictly greater than
+the last accepted sequence for that epoch. Duplicate or delayed snapshots are
+rejected without changing state, preventing an older not-caught-up snapshot
+from downgrading a session that has already become ready. A newer full
+snapshot with `audioStateCaughtUp == false` conservatively returns the gate
+to `Synchronizing`; a later newer full snapshot whose audio watermark is
+acknowledged moves it to `Ready`. Partial snapshots, zero epochs, and
+snapshots tagged with a stale epoch are rejected.
 
 On disconnect, invalidate the same epoch in both the epoch source and the
 session gate. A delayed disconnect for an old epoch cannot close a newer
@@ -278,5 +279,6 @@ responsible for serializing calls on the control thread and checking
 establish an IPC implementation or device integration.
 
 `tests/native_ui_session_gate_test.cpp` covers disconnected and synchronizing
-states, rejection of partial and stale snapshots, transition to ready only
-after audio catch-up, stale disconnect protection, and reconnect isolation.
+states, rejection of partial, stale, duplicate, and out-of-order snapshots,
+transition to ready only after audio catch-up, stale disconnect protection,
+and reconnect isolation.
