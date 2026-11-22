@@ -23,7 +23,7 @@ int main() {
     command.sequence = 2;
     command.type = mpcmixer::MixerUiCommandType::SetMasterMute;
     command.flag = true;
-    const auto second = tracker.dispatch(dispatcher, command);
+    const auto second = tracker.dispatch(dispatcher, command, 7);
     assert(second.accepted() && second.audioTicket != 0);
     assert(tracker.pendingCount() == 2);
     assert(!tracker.popApplied(controller, ack));
@@ -45,7 +45,7 @@ int main() {
     command.sequence = 3;
     command.type = mpcmixer::MixerUiCommandType::SetAudioInputPairLinked;
     command.flag = false; // already unlinked
-    const auto noOp = tracker.dispatch(dispatcher, command);
+    const auto noOp = tracker.dispatch(dispatcher, command, 7);
     assert(noOp.accepted() && noOp.audioTicket == 0);
     assert(tracker.pendingCount() == 0);
 
@@ -57,12 +57,12 @@ int main() {
         command.type = mpcmixer::MixerUiCommandType::SetTrackFader;
         command.track = 0;
         command.value = static_cast<int>(i % 128);
-        const auto accepted = tracker.dispatch(dispatcher, command);
+        const auto accepted = tracker.dispatch(dispatcher, command, 7);
         assert(accepted.accepted() && accepted.audioTicket != 0);
     }
     assert(tracker.pendingCount() == mpcmixer::NativeUiCommandTracker::kCapacity);
     command.sequence = 10 + mpcmixer::NativeUiCommandTracker::kCapacity;
-    const auto backpressured = tracker.dispatch(dispatcher, command);
+    const auto backpressured = tracker.dispatch(dispatcher, command, 7);
     assert(backpressured.status == mpcmixer::MixerUiCommandStatus::QueueFull);
     assert(dispatcher.lastAcceptedSequence() == command.sequence - 1);
 
@@ -72,7 +72,7 @@ int main() {
     assert(drained == mpcmixer::NativeUiCommandTracker::kCapacity);
     assert(tracker.pendingCount() == 0);
 
-    const auto retried = tracker.dispatch(dispatcher, command);
+    const auto retried = tracker.dispatch(dispatcher, command, 7);
     assert(retried.accepted() && retried.audioTicket != 0);
     assert(tracker.pendingCount() == 1);
     bridge.process(inputs, left, right, 1);
