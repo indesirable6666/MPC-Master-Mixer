@@ -78,6 +78,52 @@ int main() {
     assert(shutdownOwner.allCleared());
     assert(shutdownDestroyed == 2);
 
+    // A replacement still awaiting acknowledgement must keep bulk clear incomplete.
+    mpcmixer::AudioEngineCommandBridge pendingBridge;
+    mpcmixer::MixerController pendingController(pendingBridge);
+    mpcmixer::MixerInsertEffectOwner pendingOwner(pendingController);
+    int pendingDestroyed = 0;
+    auto pendingFirst = std::unique_ptr<mpcmixer::AudioInsert>(
+        new CountingInsert(pendingDestroyed));
+    assert(pendingOwner.publish(0, 0, pendingFirst, ticket));
+    processBlock(pendingBridge);
+    assert(pendingOwner.collectApplied() == 1);
+    auto pendingReplacement = std::unique_ptr<mpcmixer::AudioInsert>(
+        new CountingInsert(pendingDestroyed));
+    assert(pendingOwner.publish(0, 0, pendingReplacement, ticket));
+    assert(!pendingOwner.requestClearAll());
+    assert(!pendingOwner.allCleared());
+    processBlock(pendingBridge);
+    assert(pendingOwner.collectApplied() == 1);
+    assert(pendingDestroyed == 1);
+    assert(!pendingOwner.requestClearAll());
+    processBlock(pendingBridge);
+    assert(pendingOwner.collectApplied() == 1);
+    assert(pendingOwner.allCleared());
+    assert(pendingDestroyed == 2);
+
+    // Queue pressure during bulk clearing is retryable after the consumer drains it.
+    mpcmixer::AudioEngineCommandBridge retryBridge;
+    mpcmixer::MixerController retryController(retryBridge);
+    mpcmixer::MixerInsertEffectOwner retryOwner(retryController);
+    int retryDestroyed = 0;
+    auto retryInsert = std::unique_ptr<mpcmixer::AudioInsert>(
+        new CountingInsert(retryDestroyed));
+    assert(retryOwner.publish(0, 0, retryInsert, ticket));
+    processBlock(retryBridge);
+    assert(retryOwner.collectApplied() == 1);
+    for (std::size_t i = 0; i < mpcmixer::AudioEngineCommandBridge::kQueueCapacity; ++i)
+        assert(retryController.setMasterMute((i & 1u) != 0));
+    assert(!retryOwner.requestClearAll());
+    assert(!retryOwner.allCleared());
+    processBlock(retryBridge);
+    assert(retryOwner.collectApplied() == 0);
+    assert(retryOwner.requestClearAll());
+    processBlock(retryBridge);
+    assert(retryOwner.collectApplied() == 1);
+    assert(retryOwner.allCleared());
+    assert(retryDestroyed == 1);
+
     mpcmixer::AudioEngineCommandBridge fullBridge;
     mpcmixer::MixerController fullController(fullBridge);
     mpcmixer::MixerInsertEffectOwner fullOwner(fullController);
