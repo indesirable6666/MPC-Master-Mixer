@@ -300,6 +300,13 @@ jobs:
           path: build/mpc-audio-engine-test-armv7
           if-no-files-found: error
 
+      - name: Upload ARMv7 audio output headroom test binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: mpc-armv7-audio-output-headroom-test
+          path: build/mpc-audio-output-headroom-test-armv7
+          if-no-files-found: error
+
       - name: Upload ARMv7 stereo Audio In pair host-test binary
         uses: actions/upload-artifact@v4
         with:
