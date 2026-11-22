@@ -119,6 +119,12 @@ Audio In R). Le mode non lié conserve deux voies mono avec gain, panoramique,
 mute et solo indépendants. Le mode lié traite les deux buffers comme une seule
 voie stéréo : le gain et le mute sont communs, le réglage Balance atténue le
 côté opposé sans sommer les deux canaux ni détruire la séparation gauche/droite.
+La convention est identique à celle des retours Aux : une balance négative
+atténue progressivement l'entrée droite, une balance positive atténue
+progressivement l'entrée gauche, et zéro laisse les deux niveaux inchangés.
+Cette balance stéréo est une atténuation linéaire par côté ; elle ne convertit
+pas les valeurs de panoramique mono. Les panoramiques mono L/R restent stockés
+indépendamment pendant le mode lié et sont réutilisés au déliage.
 
 Le processeur est sans allocation et reçoit des buffers fournis par l'appelant.
 Il ne capture aucun signal physique et n'ouvre aucun périphérique audio. La
