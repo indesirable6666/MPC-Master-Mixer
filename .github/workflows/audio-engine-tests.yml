@@ -22,6 +22,7 @@ on:
       - "tests/mixer_mute_solo_order_test.cpp"
       - "tests/mixer_ui_command_dispatcher_test.cpp"
       - "tests/native_ui_command_adapter_test.cpp"
+      - "tests/native_ui_command_tracker_test.cpp"
       - "tests/meter_model_test.cpp"
       - "tests/audio_block_meter_test.cpp"
       - "tests/audio_meter_snapshot_bridge_test.cpp"
@@ -42,6 +43,7 @@ on:
       - "tests/mixer_presentation_all_tracks_test.cpp"
       - "tests/mixer_ui_command_dispatcher_test.cpp"
       - "tests/native_ui_command_adapter_test.cpp"
+      - "tests/native_ui_command_tracker_test.cpp"
       - "tools/audio-engine-benchmark.cpp"
       - ".github/workflows/audio-engine-tests.yml"
   pull_request:
@@ -63,6 +65,7 @@ on:
       - "tests/mixer_mute_solo_order_test.cpp"
       - "tests/mixer_ui_command_dispatcher_test.cpp"
       - "tests/native_ui_command_adapter_test.cpp"
+      - "tests/native_ui_command_tracker_test.cpp"
       - "tests/meter_model_test.cpp"
       - "tests/audio_block_meter_test.cpp"
       - "tests/audio_meter_snapshot_bridge_test.cpp"
@@ -83,6 +86,7 @@ on:
       - "tests/mixer_presentation_all_tracks_test.cpp"
       - "tests/mixer_ui_command_dispatcher_test.cpp"
       - "tests/native_ui_command_adapter_test.cpp"
+      - "tests/native_ui_command_tracker_test.cpp"
       - "tools/audio-engine-benchmark.cpp"
       - ".github/workflows/audio-engine-tests.yml"
   workflow_dispatch:
