@@ -149,6 +149,34 @@ public:
         return enqueue(command);
     }
 
+    bool enqueueAudioInputPairEq(
+        std::size_t side, float sampleRate,
+        const std::array<SixBandEq::BandParameters, SixBandEq::kBandCount>& bands) noexcept {
+        if (side >= 2) return false;
+        SixBandEq::PreparedConfiguration prepared;
+        if (!SixBandEq::prepareConfiguration(sampleRate, bands, prepared))
+            return false;
+        Command command;
+        command.type = CommandType::AudioInputPairEq;
+        command.index = side;
+        command.eq = prepared;
+        return enqueue(command);
+    }
+
+    // The caller retains both effect instances until hasApplied(ticket) is
+    // true; retirement/destruction must happen on the control thread.
+    bool enqueueAudioInputPairInsert(std::size_t side, std::size_t slot,
+                                     AudioInsert* effect,
+                                     std::uint32_t& ticket) noexcept {
+        if (side >= 2 || slot >= InsertChain::kSlotCount) return false;
+        Command command;
+        command.type = CommandType::AudioInputPairInsert;
+        command.index = side;
+        command.slot = slot;
+        command.effect = effect;
+        return enqueue(command, &ticket);
+    }
+
     // These methods are audio-thread-only. Pending commands are applied in
     // FIFO order at the block boundary, so no setter races process().
     void process(const float* const inputs[AudioEngine::kTrackCount],
@@ -165,16 +193,20 @@ public:
         const float* const inputs[AudioEngine::kTrackCount],
         const float* inputLeft, const float* inputRight,
         float* outputLeft, float* outputRight,
-        std::size_t frameCount) noexcept {
+        std::size_t frameCount,
+        float* const auxLeft[AudioEngine::kAuxBusCount] = nullptr,
+        float* const auxRight[AudioEngine::kAuxBusCount] = nullptr,
+        const float* const returnLeft[AudioEngine::kAuxBusCount] = nullptr,
+        const float* const returnRight[AudioEngine::kAuxBusCount] = nullptr) noexcept {
         applyPending();
         const bool pairSolo = audioInputPair_.hasSolo();
         engine_.processWithAuxAndReturns(
-            inputs, outputLeft, outputRight, nullptr, nullptr, nullptr, nullptr,
-            frameCount, pairSolo);
+            inputs, outputLeft, outputRight, auxLeft, auxRight,
+            returnLeft, returnRight, frameCount, pairSolo);
         audioInputPair_.processAndMix(
             inputLeft, inputRight, outputLeft, outputRight, frameCount,
             engine_.masterGain(), engine_.masterMute(),
-            engine_.hasSoloedTrack());
+            engine_.hasSoloedTrack(), auxLeft, auxRight);
     }
 
     void processWithAux(
@@ -214,7 +246,7 @@ private:
     enum class CommandType : std::uint8_t {
         Track, TrackEq, TrackInsert, AuxReturn, MasterGain, MasterMute,
         AudioInputPairChannel, AudioInputPairStereoControls, AudioInputPairLinked,
-        AudioInputPairState
+        AudioInputPairState, AudioInputPairEq, AudioInputPairInsert
     };
 
     struct Command {
@@ -235,17 +267,27 @@ private:
 
     static bool validInputPairChannel(
         std::size_t side, const AudioInputPair::Channel& state) noexcept {
-        return side < 2 && std::isfinite(state.gain) &&
-            std::isfinite(state.pan) && state.gain >= 0.0f &&
-            state.gain <= AudioEngine::kMaxFaderGain &&
-            state.pan >= -1.0f && state.pan <= 1.0f;
+        if (side >= 2 || !std::isfinite(state.gain) ||
+            !std::isfinite(state.pan) || state.gain < 0.0f ||
+            state.gain > AudioEngine::kMaxFaderGain ||
+            state.pan < -1.0f || state.pan > 1.0f) return false;
+        for (float send : state.auxSend) {
+            if (!std::isfinite(send) || send < 0.0f || send > 1.0f)
+                return false;
+        }
+        return true;
     }
 
     static bool validInputPairStereo(
         const AudioInputPair::StereoControls& state) noexcept {
-        return std::isfinite(state.gain) && std::isfinite(state.balance) &&
-            state.gain >= 0.0f && state.gain <= AudioEngine::kMaxFaderGain &&
-            state.balance >= -1.0f && state.balance <= 1.0f;
+        if (!std::isfinite(state.gain) || !std::isfinite(state.balance) ||
+            state.gain < 0.0f || state.gain > AudioEngine::kMaxFaderGain ||
+            state.balance < -1.0f || state.balance > 1.0f) return false;
+        for (float send : state.auxSend) {
+            if (!std::isfinite(send) || send < 0.0f || send > 1.0f)
+                return false;
+        }
+        return true;
     }
 
     static bool validTrack(const AudioEngine::Track& state) noexcept {
@@ -324,6 +366,12 @@ private:
                 audioInputPair_.setChannel(1, command.inputPairChannels[1]);
                 audioInputPair_.setStereoControls(command.inputPairStereo);
                 audioInputPair_.setLinked(command.flag);
+                break;
+            case CommandType::AudioInputPairEq:
+                audioInputPair_.setEqPrepared(command.index, command.eq);
+                break;
+            case CommandType::AudioInputPairInsert:
+                audioInputPair_.setInsert(command.index, command.slot, command.effect);
                 break;
             }
             appliedSequence_.store(command.sequence, std::memory_order_release);
