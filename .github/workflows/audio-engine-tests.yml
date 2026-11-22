@@ -11,6 +11,7 @@ on:
       - "tests/audio_insert_frequency_response_test.cpp"
       - "tests/audio_eq_frequency_response_test.cpp"
       - "tests/audio_dsp_tiny_signal_test.cpp"
+      - "tests/audio_output_headroom_test.cpp"
       - "tests/audio_insert_chain_test.cpp"
       - "tests/audio_eq_insert_chain_test.cpp"
       - "tests/audio_control_bridge_queue_lifecycle_test.cpp"
