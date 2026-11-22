@@ -76,6 +76,47 @@ public:
         return count;
     }
 
+    // Incrementally queue clears for every owned slot. Safe to call again
+    // after collectApplied(); false means retry later (for example, queue full).
+    // Call while the audio consumer is still running.
+    bool requestClearAll() noexcept {
+        bool complete = true;
+        for (std::size_t track = 0; track < kTrackCount; ++track) {
+            for (std::size_t slot = 0; slot < kSlotCount; ++slot) {
+                Slot& state = slots_[track][slot];
+                if (state.pendingActive || !state.current) continue;
+                std::uint32_t ignoredTicket = 0;
+                if (!clear(track, slot, ignoredTicket)) complete = false;
+            }
+        }
+        for (std::size_t side = 0; side < 2; ++side) {
+            for (std::size_t slot = 0; slot < kSlotCount; ++slot) {
+                Slot& state = audioInputSlots_[side][slot];
+                if (state.pendingActive || !state.current) continue;
+                std::uint32_t ignoredTicket = 0;
+                if (!clearAudioInputPair(side, slot, ignoredTicket))
+                    complete = false;
+            }
+        }
+        return complete;
+    }
+
+    // True only after every slot is empty and every queued pointer handoff
+    // (including a pending publish or clear) has been acknowledged.
+    bool allCleared() const noexcept {
+        for (const auto& track : slots_) {
+            for (const auto& slot : track) {
+                if (slot.current || slot.pending || slot.pendingActive) return false;
+            }
+        }
+        for (const auto& side : audioInputSlots_) {
+            for (const auto& slot : side) {
+                if (slot.current || slot.pending || slot.pendingActive) return false;
+            }
+        }
+        return true;
+    }
+
     bool hasPending(std::size_t track, std::size_t slot) const noexcept {
         return validSlot(track, slot) && slots_[track][slot].pendingActive;
     }
