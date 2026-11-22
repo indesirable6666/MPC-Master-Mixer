@@ -157,7 +157,14 @@ backpressure before dispatch rather than accept a command it cannot retain
 for acknowledgement. The tracker does not send network responses, create or validate epochs, persist
 requests, or own the dispatcher/controller. The transport supplies a nonzero, monotonically increasing epoch on each
 connection and uses the epoch returned in each acknowledgement to prevent
-stale responses crossing reconnect boundaries. Epoch zero is rejected before
+stale responses crossing reconnect boundaries. `NativeUiConnectionEpoch` is
+implemented as a small control-thread-only epoch source: it issues strictly
+increasing nonzero values, permits only one active connection, and invalidates
+only the matching active epoch. A delayed disconnect for an older epoch cannot
+invalidate a newer connection. It refuses to issue another epoch at
+`UINT64_MAX` rather than wrapping to the reserved zero value. The transport
+must retain this object across reconnects (or restore its last-issued counter)
+for the lifetime of the adapter/sequence space. Epoch zero is rejected before
 dispatch and cannot consume a request sequence.
 
 ## State synchronization
@@ -222,6 +229,10 @@ cover sequence ordering, queue backpressure, and audio-ticket application.
 FIFO completion after the audio callback applies queued work, immediate
 no-ticket acceptance, rejection handling, and reconnect filtering that drains
 old-epoch acknowledgements without exposing them to the active epoch.
+
+`tests/native_ui_connection_epoch_test.cpp` covers monotonic issuance,
+single-active-connection enforcement, stale disconnect rejection, invalidation,
+and exhaustion without zero wraparound.
 
 `tests/native_ui_json_decoder_test.cpp` covers valid command envelopes,
 malformed/trailing input, top-level non-objects, duplicate and unknown keys,
