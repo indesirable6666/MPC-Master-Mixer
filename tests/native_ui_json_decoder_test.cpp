@@ -78,8 +78,12 @@ int main() {
     reject(R"({"sequence":1,"type":"SetMasterMute","flag":null})");
     reject(R"({"sequence":1,"type":"SetMasterMute"})");
     reject(R"({"sequence":1,"type":"SetMasterMute","flag":true,"value":0})");
-    reject(R"({"sequence":1,"type":"SetMasterFader","value":128})");
-    reject(R"({"sequence":1,"type":"SetMasterFader","value":-1})");
+    assert(NativeUiJsonDecoder::decode(
+        R"({"sequence":1,"type":"SetMasterFader","value":128})", message) ==
+        NativeUiJsonDecodeStatus::Ok); // Range validation belongs to the typed adapter.
+    assert(NativeUiJsonDecoder::decode(
+        R"({"sequence":1,"type":"SetMasterFader","value":-1})", message) ==
+        NativeUiJsonDecodeStatus::Ok); // Representable integer; adapter rejects the fader range.
     reject(R"({"sequence":1,"type":"SetMasterFader","value":1.5})");
     reject(R"({"sequence":1,"type":"SetMasterFader","value":2147483648})");
     reject(R"({"sequence":1,"type":"SetTrackFader","value":10})");
