@@ -23,6 +23,9 @@ struct MixerPresentationSnapshot {
         bool solo = false;
         std::array<std::uint8_t, kAuxBusCount> auxSendPercent{};
         std::array<SixBandEq::BandParameters, kEqBandCount> eq{};
+        // False/zero until an EQ configuration has been successfully queued.
+        bool eqConfigured = false;
+        float eqSampleRate = 0.0f;
         std::array<bool, kInsertSlotCount> hasInsert{};
     };
 
@@ -87,6 +90,8 @@ inline MixerPresentationSnapshot makeMixerPresentationSnapshot(
                 std::lround(source.controls.auxSend[bus] * 100.0f));
         }
         target.eq = source.eq;
+        target.eqConfigured = desired.trackEqConfigured[index];
+        target.eqSampleRate = desired.trackEqSampleRates[index];
         for (std::size_t slot = 0; slot < InsertChain::kSlotCount; ++slot)
             target.hasInsert[slot] = source.inserts[slot] != nullptr;
     }
