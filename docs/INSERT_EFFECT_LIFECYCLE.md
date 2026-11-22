@@ -21,9 +21,13 @@ Queue-full rejection leaves the candidate and current slot unchanged.
 
 ## Shutdown ordering
 
-The owner cannot stop an arbitrary audio backend. Stop and shut down the audio
-host, ensuring no callback can still dereference inserts, before destroying
-this owner. A queued clear alone is not a shutdown barrier.
+The owner cannot stop an arbitrary audio backend. Before teardown, queue a
+clear for every populated slot and keep the owner and old effects alive until
+all clear tickets are acknowledged. Then stop and shut down the audio host
+before destroying the owner. This ordering ensures the engine no longer holds
+insert pointers and no callback can race destruction. A queued clear alone is
+not a shutdown barrier; if the callback is stopped before the clears are
+applied, the host must provide another safe way to drain them before teardown.
 
 ## Validation
 
