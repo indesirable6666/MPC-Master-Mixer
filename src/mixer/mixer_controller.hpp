@@ -32,6 +32,10 @@ public:
         bool masterMute = false;
         AudioInputPair::StereoControls audioInputStereo{};
         std::array<AudioInputPair::Channel, 2> audioInputChannels{};
+        std::array<std::array<SixBandEq::BandParameters, SixBandEq::kBandCount>, 2>
+            audioInputEq{};
+        std::array<std::array<AudioInsert*, InsertChain::kSlotCount>, 2>
+            audioInputInserts{};
         bool audioInputLinked = false;
     };
 
@@ -127,6 +131,27 @@ public:
         return true;
     }
 
+    bool setAudioInputPairInsert(std::size_t side, std::size_t slot,
+                                 AudioInsert* effect,
+                                 std::uint32_t& ticket) noexcept {
+        if (side >= 2 || slot >= InsertChain::kSlotCount) return false;
+        if (audioInputInsertPending_[side][slot]) {
+            if (!bridge_.hasApplied(audioInputInsertTickets_[side][slot]))
+                return false;
+            audioInputInsertPending_[side][slot] = false;
+        }
+        if (!bridge_.enqueueAudioInputPairInsert(side, slot, effect, ticket))
+            return false;
+        audioInputInserts_[side][slot] = effect;
+        audioInputInsertTickets_[side][slot] = ticket;
+        audioInputInsertPending_[side][slot] = true;
+        return true;
+    }
+
+    bool isAudioInputPairInsertUpdateApplied(std::uint32_t ticket) const noexcept {
+        return bridge_.hasApplied(ticket);
+    }
+
     // Latest successfully queued audio command. Read immediately after a
     // successful setter on the serialized producer/control thread.
     std::uint32_t lastAudioCommandTicket() const noexcept {
@@ -166,6 +191,26 @@ public:
         return true;
     }
 
+    bool setAudioInputPairEq(
+        std::size_t side, float sampleRate,
+        const std::array<SixBandEq::BandParameters, SixBandEq::kBandCount>& bands) noexcept {
+        if (side >= 2 || !bridge_.enqueueAudioInputPairEq(side, sampleRate, bands))
+            return false;
+        audioInputEqBands_[side] = bands;
+        return true;
+    }
+
+    bool setAudioInputPairEqBand(
+        std::size_t side, std::size_t band, float sampleRate,
+        const SixBandEq::BandParameters& parameters) noexcept {
+        if (side >= 2 || band >= SixBandEq::kBandCount) return false;
+        auto next = audioInputEqBands_[side];
+        next[band] = parameters;
+        if (!bridge_.enqueueAudioInputPairEq(side, sampleRate, next)) return false;
+        audioInputEqBands_[side] = next;
+        return true;
+    }
+
     bool setAudioInputPairLinked(bool linked) noexcept {
         if (linked == audioInputLinked_) return true;
         auto nextStereo = audioInputStereo_;
@@ -175,15 +220,18 @@ public:
             nextStereo.gain = nextChannels[0].gain;
             nextStereo.mute = nextChannels[0].mute;
             nextStereo.solo = nextChannels[0].solo;
+            nextStereo.auxSend = nextChannels[0].auxSend;
             nextChannels[1].gain = nextChannels[0].gain;
             nextChannels[1].mute = nextChannels[0].mute;
             nextChannels[1].solo = nextChannels[0].solo;
+            nextChannels[1].auxSend = nextChannels[0].auxSend;
         } else {
             // Unlinking copies shared state to both sides, retaining mono pan.
             for (auto& channel : nextChannels) {
                 channel.gain = nextStereo.gain;
                 channel.mute = nextStereo.mute;
                 channel.solo = nextStereo.solo;
+                channel.auxSend = nextStereo.auxSend;
             }
         }
         if (!bridge_.enqueueAudioInputPairState(linked, nextStereo, nextChannels))
@@ -237,6 +285,27 @@ public:
         }
         auto next = audioInputChannels_[side];
         next.gain = gain;
+        if (!bridge_.enqueueAudioInputPairChannel(side, next)) return false;
+        audioInputChannels_[side] = next;
+        return true;
+    }
+
+    bool setAudioInputPairAuxSend(std::size_t side, std::size_t bus,
+                                  float level) noexcept {
+        if (side >= 2 || bus >= AudioEngine::kAuxBusCount ||
+            !std::isfinite(level) || level < 0.0f || level > 1.0f)
+            return false;
+        if (audioInputLinked_) {
+            auto next = audioInputStereo_;
+            next.auxSend[bus] = level;
+            if (!bridge_.enqueueAudioInputPairStereoControls(next)) return false;
+            audioInputStereo_ = next;
+            for (auto& channel : audioInputChannels_)
+                channel.auxSend[bus] = level;
+            return true;
+        }
+        auto next = audioInputChannels_[side];
+        next.auxSend[bus] = level;
         if (!bridge_.enqueueAudioInputPairChannel(side, next)) return false;
         audioInputChannels_[side] = next;
         return true;
@@ -324,6 +393,8 @@ public:
         snapshot.masterMute = masterMute_;
         snapshot.audioInputStereo = audioInputStereo_;
         snapshot.audioInputChannels = audioInputChannels_;
+        snapshot.audioInputEq = audioInputEqBands_;
+        snapshot.audioInputInserts = audioInputInserts_;
         snapshot.audioInputLinked = audioInputLinked_;
         return snapshot;
     }
@@ -360,6 +431,15 @@ private:
     bool masterMute_ = false;
     AudioInputPair::StereoControls audioInputStereo_{};
     std::array<AudioInputPair::Channel, 2> audioInputChannels_{};
+    std::array<std::array<SixBandEq::BandParameters, SixBandEq::kBandCount>, 2>
+        audioInputEqBands_{{SixBandEq::defaultBandParameters(),
+                            SixBandEq::defaultBandParameters()}};
+    std::array<std::array<AudioInsert*, InsertChain::kSlotCount>, 2>
+        audioInputInserts_{};
+    std::array<std::array<std::uint32_t, InsertChain::kSlotCount>, 2>
+        audioInputInsertTickets_{};
+    std::array<std::array<bool, InsertChain::kSlotCount>, 2>
+        audioInputInsertPending_{};
     bool audioInputLinked_ = false;
 };
 
