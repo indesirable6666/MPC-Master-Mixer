@@ -15,7 +15,7 @@ int main() {
     command.track = 0;
     command.value = 64;
 
-    const auto first = tracker.dispatch(dispatcher, command);
+    const auto first = tracker.dispatch(dispatcher, command, 7);
     assert(first.accepted() && first.audioTicket != 0);
     assert(tracker.pendingCount() == 1);
     assert(!tracker.popApplied(controller, ack));
@@ -34,9 +34,9 @@ int main() {
     bridge.process(inputs, left, right, 1);
 
     assert(tracker.popApplied(controller, ack));
-    assert(ack.sequence == 1 && ack.audioTicket == first.audioTicket);
+    assert(ack.sequence == 1 && ack.audioTicket == first.audioTicket && ack.connectionEpoch == 7);
     assert(tracker.popApplied(controller, ack));
-    assert(ack.sequence == 2 && ack.audioTicket == second.audioTicket);
+    assert(ack.sequence == 2 && ack.audioTicket == second.audioTicket && ack.connectionEpoch == 7);
     assert(!tracker.popApplied(controller, ack));
     assert(tracker.pendingCount() == 0);
 
@@ -49,10 +49,6 @@ int main() {
     assert(noOp.accepted() && noOp.audioTicket == 0);
     assert(tracker.pendingCount() == 0);
 
-    // A rejected dispatch result must never be recorded as an ACK candidate.
-    mpcmixer::MixerUiCommandResult rejected;
-    rejected.status = mpcmixer::MixerUiCommandStatus::QueueFull;
-    rejected.sequence = 4;
     // Fill the ledger while the callback is stopped. The next request must
     // be rejected before dispatcher sequence consumption, then be retryable
     // after acknowledgements are drained.
@@ -81,6 +77,6 @@ int main() {
     assert(tracker.pendingCount() == 1);
     bridge.process(inputs, left, right, 1);
     assert(tracker.popApplied(controller, ack));
-    assert(ack.sequence == command.sequence);
+    assert(ack.sequence == command.sequence && ack.connectionEpoch == 7);
     assert(!tracker.popApplied(controller, ack));
 }
