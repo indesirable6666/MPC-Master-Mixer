@@ -127,6 +127,23 @@ It also returns an `audioTicket` when nonzero.
 - `Invalid`, `OutOfOrder`, and `Unsupported` are not retried unchanged.
 - Never advance the accepted sequence on a rejected command.
 
+### Pending audio acknowledgement ledger
+
+`NativeUiCommandTracker` is implemented as a fixed-capacity,
+allocation-free, control-thread-only ledger. The transport owner should check
+`canTrackAudioCommand()` before dispatching a command that can enqueue audio
+work, then call `recordAccepted()` for the accepted result before yielding
+control. It stores the accepted request sequence and nonzero audio ticket.
+`popApplied(controller, ack)` releases completed acknowledgements in FIFO
+order only after the controller reports the corresponding ticket applied.
+
+A command accepted with ticket zero has no asynchronous audio work to track;
+the transport may return its accepted response immediately. Rejected results
+must not be recorded. If the tracker is full, the caller must apply
+backpressure before dispatch rather than accept a command it cannot retain
+for acknowledgement. The tracker does not send network responses, manage
+connection epochs, persist requests, or own the dispatcher/controller.
+
 ## State synchronization
 
 The native view model must be initialized from a
@@ -184,6 +201,10 @@ cross-restart identity or as a substitute for the transport connection epoch.
 field presence, invalid ranges, unknown command names, sequence ordering,
 retry after rejection, and state publication. The existing dispatcher tests
 cover sequence ordering, queue backpressure, and audio-ticket application.
+
+`tests/native_ui_command_tracker_test.cpp` covers deferred acknowledgement,
+FIFO completion after the audio callback applies queued work, immediate
+no-ticket acceptance, and rejection handling.
 
 `tests/native_ui_json_decoder_test.cpp` covers valid command envelopes,
 malformed/trailing input, top-level non-objects, duplicate and unknown keys,
