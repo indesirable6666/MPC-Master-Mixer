@@ -130,7 +130,7 @@ Each Audio Input channel object has exactly:
 - `eq_sample_rate`: finite JSON number in the engine-supported range 8000..192000;
 - `aux_sends`: array of exactly 4 integers 0..100;
 - `eq`: array of exactly 6 EQ band objects with the same fields and validation;
-- `has_insert`: array of exactly 4 booleans.
+- `has_insert`: array of exactly 2 booleans (the engine's two insert slots).
 
 For every EQ band, `frequency_hz` must be at least 20; `q` must be 0.1..10;
 `gain_db` must be -12..12. When `eq_configured` is true, every track EQ band's
