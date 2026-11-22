@@ -271,6 +271,28 @@ test('left and right arrow keys move focus between adjacent channels', () => {
   dom.window.close();
 });
 
+test('arrow keys on channel controls remain native and do not navigate strips', () => {
+  const dom = loadPrototype();
+  const channel = dom.window.document.querySelector('[data-channel="2"]');
+  const slider = channel.querySelector('[data-volume]');
+  slider.focus();
+  slider.dispatchEvent(new dom.window.KeyboardEvent('keydown', {
+    key: 'ArrowRight', bubbles: true, cancelable: true
+  }));
+  assert.equal(dom.window.document.activeElement, slider);
+  assert.equal(channel.getAttribute('aria-current'), 'true');
+  assert.equal(dom.window.document.querySelector('[data-channel="3"]').hasAttribute('aria-current'), false);
+
+  const select = channel.querySelector('[data-insert-type="0"]');
+  select.focus();
+  select.dispatchEvent(new dom.window.KeyboardEvent('keydown', {
+    key: 'ArrowLeft', bubbles: true, cancelable: true
+  }));
+  assert.equal(dom.window.document.activeElement, select);
+  assert.equal(channel.getAttribute('aria-current'), 'true');
+  dom.window.close();
+});
+
 test('Home and End keys jump to the first and last channel strips', () => {
   const dom = loadPrototype();
   const middle = dom.window.document.querySelector('[data-channel="7"]');
