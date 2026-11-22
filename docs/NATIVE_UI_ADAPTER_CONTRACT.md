@@ -140,7 +140,15 @@ sequence, nonzero audio ticket, and opaque connection epoch.
 order only after the controller reports the corresponding ticket applied.
 The transport must send an acknowledgement only if its stored epoch still
 matches the active connection; stale-epoch acknowledgements are discarded,
-not forwarded to a reconnected client.
+not forwarded to a reconnected client. Prefer
+`popAppliedForEpoch(controller, activeEpoch, ack)` at the transport boundary:
+it drains completed stale-epoch entries and returns only an acknowledgement
+for the active nonzero epoch. A completed stale entry must still be removed
+from the ledger, or repeated reconnects could leave obsolete acknowledgements
+occupying its fixed capacity. If the oldest ticket is not yet applied, FIFO
+ordering intentionally prevents later acknowledgements from being returned.
+Continue polling/draining after disconnect so completed old tickets release
+capacity; never erase an unapplied ticket merely because its connection closed.
 
 A command accepted with ticket zero has no asynchronous audio work to track;
 the transport may return its accepted response immediately. Rejected results
@@ -212,7 +220,8 @@ cover sequence ordering, queue backpressure, and audio-ticket application.
 
 `tests/native_ui_command_tracker_test.cpp` covers deferred acknowledgement,
 FIFO completion after the audio callback applies queued work, immediate
-no-ticket acceptance, and rejection handling.
+no-ticket acceptance, rejection handling, and reconnect filtering that drains
+old-epoch acknowledgements without exposing them to the active epoch.
 
 `tests/native_ui_json_decoder_test.cpp` covers valid command envelopes,
 malformed/trailing input, top-level non-objects, duplicate and unknown keys,
