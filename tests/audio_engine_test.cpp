@@ -356,6 +356,16 @@ int main() {
     eq.reset();
     assert(near(eq.processSample(0.5f), 0.5f));
 
+    // Extreme but finite samples must not poison recursive EQ delay state.
+    // The next ordinary sample should recover instead of remaining silent.
+    mpcmixer::SixBandEq recoveryEq;
+    assert(recoveryEq.configure(48000.0f, std::array<float, 6>{}));
+    const float extremeFinite = std::numeric_limits<float>::max();
+    (void)recoveryEq.processSample(extremeFinite);
+    const float recoveredSample = recoveryEq.processSample(0.5f);
+    assert(std::isfinite(recoveredSample));
+    assert(near(recoveredSample, 0.5f, 0.001f));
+
     // Verify the parametric band's actual steady-state magnitude at its
     // centre frequency, not merely that an impulse response changes.
     auto responseBands = mpcmixer::SixBandEq::defaultBandParameters();
