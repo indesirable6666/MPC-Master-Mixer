@@ -105,6 +105,11 @@ Each track object has exactly:
 - `aux_sends`: array of exactly 4 integers 0..100;
 - `eq`: array of exactly 6 objects, each with `frequency_hz`, `q`,
   and `gain_db` finite JSON numbers;
+- `eq_configured`: boolean indicating whether a track EQ configuration has
+  successfully been queued;
+- `eq_sample_rate`: finite JSON number; exactly `0` while
+  `eq_configured` is false, otherwise the actual sample rate supplied with the
+  last successfully queued track EQ configuration (8000..192000 Hz);
 - `has_insert`: array of exactly 4 booleans.
 
 Each Aux return object has exactly `level` (integer 0..127),
@@ -127,13 +132,13 @@ Each Audio Input channel object has exactly:
 - `eq`: array of exactly 6 EQ band objects with the same fields and validation;
 - `has_insert`: array of exactly 4 booleans.
 
-For every EQ band, `frequency_hz` must be at least 20 and strictly below
-half the associated sample rate; `q` must be 0.1..10; `gain_db` must be
--12..12. For track EQ, use the sample rate associated with the track's
-published EQ configuration; if that rate is not exposed by the current snapshot
-type, the v1 serializer must use the documented native configuration rate and
-must not invent a value. This detail must be resolved in implementation tests
-before claiming full snapshot fidelity.
+For every EQ band, `frequency_hz` must be at least 20; `q` must be 0.1..10;
+`gain_db` must be -12..12. When `eq_configured` is true, every track EQ band's
+frequency must also be strictly below half its published `eq_sample_rate`.
+When false, the EQ bands are the controller's desired default parameters and
+are not evidence that an EQ configuration has been applied or queued; do not
+apply a Nyquist check against the zero sentinel. Audio Input channel EQ always
+has an associated configured sample rate and follows the same Nyquist rule.
 
 All arrays are fixed-length and ordered as specified. Do not serialize C++
 object memory, padding, pointers, coefficient state, or insert instances.
@@ -282,7 +287,9 @@ is the cross-connection boundary.
 ## Implementation and acceptance checklist
 
 Before implementing v1:
-- [ ] Resolve track EQ sample-rate provenance in the presentation snapshot.
+- [x] Resolve track EQ sample-rate provenance in the presentation snapshot;
+      unconfigured tracks expose `eq_configured:false` and rate `0`, while
+      successfully queued configurations publish their actual requested rate.
 - [ ] Choose and document the measured full-snapshot byte limit.
 - [x] Implement strict v1 command/client-message decoders and server serializers for the four non-snapshot response kinds.
 - [ ] Implement full snapshot serialization/decoding after sample-rate provenance and the measured payload limit are resolved.
