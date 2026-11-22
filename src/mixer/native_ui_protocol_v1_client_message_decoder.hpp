@@ -39,9 +39,12 @@ private:
   bool binary(binary_t&) override{return false;}
   bool start_object(std::size_t) override{if(started_||ended_||depth_)return false;started_=true;depth_=1;return true;}
   bool key(string_t& v) override{
-   if(depth_!=1||ended_||field_!=Field::None)return false;std::uint8_t bit=0;
+   if(depth_!=1||ended_||field_!=Field::None) return false;
+   std::uint8_t bit=0;
    if(v=="version"){field_=Field::Version;bit=1;}else if(v=="kind"){field_=Field::Kind;bit=2;}else if(v=="epoch"){field_=Field::Epoch;bit=4;}else if(v=="client"){field_=Field::Client;bit=8;}else if(v=="request"){field_=Field::Request;bit=16;}else return false;
-   if(seen_&bit)return false;seen_=static_cast<std::uint8_t>(seen_|bit);return true;
+   if(seen_&bit) return false;
+   seen_=static_cast<std::uint8_t>(seen_|bit);
+   return true;
   }
   bool end_object() override{if(depth_!=1||field_!=Field::None||ended_)return false;depth_=0;ended_=true;return true;}
   bool start_array(std::size_t) override{return false;} bool end_array() override{return false;}
