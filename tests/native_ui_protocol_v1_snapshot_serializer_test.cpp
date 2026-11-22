@@ -1,6 +1,7 @@
 #include "native_ui_protocol_v1_snapshot_serializer.hpp"
 
 #include <cassert>
+#include <cstdio>
 #include <cmath>
 #include <cstdint>
 #include <limits>
@@ -127,6 +128,7 @@ int main() {
     assert(wire.size() <= NativeUiProtocolV1SnapshotSerializer::kMaximumPayloadBytes);
     assert(Json::parse(wire)["sequence"] ==
            (std::numeric_limits<std::uint64_t>::max)());
+    std::printf("Worst-case valid snapshot payload: %zu bytes (limit %zu)\\n",\n                wire.size(), NativeUiProtocolV1SnapshotSerializer::kMaximumPayloadBytes);
 
     const auto reject = [&wire](bool ok) {
         const std::string before = wire;
