@@ -65,6 +65,7 @@ mpc_add_host_test(native_ui_session_gate_test tests/native_ui_session_gate_test.
 mpc_add_host_test(native_ui_session_coordinator_test tests/native_ui_session_coordinator_test.cpp)
 mpc_add_host_test(native_ui_json_decoder_test tests/native_ui_json_decoder_test.cpp)
 mpc_add_host_test(native_ui_frame_codec_test tests/native_ui_frame_codec_test.cpp)
+target_include_directories(native_ui_frame_codec_test PRIVATE src/mixer)
 # Exercises strict SAX parsing, field validation, and bounded JSON frames.
 target_include_directories(native_ui_json_decoder_test PRIVATE src/mixer)
 mpc_add_host_test(midi_adapter_test tests/midi_adapter_test.cpp)
