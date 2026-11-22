@@ -257,6 +257,10 @@ jobs:
             -o build/mpc-native-ui-protocol-v1-snapshot-decoder-test-armv7
 
           arm-linux-gnueabihf-g++ $COMMON_FLAGS -std=c++14 -Isrc/mixer \
+            tests/native_ui_protocol_v1_snapshot_request_tracker_test.cpp \
+            -o build/mpc-native-ui-protocol-v1-snapshot-request-tracker-test-armv7
+
+          arm-linux-gnueabihf-g++ $COMMON_FLAGS -std=c++14 -Isrc/mixer \
             tests/native_ui_protocol_v1_session_integration_test.cpp \
             -o build/mpc-native-ui-protocol-v1-session-integration-test-armv7
 
