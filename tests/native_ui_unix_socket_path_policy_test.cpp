@@ -20,7 +20,8 @@ int main() {
           NativeUiUnixSocketPathStatus::EmbeddedNull);
     check("/run/./mixer.sock", NativeUiUnixSocketPathStatus::DotComponent);
     check("/run/../mixer.sock", NativeUiUnixSocketPathStatus::ParentComponent);
-    check("/run//mixer.sock", NativeUiUnixSocketPathStatus::EmptyComponent);\n    check("//run/mixer.sock", NativeUiUnixSocketPathStatus::EmptyComponent);
+    check("/run//mixer.sock", NativeUiUnixSocketPathStatus::EmptyComponent);
+    check("//run/mixer.sock", NativeUiUnixSocketPathStatus::EmptyComponent);
     check("/run/mixer.sock", NativeUiUnixSocketPathStatus::Valid);
     const std::string maximumLength =
         "/" + std::string(NativeUiUnixSocketPathPolicy::maximumPathBytes() - 1, 'x');
