@@ -204,7 +204,7 @@ int main() {
     }
     assert(sendQueueFull);
 
-    std::uint8_t drain[1024]{};
+    std::uint8_t drain[4096]{};
     std::size_t drained = 0;
     while (drained < sizeof(drain)) {
         const ssize_t count = ::recv(backpressurePair[1], drain,
