@@ -105,6 +105,8 @@ int main() {
     rightTrack.auxSend[0] = 1.0f;
     assert(bridge.enqueueTrack(0, leftTrack));
     assert(bridge.enqueueTrack(1, rightTrack));
+    assert(bridge.enqueueMasterGain(1.0f));
+    assert(bridge.enqueueMasterMute(false));
     assert(host.start());
 
     float mainLeft[2] = {}, mainRight[2] = {};
