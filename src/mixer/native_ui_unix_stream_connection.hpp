@@ -49,6 +49,8 @@ public:
         if (!session_.invalidate(epoch))
             return false;
 
+        // Clear both transport directions before releasing the old descriptor,
+        // so no buffered bytes or queued frame can cross into a later epoch.
         writer_.cancelPending();
         reader_.resetConnection();
         descriptor_.reset();
