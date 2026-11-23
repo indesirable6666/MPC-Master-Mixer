@@ -4,6 +4,7 @@
 #include "native_ui_protocol_v1_response_serializer.hpp"
 #include "native_ui_protocol_v1_snapshot_request_tracker.hpp"
 #include "native_ui_session_coordinator.hpp"
+#include "native_ui_protocol_v1_snapshot_delivery.hpp"
 
 #include <cstdint>
 #include <string>
@@ -81,6 +82,17 @@ public:
         const bool requestClosed = requests_.invalidate(epoch);
         const bool sessionClosed = session.invalidate(epoch);
         return requestClosed && sessionClosed;
+    }
+
+    // Disconnect variant that also releases an unsent snapshot owned by this
+    // connection. The transport must discard its queued frame before calling.
+    bool invalidate(std::uint64_t epoch,
+                    NativeUiSessionCoordinator& session,
+                    NativeUiProtocolV1SnapshotDelivery& delivery) noexcept {
+        if (epoch == 0 || epoch != session.activeEpoch()) return false;
+        requests_.invalidate(epoch);
+        delivery.cancelPending(epoch);
+        return session.invalidate(epoch);
     }
 
     std::uint64_t lastSnapshotRequest() const noexcept {
