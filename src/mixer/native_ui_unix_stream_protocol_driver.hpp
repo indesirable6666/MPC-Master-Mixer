@@ -76,7 +76,11 @@ public:
     Result dispatchOne() {
         if (!connection_.connected()) return {Status::Disconnected, 0};
         if (!connection_.reader().hasFrame()) return {Status::Idle, 0};
-        if (responseStaged_ || connection_.writer().pending())
+        // Do not overwrite a deferred snapshot request with a later
+        // inbound frame. Leave that frame in the reader until the first
+        // snapshot has been prepared and delivered.
+        if (responseStaged_ || connection_.writer().pending() ||
+            snapshotRequest_ != 0)
             return {Status::Busy, 0};
 
         std::string payload(
