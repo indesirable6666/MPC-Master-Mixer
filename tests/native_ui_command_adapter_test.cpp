@@ -70,8 +70,19 @@ int main() {
     assert(snapshot.masterFaderValue == 110 && snapshot.masterMute);
     assert(snapshot.tracks[5].auxSendPercent[2] == 42);
 
-    // Missing fields and out-of-range values must not consume the sequence.
     message.sequence = 8;
+    message.type = "SetTrackEqBand";
+    message.hasValue = false;
+    message.hasFlag = false;
+    message.hasIndex = true;
+    message.index = 2;
+    message.hasFrequencyHz = true; message.frequencyHz = 1200.0f;
+    message.hasQ = true; message.q = 0.8f;
+    message.hasGainDb = true; message.gainDb = 3.0f;
+    assert(NativeUiCommandAdapter::dispatch(message, dispatcher).accepted());
+
+    // Missing fields and out-of-range values must not consume the sequence.
+    message.sequence = 9;
     message.type = "SetTrackAuxSend";
     message.hasIndex = false;
     assert(mpcmixer::NativeUiCommandAdapter::dispatch(message, dispatcher).status ==
@@ -84,9 +95,9 @@ int main() {
     message.value = 101;
     assert(mpcmixer::NativeUiCommandAdapter::dispatch(message, dispatcher).status ==
            mpcmixer::MixerUiCommandStatus::Invalid);
-    assert(dispatcher.lastAcceptedSequence() == 7);
+    assert(dispatcher.lastAcceptedSequence() == 8);
 
-    message.sequence = 8;
+    message.sequence = 9;
     message.type = "SetTrackFader";
     message.hasIndex = false;
     message.hasFlag = false;
@@ -143,11 +154,11 @@ int main() {
     message.value = 0;
     assert(mpcmixer::NativeUiCommandAdapter::dispatch(message, dispatcher).accepted());
 
-    message.sequence = 9;
+    message.sequence = 10;
     message.value = mpcmixer::MixerController::kFaderMaximum;
     assert(mpcmixer::NativeUiCommandAdapter::dispatch(message, dispatcher).accepted());
 
     snapshot = publisher.publish();
     assert(snapshot.tracks[5].faderValue == mpcmixer::MixerController::kFaderMaximum);
-    assert(dispatcher.lastAcceptedSequence() == 9);
+    assert(dispatcher.lastAcceptedSequence() == 10);
 }
