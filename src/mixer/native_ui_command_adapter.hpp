@@ -40,7 +40,7 @@ public:
         command.sequence = message.sequence;
 
         if (message.type == "SetTrackFader") {
-            if (!message.hasTrack || !message.hasValue ||
+            if (!message.hasTrack || message.hasIndex || !message.hasValue || message.hasFlag ||
                 message.track >= AudioEngine::kTrackCount ||
                 message.value < 0 || message.value > MixerController::kFaderMaximum)
                 return false;
@@ -50,7 +50,7 @@ public:
             return true;
         }
         if (message.type == "SetTrackPan") {
-            if (!message.hasTrack || !message.hasValue ||
+            if (!message.hasTrack || message.hasIndex || !message.hasValue || message.hasFlag ||
                 message.track >= AudioEngine::kTrackCount ||
                 message.value < MixerController::kPanMinimum ||
                 message.value > MixerController::kPanMaximum)
@@ -61,7 +61,7 @@ public:
             return true;
         }
         if (message.type == "SetTrackAuxSend") {
-            if (!message.hasTrack || !message.hasIndex || !message.hasValue ||
+            if (!message.hasTrack || !message.hasIndex || !message.hasValue || message.hasFlag ||
                 message.track >= AudioEngine::kTrackCount ||
                 message.index >= AudioEngine::kAuxBusCount ||
                 message.value < 0 || message.value > MixerController::kAuxMaximum)
@@ -73,7 +73,7 @@ public:
             return true;
         }
         if (message.type == "SetTrackMute" || message.type == "SetTrackSolo") {
-            if (!message.hasTrack || !message.hasFlag ||
+            if (!message.hasTrack || message.hasIndex || message.hasValue || !message.hasFlag ||
                 message.track >= AudioEngine::kTrackCount)
                 return false;
             command.type = message.type == "SetTrackMute"
@@ -84,7 +84,7 @@ public:
             return true;
         }
         if (message.type == "SetMasterFader") {
-            if (!message.hasValue || message.value < 0 ||
+            if (message.hasTrack || message.hasIndex || !message.hasValue || message.hasFlag || message.value < 0 ||
                 message.value > MixerController::kFaderMaximum)
                 return false;
             command.type = MixerUiCommandType::SetMasterFader;
@@ -92,7 +92,7 @@ public:
             return true;
         }
         if (message.type == "SetMasterMute") {
-            if (!message.hasFlag)
+            if (message.hasTrack || message.hasIndex || message.hasValue || !message.hasFlag)
                 return false;
             command.type = MixerUiCommandType::SetMasterMute;
             command.flag = message.flag;
