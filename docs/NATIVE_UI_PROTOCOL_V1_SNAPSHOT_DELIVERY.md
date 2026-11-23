@@ -24,10 +24,14 @@ gate. It deliberately separates *serialization* from *delivery*.
 
 A wrong epoch, wrong sequence, missing pending delivery, or stale connection
 cannot open the gate. Failed confirmation leaves the pending delivery intact
-so the caller can handle the transport failure. On disconnect, the owner must
-invalidate the session, discard any queued frame for that epoch, and call
-`cancelPending(epoch)` to release the abandoned snapshot. A new connection can
-then prepare its own snapshot without inheriting stale delivery state.
+so the caller can handle the transport failure. On disconnect, the transport owner first discards any queued frame for that
+epoch, then calls the three-argument
+`NativeUiProtocolV1ClientMessageHandler::invalidate(epoch, session, delivery)`
+overload. That coordinated path invalidates the session and request tracker
+and calls `cancelPending(epoch)` to release the abandoned snapshot. A new
+connection can then prepare its own snapshot without inheriting stale delivery
+state. The lower-level `cancelPending` remains available when lifecycle is
+managed directly.
 
 ## Boundaries
 
