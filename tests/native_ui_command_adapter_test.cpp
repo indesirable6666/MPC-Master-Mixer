@@ -81,6 +81,14 @@ int main() {
     message.hasGainDb = true; message.gainDb = 3.0f;
     assert(mpcmixer::NativeUiCommandAdapter::dispatch(message, dispatcher).accepted());
 
+    // EQ-only fields must not be silently accepted on an unrelated command.
+    message.sequence = 9;
+    message.type = "SetTrackFader";
+    message.hasValue = true;
+    message.value = 64;
+    assert(mpcmixer::NativeUiCommandAdapter::dispatch(message, dispatcher).status ==
+           mpcmixer::MixerUiCommandStatus::Invalid);
+
     // Missing fields and out-of-range values must not consume the sequence.
     message.sequence = 9;
     message.type = "SetTrackAuxSend";
