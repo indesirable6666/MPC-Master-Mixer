@@ -73,6 +73,14 @@ public:
         return {Status::Sent, transferred, 0};
     }
 
+    // Drop an unsent frame when the owning connection is invalidated.
+    // The caller must invoke this before reusing the writer for a new epoch.
+    void cancelPending() noexcept {
+        pending_ = false;
+        totalBytes_ = 0;
+        offset_ = 0;
+    }
+
     bool pending() const noexcept { return pending_; }
     std::size_t remainingBytes() const noexcept {
         return pending_ ? totalBytes_ - offset_ : 0;
