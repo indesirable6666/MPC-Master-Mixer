@@ -302,6 +302,22 @@ int main() {
     assert(!delivery.hasPendingDelivery());
     assert(!writer.pending());
     assert(connection.session().activeEpoch() == 0);
+    assert(connection.session().pendingAcknowledgements() == 1);
     ::close(reconnect[1]);
+
+    // The staged ACK was not consumed on disconnect, but its old epoch must
+    // be discarded before a later connection can publish any ACK.
+    int finalPair[2] = {-1, -1};
+    assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, finalPair) == 0);
+    std::uint64_t finalEpoch = 0;
+    assert(connection.adopt(finalPair[0], finalEpoch));
+    assert(finalEpoch > nextEpoch);
+    std::string obsoleteAck = "unchanged";
+    assert(!acknowledgements.publishNext(
+        controller, connection.session(), obsoleteAck));
+    assert(obsoleteAck == "unchanged");
+    assert(connection.session().pendingAcknowledgements() == 0);
+    assert(protocolOwner.disconnect(finalEpoch));
+    ::close(finalPair[1]);
     return 0;
 }
