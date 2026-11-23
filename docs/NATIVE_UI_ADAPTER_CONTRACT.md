@@ -64,7 +64,7 @@ Example decoded message:
 
 ### Normative decoder rules
 
-A future JSON decoder must enforce these rules before constructing the typed
+The implemented JSON decoder enforces these rules before constructing the typed
 message. They are part of the wire contract, not optional parser preferences.
 The selected parser dependency and SAX implementation constraints are recorded
 in [JSON decoder dependency decision](JSON_DECODER_DEPENDENCY_DECISION.md).
@@ -100,10 +100,9 @@ in [JSON decoder dependency decision](JSON_DECODER_DEPENDENCY_DECISION.md).
 - Set each `hasTrack`, `hasIndex`, `hasValue`, and `hasFlag` flag only after the
   corresponding field has passed exact JSON type and representability checks.
   Never manufacture a default value to make a missing field appear present.
-- Bound the transport frame size before parsing. The transport owner must
-  choose and document a conservative maximum suitable for these small control
-  messages; oversized frames must be rejected before allocating an unbounded
-  parse buffer.
+- Bound the transport frame size before parsing. The decoder currently enforces
+  a 1024-byte maximum; the future transport must apply the same bound while
+  receiving frames, before constructing an unbounded input buffer.
 - Parsing, allocation, and decoding occur only on the serialized control
   thread, never in the audio callback. The decoder must not call controller
   or engine APIs itself.
