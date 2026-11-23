@@ -63,3 +63,20 @@ cmake --build build/host --target audio_engine_benchmark --parallel
 
 The executable is diagnostic. The C++ host tests remain the correctness
 checks; benchmark timing is deliberately not a CI pass/fail threshold.
+
+## ARMv7 cross-compiled benchmark artifact
+
+The separate [ARMv7 toolchain check #45184541591](https://github.com/indesirable6666/MPC-Master-Mixer/actions/runs/45184541591)
+successfully cross-compiled `tools/audio-engine-benchmark.cpp` with Debian
+Bullseye's `arm-linux-gnueabihf-g++` using
+`-march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard` and C++14. The workflow
+audited the resulting ELF/runtime symbol requirements and uploaded the
+`mpc-armv7-audio-engine-benchmark` artifact.
+
+This is a compile-time compatibility check only. The workflow did **not**
+execute the ARM binary, and the artifact was built with a generic Debian
+cross-toolchain rather than the MPC's exact Buildroot SDK/sysroot. It is not
+a deployable application and its output cannot be treated as an MPC benchmark.
+A representative target measurement still requires a verified target build
+and an approved way to execute the benchmark on the actual ARMv7 device.
+No hardware run, audio-device access, or MPC filesystem change was performed.
