@@ -68,18 +68,62 @@ public:
         if (active == 0 || message.epoch != active)
             return {NativeUiProtocolV1ClientMessageStatus::StaleEpoch,
                     message.epoch, message.request};
+        // This v1 implementation deliberately permits one snapshot request
+        // in flight. Do not consume a later request identifier until the
+        // prior request has been prepared and its frame fully delivered.
+        if (snapshotRequestAwaitingPreparation_ || preparedRequest_ != 0)
+            return {NativeUiProtocolV1ClientMessageStatus::Busy,
+                    message.epoch, message.request};
         if (!requests_.accept(message.epoch, message.request))
             return {NativeUiProtocolV1ClientMessageStatus::InvalidMessage,
                     message.epoch, message.request};
 
+        snapshotRequestAwaitingPreparation_ = true;
         return {NativeUiProtocolV1ClientMessageStatus::SnapshotRequested,
                 message.epoch, message.request};
+    }
+
+    // Prepare only the exact request most recently accepted by handle().
+    // A successful prepare moves the single in-flight request to delivery.
+    bool prepareSnapshot(std::uint64_t epoch, std::uint64_t request,
+                         MixerPresentationPublisher& publisher,
+                         const NativeUiSessionCoordinator& session,
+                         NativeUiProtocolV1SnapshotDelivery& delivery,
+                         std::string& output) {
+        if (!snapshotRequestAwaitingPreparation_ || request == 0 ||
+            request != requests_.lastRequest() || epoch == 0 ||
+            epoch != requests_.activeEpoch() || delivery.hasPendingDelivery())
+            return false;
+        if (!delivery.prepare(epoch, request, publisher, session, output))
+            return false;
+        snapshotRequestAwaitingPreparation_ = false;
+        preparedRequest_ = request;
+        preparedEpoch_ = epoch;
+        return true;
+    }
+
+    // Commit delivery only after the transport reports the complete frame.
+    bool markSnapshotDelivered(std::uint64_t epoch, std::uint64_t request,
+                               std::uint64_t sequence,
+                               NativeUiSessionCoordinator& session,
+                               NativeUiProtocolV1SnapshotDelivery& delivery) noexcept {
+        if (preparedRequest_ == 0 || request != preparedRequest_ ||
+            epoch == 0 || epoch != preparedEpoch_)
+            return false;
+        if (!delivery.markDelivered(epoch, sequence, session))
+            return false;
+        preparedRequest_ = 0;
+        preparedEpoch_ = 0;
+        return true;
     }
 
     bool invalidate(std::uint64_t epoch,
                     NativeUiSessionCoordinator& session) noexcept {
         if (epoch == 0 || epoch != session.activeEpoch()) return false;
         const bool requestClosed = requests_.invalidate(epoch);
+        snapshotRequestAwaitingPreparation_ = false;
+        preparedRequest_ = 0;
+        preparedEpoch_ = 0;
         const bool sessionClosed = session.invalidate(epoch);
         return requestClosed && sessionClosed;
     }
@@ -91,6 +135,9 @@ public:
                     NativeUiProtocolV1SnapshotDelivery& delivery) noexcept {
         if (epoch == 0 || epoch != session.activeEpoch()) return false;
         requests_.invalidate(epoch);
+        snapshotRequestAwaitingPreparation_ = false;
+        preparedRequest_ = 0;
+        preparedEpoch_ = 0;
         delivery.cancelPending(epoch);
         return session.invalidate(epoch);
     }
@@ -101,6 +148,9 @@ public:
 
 private:
     NativeUiProtocolV1SnapshotRequestTracker requests_;
+    std::uint64_t preparedEpoch_ = 0;
+    std::uint64_t preparedRequest_ = 0;
+    bool snapshotRequestAwaitingPreparation_ = false;
 };
 
 } // namespace mpcmixer
