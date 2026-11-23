@@ -118,7 +118,37 @@ int main() {
            NativeUiProtocolV1ClientMessageStatus::HelloAccepted);
     assert(reconnected.epoch == nextEpoch);
     reader.acknowledgeFrame();
+
+    // A second hello cannot replace the active protocol epoch, and a
+    // delayed request from the previous transport epoch remains stale.
+    const std::string helloResponse = response;
+    const auto duplicateHello =
+        ingress.handle(hello, connection.session(), response);
+    assert(duplicateHello.status ==
+           NativeUiProtocolV1ClientMessageStatus::Busy);
+    assert(response == helloResponse);
+
+    const std::string staleSnapshotRequest =
+        std::string(R"({"version":1,"kind":"snapshot_request","epoch":)") +
+        std::to_string(epoch) + R"(,"request":1})";
+    const auto staleRequest =
+        ingress.handle(staleSnapshotRequest, connection.session(), response);
+    assert(staleRequest.status ==
+           NativeUiProtocolV1ClientMessageStatus::StaleEpoch);
+
+    const std::string currentSnapshotRequest =
+        std::string(R"({"version":1,"kind":"snapshot_request","epoch":)") +
+        std::to_string(nextEpoch) + R"(,"request":1})";
+    const auto currentRequest =
+        ingress.handle(currentSnapshotRequest, connection.session(), response);
+    assert(currentRequest.status ==
+           NativeUiProtocolV1ClientMessageStatus::SnapshotRequested);
+    assert(ingress.lastSnapshotRequest() == 1);
+
+    // Reset also clears a request accepted but not yet prepared, so the next
+    // transport epoch starts with a clean request watermark.
     assert(ingress.resetConnectionState(nextEpoch, delivery));
+    assert(ingress.lastSnapshotRequest() == 0);
     assert(connection.invalidate(nextEpoch));
     ::close(reconnect[1]);
     return 0;
