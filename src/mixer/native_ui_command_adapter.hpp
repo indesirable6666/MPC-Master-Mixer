@@ -15,6 +15,8 @@ struct NativeUiCommandMessage {
     std::string type;
     bool hasTrack = false;
     std::size_t track = 0;
+    bool hasIndex = false;
+    std::size_t index = 0;
     bool hasValue = false;
     int value = 0;
     bool hasFlag = false;
@@ -55,6 +57,18 @@ public:
                 return false;
             command.type = MixerUiCommandType::SetTrackPan;
             command.track = message.track;
+            command.value = message.value;
+            return true;
+        }
+        if (message.type == "SetTrackAuxSend") {
+            if (!message.hasTrack || !message.hasIndex || !message.hasValue ||
+                message.track >= AudioEngine::kTrackCount ||
+                message.index >= AudioEngine::kAuxBusCount ||
+                message.value < 0 || message.value > MixerController::kAuxMaximum)
+                return false;
+            command.type = MixerUiCommandType::SetTrackAuxSend;
+            command.track = message.track;
+            command.index = message.index;
             command.value = message.value;
             return true;
         }
