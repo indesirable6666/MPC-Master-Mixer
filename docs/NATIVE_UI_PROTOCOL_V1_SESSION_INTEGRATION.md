@@ -38,8 +38,10 @@ hello/snapshot/command/audio-ack path over an in-process `AF_UNIX` socketpair:
 7. After the callback applies the ticket, the control thread stages and sends
    `audio_ack`. The pending acknowledgement is consumed only after the
    writer reports `Sent` and the peer validates the frame.
-8. A second prepared but queued snapshot is cancelled when the connection is
-   invalidated; queued bytes and pending delivery do not cross the epoch boundary.
+8. A second prepared but queued snapshot and a staged audio ACK are cancelled
+   during disconnect teardown. The control-thread owner cancels the ACK publisher,
+   then invalidates the connection; queued bytes and staged response state do not
+   cross the epoch boundary.
 
 The socketpair test is host-only and uses no filesystem endpoint or external
 service. The ARM workflow validates the relevant portable components and
