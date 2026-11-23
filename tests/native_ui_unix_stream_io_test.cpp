@@ -55,5 +55,18 @@ int main() {
     got = NativeUiUnixStreamIo::receive(-1, received, sizeof(received));
     assert(got.status == NativeUiUnixStreamIo::Status::Error);
     assert(got.errorNumber == EBADF);
+
+#ifdef MSG_NOSIGNAL
+    // Sending after peer shutdown must report EPIPE rather than delivering
+    // SIGPIPE to the process (the Linux target supports MSG_NOSIGNAL).
+    int closedPeerPair[2] = {-1, -1};
+    assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, closedPeerPair) == 0);
+    ::close(closedPeerPair[1]);
+    const auto brokenPipe = NativeUiUnixStreamIo::transmit(
+        closedPeerPair[0], message, sizeof(message));
+    assert(brokenPipe.status == NativeUiUnixStreamIo::Status::Error);
+    assert(brokenPipe.errorNumber == EPIPE);
+    ::close(closedPeerPair[0]);
+#endif
     return 0;
 }
