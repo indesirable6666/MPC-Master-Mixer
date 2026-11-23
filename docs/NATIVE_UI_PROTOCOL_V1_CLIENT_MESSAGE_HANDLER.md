@@ -32,6 +32,9 @@ snapshot, dispatch mixer commands, or access the audio callback.
   delivery confirmation to `NativeUiProtocolV1SnapshotDelivery`; only then
   can another request be accepted. This prevents accepted request IDs from
   silently accumulating while the single-slot delivery object is occupied.
+  A mismatched request or frame sequence leaves the prepared request and
+  pending delivery intact, so the transport can retry the exact confirmation
+  after completing the correct frame.
 - `invalidate(epoch, session)` closes the exact active session and resets
   request tracking, but leaves snapshot-delivery cleanup to its owner.
 - Prefer `invalidate(epoch, session, delivery)` when the connection owns a
