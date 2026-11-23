@@ -25,6 +25,7 @@ int main() {
 
     message.sequence = 3;
     message.type = "SetTrackMute";
+    message.hasValue = false;
     message.hasFlag = true;
     message.flag = true;
     assert(mpcmixer::NativeUiCommandAdapter::dispatch(message, dispatcher).accepted());
@@ -35,17 +36,22 @@ int main() {
 
     message.sequence = 5;
     message.type = "SetMasterFader";
+    message.hasFlag = false;
     message.hasTrack = false;
     message.value = 110;
     assert(mpcmixer::NativeUiCommandAdapter::dispatch(message, dispatcher).accepted());
 
     message.sequence = 6;
     message.type = "SetMasterMute";
+    message.hasValue = false;
     message.flag = true;
     assert(mpcmixer::NativeUiCommandAdapter::dispatch(message, dispatcher).accepted());
 
     message.sequence = 7;
     message.type = "SetTrackAuxSend";
+    message.hasTrack = true;
+    message.track = 5;
+    message.hasFlag = false;
     message.hasIndex = true;
     message.index = 2;
     message.hasValue = true;
@@ -78,6 +84,8 @@ int main() {
 
     message.sequence = 8;
     message.type = "SetTrackFader";
+    message.hasIndex = false;
+    message.hasFlag = false;
     message.hasValue = false;
     assert(mpcmixer::NativeUiCommandAdapter::dispatch(message, dispatcher).status ==
            mpcmixer::MixerUiCommandStatus::Invalid);
@@ -93,6 +101,9 @@ int main() {
            mpcmixer::MixerUiCommandStatus::Invalid);
 
     message.type = "SetMasterMute";
+    message.hasTrack = false;
+    message.hasIndex = false;
+    message.hasValue = false;
     message.hasFlag = false;
     assert(mpcmixer::NativeUiCommandAdapter::dispatch(message, dispatcher).status ==
            mpcmixer::MixerUiCommandStatus::Invalid);
@@ -104,6 +115,9 @@ int main() {
     // Sequence checks happen in the dispatcher after the adapter has decoded
     // a valid typed command. Use a valid payload to isolate ordering behavior.
     message.type = "SetMasterMute";
+    message.hasTrack = false;
+    message.hasIndex = false;
+    message.hasValue = false;
     message.hasFlag = true;
     message.flag = false;
     message.sequence = 0;
