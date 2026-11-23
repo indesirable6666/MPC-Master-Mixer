@@ -73,8 +73,8 @@ in [JSON decoder dependency decision](JSON_DECODER_DEPENDENCY_DECISION.md).
 
 - The top-level value must be exactly one JSON object. Reject trailing
   non-whitespace data, malformed JSON, arrays, scalars, and `null`.
-- Accept only the fields `sequence`, `type`, `track`, `index`, `value`, and
-  `flag`. Reject unknown fields and duplicate keys; do not use
+- Accept only the fields `sequence`, `type`, `track`, `index`, `value`,
+  `flag`, `frequencyHz`, `q`, and `gainDb`. Reject unknown fields and duplicate keys; do not use
   last-key-wins or first-key-wins behavior.
 - `sequence` is required and must be a JSON integer in the range
   1..`UINT64_MAX`. Reject negative values, fractions, exponent notation,
@@ -89,8 +89,8 @@ in [JSON decoder dependency decision](JSON_DECODER_DEPENDENCY_DECISION.md).
   strings, and overflow.
 - `index`, when present, must be a non-negative JSON integer representable as
   `std::size_t`; command-specific range validation limits Aux bus indices to
-  0..3. Reject fractions, exponent notation, negative values, booleans,
-  strings, and overflow.
+  0..3 and EQ band indices to 0..5. Reject fractions, exponent notation,
+  negative values, booleans, strings, and overflow.
 - `value`, when present, must be a signed JSON integer representable as
   `int`; command-specific validation then applies the fader or pan range.
   Reject fractions, exponent notation, booleans, strings, null, and overflow.
@@ -103,8 +103,9 @@ in [JSON decoder dependency decision](JSON_DECODER_DEPENDENCY_DECISION.md).
 - Required fields are command-specific as shown in the mapping table. Reject
   missing required fields. Also reject fields that are not defined for the
   selected command, rather than silently ignoring contradictory payload data.
-- Set each `hasTrack`, `hasIndex`, `hasValue`, and `hasFlag` flag only after the
-  corresponding field has passed exact JSON type and representability checks.
+- Set each presence flag (`hasTrack`, `hasIndex`, `hasValue`, `hasFlag`,
+  `hasFrequencyHz`, `hasQ`, and `hasGainDb`) only after the corresponding
+  field has passed exact JSON type and representability checks.
   Never manufacture a default value to make a missing field appear present.
 - Bound the transport frame size before parsing. The decoder currently enforces
   a 1024-byte maximum; the future transport must apply the same bound while
@@ -249,7 +250,8 @@ malformed/trailing input, top-level non-objects, duplicate and unknown keys,
 nested values, wrong JSON types, integer boundaries/overflow, missing and
 command-inapplicable fields, oversized frames, and exact command-name matching.
 The typed adapter remains responsible for fader/pan/Aux-send range validation after
-successful decoding.
+successful decoding; the dispatcher validates EQ frequency, Q, gain, and the
+complete six-band configuration before queueing.
 
 Still not implemented: IPC, reconnect/snapshot transport, native UI toolkit
 integration, and live-device validation. No hardware tests have been performed.
