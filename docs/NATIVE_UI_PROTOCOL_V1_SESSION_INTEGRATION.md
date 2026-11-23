@@ -80,3 +80,12 @@ does not own a polling loop or application event source. The application
 transport thread must supply an already-connected descriptor and drive receive,
 dispatch, send, and disconnect calls. The browser prototype and real MPC audio
 engine remain unconnected.
+
+
+The disconnect/reconnect regression also leaves an already-applied but
+undelivered ACK in the session tracker when the staged publisher is cancelled.
+After a fresh epoch is adopted, the ACK publisher must discard that obsolete
+epoch entry before it can publish anything for the new connection. The test
+asserts that no stale ACK payload is produced and the obsolete ledger entry is
+drained. This preserves the distinction between cancelling a transport-stage
+copy and consuming an acknowledgement as delivered.
