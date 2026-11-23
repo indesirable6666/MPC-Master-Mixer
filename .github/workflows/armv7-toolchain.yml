@@ -165,7 +165,6 @@ jobs:
             -o build/mpc-audio-duplex-aux-output-test-armv7
           arm-linux-gnueabihf-g++ $COMMON_FLAGS -std=c++14 \
             tests/audio_control_bridge_queue_lifecycle_test.cpp \
-            tests/audio_control_bridge_queue_lifecycle_test.cpp \\
             -o build/mpc-audio-control-bridge-queue-lifecycle-test-armv7
 
           arm-linux-gnueabihf-g++ $COMMON_FLAGS -std=c++14 \
