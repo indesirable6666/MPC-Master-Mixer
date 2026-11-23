@@ -48,6 +48,35 @@ Result render(mpcmixer::AudioEngine& engine,
 
 int main() {
     using Engine = mpcmixer::AudioEngine;
+
+    // The engine's direct control API independently validates Aux Return
+    // values, so callers outside the command bridge cannot publish bad state.
+    Engine validationEngine;
+    const Engine::AuxReturn originalReturn = validationEngine.auxReturn(0);
+    Engine::AuxReturn invalidReturn;
+    invalidReturn.gain = std::numeric_limits<float>::quiet_NaN();
+    assert(!validationEngine.setAuxReturn(0, invalidReturn));
+    invalidReturn.gain = std::numeric_limits<float>::infinity();
+    assert(!validationEngine.setAuxReturn(0, invalidReturn));
+    invalidReturn.gain = -0.01f;
+    assert(!validationEngine.setAuxReturn(0, invalidReturn));
+    invalidReturn.gain = Engine::kMaxFaderGain + 0.01f;
+    assert(!validationEngine.setAuxReturn(0, invalidReturn));
+    invalidReturn.gain = 1.0f;
+    invalidReturn.balance = std::numeric_limits<float>::quiet_NaN();
+    assert(!validationEngine.setAuxReturn(0, invalidReturn));
+    invalidReturn.balance = std::numeric_limits<float>::infinity();
+    assert(!validationEngine.setAuxReturn(0, invalidReturn));
+    invalidReturn.balance = -1.01f;
+    assert(!validationEngine.setAuxReturn(0, invalidReturn));
+    invalidReturn.balance = 1.01f;
+    assert(!validationEngine.setAuxReturn(0, invalidReturn));
+    invalidReturn.balance = 0.0f;
+    assert(!validationEngine.setAuxReturn(Engine::kAuxBusCount, invalidReturn));
+    assert(near(validationEngine.auxReturn(0).gain, originalReturn.gain));
+    assert(near(validationEngine.auxReturn(0).balance, originalReturn.balance));
+    assert(validationEngine.auxReturn(0).mute == originalReturn.mute);
+
     Engine engine;
     Engine::Track track;
     track.gain = 0.5f;
