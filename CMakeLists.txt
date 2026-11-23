@@ -93,6 +93,7 @@ target_include_directories(native_ui_protocol_v1_decoder_test PRIVATE src/mixer)
 target_include_directories(native_ui_frame_codec_test PRIVATE src/mixer)
 target_include_directories(native_ui_unix_stream_io_test PRIVATE src/mixer)
 target_include_directories(native_ui_unix_stream_frame_channel_test PRIVATE src/mixer)
+target_include_directories(native_ui_unix_stream_connection_lifecycle_test PRIVATE src/mixer)
 target_include_directories(native_ui_unix_socket_descriptor_test PRIVATE src/mixer)
 target_include_directories(native_ui_unix_socket_path_policy_test PRIVATE src/mixer)
 # Exercises strict SAX parsing, field validation, and bounded JSON frames.
