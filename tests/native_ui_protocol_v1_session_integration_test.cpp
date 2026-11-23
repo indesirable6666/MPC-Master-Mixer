@@ -102,13 +102,17 @@ int main() {
     assert(inspectedAck.sequence == 1);
     assert(session.pendingAcknowledgements() == pendingBeforePublish);
     assert(acknowledgements.publishNext(controller, session, outbound));
-    assert(session.pendingAcknowledgements() + 1 == pendingBeforePublish);
+    assert(acknowledgements.hasPendingDelivery());
+    assert(session.pendingAcknowledgements() == pendingBeforePublish);
     const auto applied = nlohmann::json::parse(outbound);
     assert(applied["kind"] == "audio_ack");
     assert(applied["epoch"] == epoch);
     assert(applied["sequence"] == 1);
     assert(applied["audio_ticket"] == commandResult.commandResult.audioTicket);
     assert(applied["status"] == "applied");
+    assert(acknowledgements.markDelivered(session));
+    assert(!acknowledgements.hasPendingDelivery());
+    assert(session.pendingAcknowledgements() + 1 == pendingBeforePublish);
 
     // A prepared but unsent snapshot belongs to the connection too.
     const std::string requestThree =
