@@ -1,5 +1,6 @@
 #include "native_ui_protocol_v1_client_message_handler.hpp"
 #include "native_ui_protocol_v1_command_processor.hpp"
+#include "native_ui_protocol_v1_audio_ack_publisher.hpp"
 #include "native_ui_protocol_v1_response_serializer.hpp"
 #include "native_ui_protocol_v1_snapshot_decoder.hpp"
 #include "native_ui_protocol_v1_snapshot_delivery.hpp"
@@ -21,6 +22,7 @@ int main() {
     NativeUiProtocolV1ClientMessageHandler ingress;
     NativeUiProtocolV1SnapshotDelivery delivery;
     NativeUiProtocolV1CommandProcessor commands;
+    NativeUiProtocolV1AudioAckPublisher acknowledgements;
 
     std::string outbound;
     auto message = ingress.handle(
@@ -85,21 +87,16 @@ int main() {
     assert(accepted["status"] == "accepted");
 
     // Acceptance and actual audio application remain separate events.
-    NativeUiAudioAck ack;
-    assert(!session.popApplied(controller, ack));
+    outbound = "keep";
+    assert(!acknowledgements.publishNext(controller, session, outbound));
+    assert(outbound == "keep");
     bridge.process(inputs, left, right, 1);
-    assert(session.popApplied(controller, ack));
-    assert(ack.sequence == 1);
-    assert(ack.connectionEpoch == epoch);
-    assert(ack.audioTicket == commandResult.commandResult.audioTicket);
-
-    assert(NativeUiProtocolV1ResponseSerializer::audioAck(
-        ack.connectionEpoch, ack.sequence, ack.audioTicket, outbound));
+    assert(acknowledgements.publishNext(controller, session, outbound));
     const auto applied = nlohmann::json::parse(outbound);
     assert(applied["kind"] == "audio_ack");
     assert(applied["epoch"] == epoch);
     assert(applied["sequence"] == 1);
-    assert(applied["audio_ticket"] == ack.audioTicket);
+    assert(applied["audio_ticket"] == commandResult.commandResult.audioTicket);
     assert(applied["status"] == "applied");
 
     // Disconnect invalidates the session and its request sequence together.
