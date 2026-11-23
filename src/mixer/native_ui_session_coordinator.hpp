@@ -49,18 +49,45 @@ public:
         return tracker_.dispatch(dispatcher, command, epoch);
     }
 
-    // Drains applied tickets in FIFO order. Only acknowledgements belonging
-    // to the active connection are exposed; obsolete completions are dropped.
-    bool popApplied(
+    // Inspects the next active-epoch acknowledgement without consuming it.
+    // Completed entries from obsolete epochs are discarded in FIFO order.
+    bool peekApplied(
         const MixerController& controller,
         NativeUiAudioAck& acknowledgement) noexcept {
         const std::uint64_t epoch = epochs_.activeEpoch();
-        if (epoch != 0)
-            return tracker_.popAppliedForEpoch(controller, epoch, acknowledgement);
+        if (epoch == 0) {
+            NativeUiAudioAck discarded;
+            while (tracker_.popApplied(controller, discarded)) {}
+            return false;
+        }
 
-        NativeUiAudioAck discarded;
-        while (tracker_.popApplied(controller, discarded)) {}
+        NativeUiAudioAck candidate;
+        while (tracker_.peekApplied(controller, candidate)) {
+            if (candidate.connectionEpoch == epoch) {
+                acknowledgement = candidate;
+                return true;
+            }
+            if (!tracker_.consumeApplied(candidate)) return false;
+        }
         return false;
+    }
+
+    // Removes the exact acknowledgement after its response was serialized.
+    bool consumeApplied(const NativeUiAudioAck& acknowledgement) noexcept {
+        if (acknowledgement.connectionEpoch == 0 ||
+            acknowledgement.connectionEpoch != epochs_.activeEpoch())
+            return false;
+        return tracker_.consumeApplied(acknowledgement);
+    }
+
+    bool popApplied(
+        const MixerController& controller,
+        NativeUiAudioAck& acknowledgement) noexcept {
+        NativeUiAudioAck candidate;
+        if (!peekApplied(controller, candidate) || !consumeApplied(candidate))
+            return false;
+        acknowledgement = candidate;
+        return true;
     }
 
     bool isReady(std::uint64_t epoch) const noexcept {
