@@ -40,15 +40,20 @@ public:
             return {NativeUiProtocolV1ClientMessageStatus::InvalidMessage, 0, 0};
 
         if (message.kind == NativeUiProtocolV1ClientMessageKind::Hello) {
-            if (session.activeEpoch() != 0)
-                return {NativeUiProtocolV1ClientMessageStatus::Busy, 0, 0};
-
-            std::uint64_t epoch = 0;
-            if (!session.beginConnection(epoch))
+            // A transport owner may already have opened the session and
+            // assigned its epoch when it adopted the descriptor. In that
+            // case, bind protocol request tracking to that epoch instead of
+            // attempting to begin a second session.
+            const bool transportSessionAlreadyOpen =
+                session.activeEpoch() != 0;
+            std::uint64_t epoch = session.activeEpoch();
+            if (!transportSessionAlreadyOpen &&
+                !session.beginConnection(epoch))
                 return {NativeUiProtocolV1ClientMessageStatus::Busy, 0, 0};
 
             if (!requests_.begin(epoch)) {
-                session.invalidate(epoch);
+                if (!transportSessionAlreadyOpen)
+                    session.invalidate(epoch);
                 return {NativeUiProtocolV1ClientMessageStatus::Busy, 0, 0};
             }
 
@@ -56,7 +61,8 @@ public:
             if (!NativeUiProtocolV1ResponseSerializer::serverHello(
                     epoch, candidate)) {
                 requests_.invalidate(epoch);
-                session.invalidate(epoch);
+                if (!transportSessionAlreadyOpen)
+                    session.invalidate(epoch);
                 return {NativeUiProtocolV1ClientMessageStatus::Busy, 0, 0};
             }
             response.swap(candidate);
@@ -126,6 +132,22 @@ public:
         preparedEpoch_ = 0;
         const bool sessionClosed = session.invalidate(epoch);
         return requestClosed && sessionClosed;
+    }
+
+    // Clear protocol-owned request and snapshot state while leaving session
+    // invalidation to the transport connection owner. The transport must
+    // discard its queued frame before calling this method.
+    bool resetConnectionState(
+        std::uint64_t epoch,
+        NativeUiProtocolV1SnapshotDelivery& delivery) noexcept {
+        if (epoch == 0 || epoch != requests_.activeEpoch())
+            return false;
+        const bool requestClosed = requests_.invalidate(epoch);
+        snapshotRequestAwaitingPreparation_ = false;
+        preparedRequest_ = 0;
+        preparedEpoch_ = 0;
+        delivery.cancelPending(epoch);
+        return requestClosed;
     }
 
     // Disconnect variant that also releases an unsent snapshot owned by this
