@@ -3,6 +3,7 @@
 #include "native_ui_protocol_v1_audio_ack_publisher.hpp"
 #include "native_ui_protocol_v1_snapshot_delivery.hpp"
 #include "native_ui_unix_stream_connection.hpp"
+#include "native_ui_unix_stream_protocol_owner.hpp"
 #include "native_ui_frame_codec.hpp"
 #include "native_ui_protocol_v1_snapshot_decoder.hpp"
 
@@ -69,6 +70,8 @@ int main() {
     NativeUiProtocolV1SnapshotDelivery delivery;
     NativeUiProtocolV1CommandProcessor commands;
     NativeUiProtocolV1AudioAckPublisher acknowledgements;
+    NativeUiUnixStreamProtocolOwner protocolOwner(
+        connection, ingress, delivery, acknowledgements);
     AudioEngineCommandBridge bridge;
     MixerController controller(bridge);
     MixerUiCommandDispatcher dispatcher(controller);
@@ -284,13 +287,11 @@ int main() {
     assert(acknowledgements.hasPendingDelivery());
     assert(writer.pending());
 
-    // Reset protocol state and invalidate transport: explicitly cancel the
-    // ACK publisher before the owner closes the old epoch.
-    assert(ingress.resetConnectionState(nextEpoch, delivery));
-    acknowledgements.cancelPending();
+    // The protocol owner enforces teardown order: queued frame, staged
+    // snapshot/ACK, session epoch, then descriptor release.
+    assert(protocolOwner.disconnect(nextEpoch));
     assert(!acknowledgements.hasPendingDelivery());
     assert(!delivery.hasPendingDelivery());
-    assert(connection.invalidate(nextEpoch));
     assert(!writer.pending());
     assert(connection.session().activeEpoch() == 0);
     ::close(reconnect[1]);
