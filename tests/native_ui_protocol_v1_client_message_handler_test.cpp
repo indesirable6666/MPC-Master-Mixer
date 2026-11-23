@@ -71,11 +71,12 @@ int main() {
         session, response);
     assert(result.status == NativeUiProtocolV1ClientMessageStatus::SnapshotRequested);
     assert(handler.lastSnapshotRequest() == 3);
-    assert(!handler.handle(
+    result = handler.handle(
         std::string(R"({"version":1,"kind":"snapshot_request","epoch":)") +
             std::to_string(epoch) + R"(,"request":4})",
-        session, response).status ==
-        NativeUiProtocolV1ClientMessageStatus::SnapshotRequested);
+        session, response);
+    assert(result.status == NativeUiProtocolV1ClientMessageStatus::Busy);
+    assert(handler.lastSnapshotRequest() == 3);
     assert(handler.prepareSnapshot(epoch, 3, publisher, session, delivery,
                                    snapshotWire));
     const std::uint64_t thirdSnapshotSequence = delivery.pendingSequence();
