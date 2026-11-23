@@ -31,8 +31,9 @@ The adapter currently maps these commands:
 5. Master fader (`SetMasterFader`)
 6. Master Mute (`SetMasterMute`)
 7. Track Aux Send (`SetTrackAuxSend`)
+8. Track EQ band (`SetTrackEqBand`)
 
-Track indices are zero-based (0..15), Aux indices are zero-based (0..3), faders are 0..127, pan is -100..100, and Aux send levels are 0..100 percent. Required-field presence and ranges are checked before dispatch. Unknown command names are rejected. The adapter does not enable live EQ, Aux returns, inserts, meters,
+Track indices are zero-based (0..15), Aux indices are zero-based (0..3), faders are 0..127, pan is -100..100, and Aux send levels are 0..100 percent. Required-field presence and ranges are checked before dispatch. Unknown command names are rejected. The adapter enables per-track EQ band updates using `track`, `index`, `frequencyHz`, `q`, and `gainDb`. Band indices are 0..5; frequency must be at least 20 Hz and below Nyquist, Q 0.1..10, and gain -12..12 dB. The dispatcher prepares and validates the complete six-band configuration at the 48 kHz default sample rate before queueing the update. The adapter does not enable Aux returns, inserts, meters,
 audio capture, MIDI, or device routing.
 
 ## Message mapping
@@ -48,6 +49,7 @@ command name, and explicit presence flags for wire fields.
 | Track Mute | `SetTrackMute` | `track`, `flag` | track 0..15, boolean |
 | Track Solo | `SetTrackSolo` | `track`, `flag` | track 0..15, boolean |
 | Track Aux Send | `SetTrackAuxSend` | `track`, `index`, `value` | track 0..15, Aux bus 0..3, value 0..100% |
+| Track EQ band | `SetTrackEqBand` | `track`, `index`, `frequencyHz`, `q`, `gainDb` | track 0..15, band 0..5, frequency 20 Hz..below Nyquist, Q 0.1..10, gain -12..12 dB |
 | Master fader | `SetMasterFader` | `value` | value 0..127 |
 | Master Mute | `SetMasterMute` | `flag` | boolean |
 
@@ -78,7 +80,7 @@ in [JSON decoder dependency decision](JSON_DECODER_DEPENDENCY_DECISION.md).
   1..`UINT64_MAX`. Reject negative values, fractions, exponent notation,
   strings, booleans, null, and values that cannot be represented exactly as
   an unsigned 64-bit integer. Do not parse through a floating-point type.
-- `type` is required and must be a string matching one of the seven command
+- `type` is required and must be a string matching one of the eight command
   names exactly. Reject case variants, whitespace-padded names, non-strings,
   and unknown names.
 - `track`, when present, must be a non-negative JSON integer representable
@@ -92,6 +94,10 @@ in [JSON decoder dependency decision](JSON_DECODER_DEPENDENCY_DECISION.md).
 - `value`, when present, must be a signed JSON integer representable as
   `int`; command-specific validation then applies the fader or pan range.
   Reject fractions, exponent notation, booleans, strings, null, and overflow.
+- `frequencyHz`, `q`, and `gainDb`, when present, must be finite JSON numbers
+  representable as `float`; they are accepted only for `SetTrackEqBand`. The
+  dispatcher validates frequency against the 48 kHz default sample rate and
+  the complete EQ parameter ranges before queueing.
 - `flag`, when present, must be a JSON boolean. Do not coerce 0/1, strings,
   or null to booleans.
 - Required fields are command-specific as shown in the mapping table. Reject
