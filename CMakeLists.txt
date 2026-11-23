@@ -37,6 +37,7 @@ mpc_add_host_test(audio_meter_snapshot_bridge_test tests/audio_meter_snapshot_br
 mpc_add_host_test(audio_meter_snapshot_freshness_test tests/audio_meter_snapshot_freshness_test.cpp)
 mpc_add_host_test(audio_duplex_meter_tap_test tests/audio_duplex_meter_tap_test.cpp)
 mpc_add_host_test(audio_input_pair_host_test tests/audio_input_pair_host_test.cpp)
+mpc_add_host_test(audio_duplex_aux_output_test tests/audio_duplex_aux_output_test.cpp)
 # Covers failed prepare, restart, explicit shutdown, and RAII backend release.
 mpc_add_host_test(audio_duplex_backend_lifecycle_test tests/audio_duplex_backend_lifecycle_test.cpp)
 mpc_add_host_test(audio_meter_ui_consumer_test tests/audio_meter_ui_consumer_test.cpp)
