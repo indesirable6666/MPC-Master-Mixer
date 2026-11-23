@@ -224,7 +224,9 @@ int main() {
     assert(resultJson["audio_ticket"] == commandResult.commandResult.audioTicket);
 
     std::string ackPayload = "unchanged";
-    assert(connection.session().pendingAcknowledgements() == 0);
+    // The accepted ticket is tracked immediately, but cannot be published
+    // until the audio callback confirms that it has been applied.
+    assert(connection.session().pendingAcknowledgements() == 1);
     assert(!acknowledgements.publishNext(controller, connection.session(), ackPayload));
     assert(ackPayload == "unchanged");
     const float* inputs[AudioEngine::kTrackCount]{};
