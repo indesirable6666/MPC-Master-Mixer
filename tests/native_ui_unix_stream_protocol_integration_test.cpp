@@ -287,6 +287,14 @@ int main() {
     assert(acknowledgements.hasPendingDelivery());
     assert(writer.pending());
 
+    // A stale teardown request must not cancel the active epoch's staged
+    // response or queued bytes.
+    assert(!protocolOwner.disconnect(nextEpoch + 1));
+    assert(writer.pending());
+    assert(acknowledgements.hasPendingDelivery());
+    assert(delivery.hasPendingDelivery());
+    assert(connection.connected());
+
     // The protocol owner enforces teardown order: queued frame, staged
     // snapshot/ACK, session epoch, then descriptor release.
     assert(protocolOwner.disconnect(nextEpoch));
