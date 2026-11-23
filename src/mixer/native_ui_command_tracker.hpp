@@ -49,18 +49,38 @@ public:
         return result;
     }
 
-    // Returns the oldest completed acknowledgement, preserving dispatch order.
-    // The caller sends it to its transport and may call again to drain more.
-    bool popApplied(
+    // Inspects the oldest completed acknowledgement without consuming it.
+    bool peekApplied(
         const MixerController& controller,
-        NativeUiAudioAck& acknowledgement) noexcept {
+        NativeUiAudioAck& acknowledgement) const noexcept {
         if (count_ == 0) return false;
         const NativeUiAudioAck& oldest = pending_[head_];
         if (!controller.isAudioCommandApplied(oldest.audioTicket)) return false;
-
         acknowledgement = oldest;
+        return true;
+    }
+
+    // Consumes only the exact acknowledgement previously inspected by the
+    // serialized control thread. This permits serialization before removal.
+    bool consumeApplied(const NativeUiAudioAck& acknowledgement) noexcept {
+        if (count_ == 0) return false;
+        const NativeUiAudioAck& oldest = pending_[head_];
+        if (oldest.sequence != acknowledgement.sequence ||
+            oldest.audioTicket != acknowledgement.audioTicket ||
+            oldest.connectionEpoch != acknowledgement.connectionEpoch)
+            return false;
         head_ = (head_ + 1) % kCapacity;
         --count_;
+        return true;
+    }
+
+    bool popApplied(
+        const MixerController& controller,
+        NativeUiAudioAck& acknowledgement) noexcept {
+        NativeUiAudioAck candidate;
+        if (!peekApplied(controller, candidate) || !consumeApplied(candidate))
+            return false;
+        acknowledgement = candidate;
         return true;
     }
 
