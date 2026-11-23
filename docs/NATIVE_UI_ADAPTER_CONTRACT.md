@@ -22,7 +22,7 @@ The browser must never call the DSP engine or audio callback directly.
 
 ## Implemented first vertical slice
 
-The adapter maps only these commands:
+The adapter currently maps these commands:
 
 1. Track fader (`SetTrackFader`)
 2. Track pan (`SetTrackPan`)
@@ -30,10 +30,9 @@ The adapter maps only these commands:
 4. Track Solo (`SetTrackSolo`)
 5. Master fader (`SetMasterFader`)
 6. Master Mute (`SetMasterMute`)
+7. Track Aux Send (`SetTrackAuxSend`)
 
-Track indices are zero-based (0..15), faders are 0..127, and pan is -100..100.
-Required-field presence and ranges are checked before dispatch. Unknown command
-names are rejected. The adapter does not enable live EQ, Aux, inserts, meters,
+Track indices are zero-based (0..15), Aux indices are zero-based (0..3), faders are 0..127, pan is -100..100, and Aux send levels are 0..100 percent. Required-field presence and ranges are checked before dispatch. Unknown command names are rejected. The adapter does not enable live EQ, Aux returns, inserts, meters,
 audio capture, MIDI, or device routing.
 
 ## Message mapping
@@ -48,6 +47,7 @@ command name, and explicit presence flags for wire fields.
 | Track pan | `SetTrackPan` | `track`, `value` | track 0..15, value -100..100 |
 | Track Mute | `SetTrackMute` | `track`, `flag` | track 0..15, boolean |
 | Track Solo | `SetTrackSolo` | `track`, `flag` | track 0..15, boolean |
+| Track Aux Send | `SetTrackAuxSend` | `track`, `index`, `value` | track 0..15, Aux bus 0..3, value 0..100% |
 | Master fader | `SetMasterFader` | `value` | value 0..127 |
 | Master Mute | `SetMasterMute` | `flag` | boolean |
 
@@ -71,19 +71,23 @@ in [JSON decoder dependency decision](JSON_DECODER_DEPENDENCY_DECISION.md).
 
 - The top-level value must be exactly one JSON object. Reject trailing
   non-whitespace data, malformed JSON, arrays, scalars, and `null`.
-- Accept only the fields `sequence`, `type`, `track`, `value`, and
+- Accept only the fields `sequence`, `type`, `track`, `index`, `value`, and
   `flag`. Reject unknown fields and duplicate keys; do not use
   last-key-wins or first-key-wins behavior.
 - `sequence` is required and must be a JSON integer in the range
   1..`UINT64_MAX`. Reject negative values, fractions, exponent notation,
   strings, booleans, null, and values that cannot be represented exactly as
   an unsigned 64-bit integer. Do not parse through a floating-point type.
-- `type` is required and must be a string matching one of the six command
+- `type` is required and must be a string matching one of the seven command
   names exactly. Reject case variants, whitespace-padded names, non-strings,
   and unknown names.
 - `track`, when present, must be a non-negative JSON integer representable
   as `std::size_t`; command-specific range validation then limits it to
   0..15. Reject fractions, exponent notation, negative values, booleans,
+  strings, and overflow.
+- `index`, when present, must be a non-negative JSON integer representable as
+  `std::size_t`; command-specific range validation limits Aux bus indices to
+  0..3. Reject fractions, exponent notation, negative values, booleans,
   strings, and overflow.
 - `value`, when present, must be a signed JSON integer representable as
   `int`; command-specific validation then applies the fader or pan range.
@@ -93,7 +97,7 @@ in [JSON decoder dependency decision](JSON_DECODER_DEPENDENCY_DECISION.md).
 - Required fields are command-specific as shown in the mapping table. Reject
   missing required fields. Also reject fields that are not defined for the
   selected command, rather than silently ignoring contradictory payload data.
-- Set each `hasTrack`, `hasValue`, and `hasFlag` flag only after the
+- Set each `hasTrack`, `hasIndex`, `hasValue`, and `hasFlag` flag only after the
   corresponding field has passed exact JSON type and representability checks.
   Never manufacture a default value to make a missing field appear present.
 - Bound the transport frame size before parsing. The transport owner must
@@ -221,7 +225,7 @@ cross-restart identity or as a substitute for the transport connection epoch.
 
 ## Acceptance tests and remaining work
 
-`tests/native_ui_command_adapter_test.cpp` covers command mapping, required
+`tests/native_ui_command_adapter_test.cpp` covers command mapping including four-bus Aux sends, required
 field presence, invalid ranges, unknown command names, sequence ordering,
 retry after rejection, and state publication. The existing dispatcher tests
 cover sequence ordering, queue backpressure, and audio-ticket application.
@@ -239,7 +243,7 @@ and exhaustion without zero wraparound.
 malformed/trailing input, top-level non-objects, duplicate and unknown keys,
 nested values, wrong JSON types, integer boundaries/overflow, missing and
 command-inapplicable fields, oversized frames, and exact command-name matching.
-The typed adapter remains responsible for fader/pan range validation after
+The typed adapter remains responsible for fader/pan/Aux-send range validation after
 successful decoding.
 
 Still not implemented: IPC, reconnect/snapshot transport, native UI toolkit
