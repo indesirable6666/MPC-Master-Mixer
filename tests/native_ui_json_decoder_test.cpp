@@ -3,6 +3,7 @@
 #include <cassert>
 #include <cstdint>
 #include <limits>
+#include <iostream>
 #include <string>
 
 using namespace mpcmixer;
@@ -65,6 +66,7 @@ int main() {
         const std::uint64_t previousSequence = message.sequence;
         const NativeUiJsonDecodeStatus status =
             NativeUiJsonDecoder::decode(json, message);
+        if (status == NativeUiJsonDecodeStatus::Ok) std::cerr << "Unexpectedly accepted: " << json << "\\n";
         assert(status != NativeUiJsonDecodeStatus::Ok);
         assert(message.sequence == previousSequence);
     };
