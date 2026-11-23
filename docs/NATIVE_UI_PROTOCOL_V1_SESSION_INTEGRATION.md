@@ -13,8 +13,14 @@ calling the session coordinator directly:
 5. A v1 track-fader command is decoded, dispatched, and returned as
    `command_result`.
 6. The test confirms no `audio_ack` exists before callback application, then
-   serializes the applied acknowledgement after the ticket is observed.
-7. Disconnect invalidates the epoch and request sequence.
+   inspects the applied acknowledgement without consuming it, serializes the
+   response, and only then removes the ticket from the pending ledger.
+7. Disconnect invalidates the epoch and request sequence, and cancels any
+   prepared-but-unsent snapshot for that connection.
+
+The ACK publisher uses a peek/serialize/consume sequence. If response
+construction fails, the ticket remains pending for a later retry; the output
+buffer is changed only after successful serialization and consumption.
 
 This remains a host/ARM compile validation of transport-neutral components.
 It does not create or bind a Unix socket, launch a service, integrate the
