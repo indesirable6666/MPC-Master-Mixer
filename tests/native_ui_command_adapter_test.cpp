@@ -80,6 +80,9 @@ int main() {
     message.hasQ = true; message.q = 0.8f;
     message.hasGainDb = true; message.gainDb = 3.0f;
     assert(mpcmixer::NativeUiCommandAdapter::dispatch(message, dispatcher).accepted());
+    message.hasFrequencyHz = false;
+    message.hasQ = false;
+    message.hasGainDb = false;
 
     // EQ-only fields must not be silently accepted on an unrelated command.
     message.sequence = 9;
