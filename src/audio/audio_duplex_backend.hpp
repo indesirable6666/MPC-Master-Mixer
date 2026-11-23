@@ -2,11 +2,14 @@
 #include <cstddef>
 namespace mpcmixer {
 struct AudioDuplexFormat {
+    enum { kMaxInputChannels = 2, kMaxOutputChannels = 10 };
+
     unsigned sampleRate = 48000;
     std::size_t inputChannels = 2, outputChannels = 2, maxFramesPerBlock = 512;
     bool valid() const noexcept {
         return sampleRate >= 8000 && sampleRate <= 192000 &&
-            inputChannels <= 2 && outputChannels > 0 && outputChannels <= 2 &&
+            inputChannels <= kMaxInputChannels && outputChannels > 0 &&
+            outputChannels <= kMaxOutputChannels &&
             maxFramesPerBlock > 0 && maxFramesPerBlock <= 8192;
     }
 };
