@@ -124,7 +124,6 @@ native engine.
 
 
 The driver socketpair test also constrains the peer receive window to exercise a
-real partial outbound snapshot write. It verifies that `flushOne()` reports
-progress followed by `WouldBlock`, the writer retains the remaining framed
-bytes, and disconnect clears both the queued remainder and the driver's staged
+real partial outbound snapshot write. It verifies that `flushOne()` returns `WouldBlock` with a positive byte count,
+the writer retains the remaining framed bytes, and disconnect clears both the queued remainder and the driver's staged
 response before the connection can be reused.
