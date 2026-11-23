@@ -37,9 +37,8 @@ std::string receiveFrame(int descriptor) {
     if (::recv(descriptor, header, sizeof(header), MSG_WAITALL) !=
         static_cast<ssize_t>(sizeof(header)))
         return {};
-    std::uint32_t length = 0;
-    if (!NativeUiFrameCodec::decodeLength(header, length) ||
-        length == 0 || length > 256)
+    const std::uint32_t length = NativeUiFrameCodec::decodeLength(header);
+    if (length == 0 || length > 256)
         return {};
     std::string payload(length, '\\0');
     if (::recv(descriptor, &payload[0], length, MSG_WAITALL) !=
