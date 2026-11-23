@@ -21,6 +21,12 @@ struct NativeUiCommandMessage {
     int value = 0;
     bool hasFlag = false;
     bool flag = false;
+    bool hasFrequencyHz = false;
+    float frequencyHz = 0.0f;
+    bool hasQ = false;
+    float q = 0.0f;
+    bool hasGainDb = false;
+    float gainDb = 0.0f;
 };
 
 class NativeUiCommandAdapter {
@@ -70,6 +76,18 @@ public:
             command.track = message.track;
             command.index = message.index;
             command.value = message.value;
+            return true;
+        }
+        if (message.type == "SetTrackEqBand") {
+            if (!message.hasTrack || !message.hasIndex || message.hasValue || message.hasFlag ||
+                !message.hasFrequencyHz || !message.hasQ || !message.hasGainDb ||
+                message.track >= AudioEngine::kTrackCount ||
+                message.index >= SixBandEq::kBandCount)
+                return false;
+            command.type = MixerUiCommandType::SetTrackEqBand;
+            command.track = message.track;
+            command.index = message.index;
+            command.eqBand = {message.frequencyHz, message.q, message.gainDb};
             return true;
         }
         if (message.type == "SetTrackMute" || message.type == "SetTrackSolo") {
