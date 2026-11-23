@@ -64,6 +64,12 @@ int main() {
     assert(handler.markSnapshotDelivered(epoch, 1, firstSnapshotSequence,
                                          session, delivery));
     assert(!delivery.hasPendingDelivery());
+    result = handler.handle(
+        std::string(R"({"version":1,"kind":"snapshot_request","epoch":)") +
+            std::to_string(epoch) + R"(,"request":1})",
+        session, response);
+    assert(result.status == NativeUiProtocolV1ClientMessageStatus::InvalidMessage);
+    assert(handler.lastSnapshotRequest() == 1);
 
     result = handler.handle(
         std::string(R"({"version":1,"kind":"snapshot_request","epoch":)") +
