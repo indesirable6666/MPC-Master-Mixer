@@ -44,9 +44,10 @@ public:
         const NativeUiCommandMessage& message,
         MixerUiCommand& command) noexcept {
         command.sequence = message.sequence;
+        const bool hasEqFields = message.hasFrequencyHz || message.hasQ || message.hasGainDb;
 
         if (message.type == "SetTrackFader") {
-            if (!message.hasTrack || message.hasIndex || !message.hasValue || message.hasFlag ||
+            if (!message.hasTrack || message.hasIndex || !message.hasValue || message.hasFlag || hasEqFields ||
                 message.track >= AudioEngine::kTrackCount ||
                 message.value < 0 || message.value > MixerController::kFaderMaximum)
                 return false;
@@ -56,7 +57,7 @@ public:
             return true;
         }
         if (message.type == "SetTrackPan") {
-            if (!message.hasTrack || message.hasIndex || !message.hasValue || message.hasFlag ||
+            if (!message.hasTrack || message.hasIndex || !message.hasValue || message.hasFlag || hasEqFields ||
                 message.track >= AudioEngine::kTrackCount ||
                 message.value < MixerController::kPanMinimum ||
                 message.value > MixerController::kPanMaximum)
@@ -67,7 +68,7 @@ public:
             return true;
         }
         if (message.type == "SetTrackAuxSend") {
-            if (!message.hasTrack || !message.hasIndex || !message.hasValue || message.hasFlag ||
+            if (!message.hasTrack || !message.hasIndex || !message.hasValue || message.hasFlag || hasEqFields ||
                 message.track >= AudioEngine::kTrackCount ||
                 message.index >= AudioEngine::kAuxBusCount ||
                 message.value < 0 || message.value > MixerController::kAuxMaximum)
@@ -91,7 +92,7 @@ public:
             return true;
         }
         if (message.type == "SetTrackMute" || message.type == "SetTrackSolo") {
-            if (!message.hasTrack || message.hasIndex || message.hasValue || !message.hasFlag ||
+            if (!message.hasTrack || message.hasIndex || message.hasValue || !message.hasFlag || hasEqFields ||
                 message.track >= AudioEngine::kTrackCount)
                 return false;
             command.type = message.type == "SetTrackMute"
@@ -102,7 +103,7 @@ public:
             return true;
         }
         if (message.type == "SetMasterFader") {
-            if (message.hasTrack || message.hasIndex || !message.hasValue || message.hasFlag || message.value < 0 ||
+            if (message.hasTrack || message.hasIndex || !message.hasValue || message.hasFlag || hasEqFields || message.value < 0 ||
                 message.value > MixerController::kFaderMaximum)
                 return false;
             command.type = MixerUiCommandType::SetMasterFader;
@@ -110,7 +111,7 @@ public:
             return true;
         }
         if (message.type == "SetMasterMute") {
-            if (message.hasTrack || message.hasIndex || message.hasValue || !message.hasFlag)
+            if (message.hasTrack || message.hasIndex || message.hasValue || !message.hasFlag || hasEqFields)
                 return false;
             command.type = MixerUiCommandType::SetMasterMute;
             command.flag = message.flag;
