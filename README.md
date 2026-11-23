@@ -51,6 +51,7 @@ The benchmark is diagnostic for the build machine only; it is not an MPC perform
 - [Graphics probe status](docs/GRAPHICS_PROBE_STATUS.md)
 - [ARMv7 build notes](docs/ARMV7_BUILD.md)
 - [Audio metering pipeline](docs/AUDIO_METERING_PIPELINE.md)
+- [Host DSP benchmark and recorded CI baseline](docs/HOST_DSP_BENCHMARK.md)
 - [Duplex host and stereo Audio In pair contract](docs/AUDIO_DUPLEX_ENGINE_HOST.md)
 - [Buildroot SDK and ARMv7 constraints](docs/ARMV7_BUILD.md)
 - [Meter presentation adapter contract](docs/METER_SNAPSHOT_HOST_ADAPTER.md)
