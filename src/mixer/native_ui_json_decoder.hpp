@@ -92,6 +92,21 @@ private:
                 message_.value = static_cast<int>(value);
                 message_.hasValue = true;
                 break;
+            case Field::FrequencyHz:
+                message_.frequencyHz = static_cast<float>(value);
+                if (!std::isfinite(message_.frequencyHz)) return false;
+                message_.hasFrequencyHz = true;
+                break;
+            case Field::Q:
+                message_.q = static_cast<float>(value);
+                if (!std::isfinite(message_.q)) return false;
+                message_.hasQ = true;
+                break;
+            case Field::GainDb:
+                message_.gainDb = static_cast<float>(value);
+                if (!std::isfinite(message_.gainDb)) return false;
+                message_.hasGainDb = true;
+                break;
             default:
                 return false;
             }
@@ -129,6 +144,21 @@ private:
                     return false;
                 message_.value = static_cast<int>(value);
                 message_.hasValue = true;
+                break;
+            case Field::FrequencyHz:
+                message_.frequencyHz = static_cast<float>(value);
+                if (!std::isfinite(message_.frequencyHz)) return false;
+                message_.hasFrequencyHz = true;
+                break;
+            case Field::Q:
+                message_.q = static_cast<float>(value);
+                if (!std::isfinite(message_.q)) return false;
+                message_.hasQ = true;
+                break;
+            case Field::GainDb:
+                message_.gainDb = static_cast<float>(value);
+                if (!std::isfinite(message_.gainDb)) return false;
+                message_.hasGainDb = true;
                 break;
             default:
                 return false;
