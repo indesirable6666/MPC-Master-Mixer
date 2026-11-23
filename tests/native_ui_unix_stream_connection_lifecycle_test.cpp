@@ -31,6 +31,8 @@ int main() {
     ::close(firstPair[1]);
     const auto closed = writer.flush(first.get());
     assert(closed.status == NativeUiUnixStreamFrameWriter::Status::PeerClosed);
+    // The transport owner explicitly drops the old-epoch frame before reuse.
+    writer.cancelPending();
     first.reset();
     assert(!first.valid());
     assert(!writer.pending());
