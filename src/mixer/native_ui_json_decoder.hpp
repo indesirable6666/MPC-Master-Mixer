@@ -77,6 +77,13 @@ private:
                 message_.track = static_cast<std::size_t>(value);
                 message_.hasTrack = true;
                 break;
+            case Field::Index:
+                if (value < 0 || static_cast<std::uint64_t>(value) >
+                    static_cast<std::uint64_t>((std::numeric_limits<std::size_t>::max)()))
+                    return false;
+                message_.index = static_cast<std::size_t>(value);
+                message_.hasIndex = true;
+                break;
             case Field::Value:
                 if (value < (std::numeric_limits<int>::min)() ||
                     value > (std::numeric_limits<int>::max)())
@@ -107,6 +114,13 @@ private:
                     return false;
                 message_.track = static_cast<std::size_t>(value);
                 message_.hasTrack = true;
+                break;
+            case Field::Index:
+                if (value > static_cast<number_unsigned_t>(
+                        (std::numeric_limits<std::size_t>::max)()))
+                    return false;
+                message_.index = static_cast<std::size_t>(value);
+                message_.hasIndex = true;
                 break;
             case Field::Value:
                 if (value > static_cast<number_unsigned_t>(
@@ -156,6 +170,8 @@ private:
                 next = Field::Type; bit = 1u << 1;
             } else if (value == "track") {
                 next = Field::Track; bit = 1u << 2;
+            } else if (value == "index") {
+                next = Field::Index; bit = 1u << 5;
             } else if (value == "value") {
                 next = Field::Value; bit = 1u << 3;
             } else if (value == "flag") {
@@ -199,6 +215,7 @@ private:
             const bool trackFaderOrPan =
                 message_.type == "SetTrackFader" ||
                 message_.type == "SetTrackPan";
+            const bool trackAuxSend = message_.type == "SetTrackAuxSend";
             const bool trackMuteOrSolo =
                 message_.type == "SetTrackMute" ||
                 message_.type == "SetTrackSolo";
@@ -207,6 +224,9 @@ private:
 
             if (trackFaderOrPan) {
                 if (!message_.hasTrack || !message_.hasValue || message_.hasFlag)
+                    return false;
+            } else if (trackAuxSend) {
+                if (!message_.hasTrack || !message_.hasIndex || !message_.hasValue || message_.hasFlag)
                     return false;
             } else if (trackMuteOrSolo) {
                 if (!message_.hasTrack || message_.hasValue || !message_.hasFlag)
@@ -227,7 +247,7 @@ private:
 
     private:
         enum class Field : std::uint8_t {
-            None, Sequence, Type, Track, Value, Flag
+            None, Sequence, Type, Track, Index, Value, Flag
         };
 
         bool beginValue() const noexcept {
