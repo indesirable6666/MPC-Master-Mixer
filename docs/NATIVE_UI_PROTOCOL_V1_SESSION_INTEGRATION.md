@@ -58,3 +58,25 @@ This remains a host/ARM compile validation of transport-neutral components.
 It does not create or bind a Unix socket, launch a service, integrate the
 browser UI, touch MPC startup/services/audio configuration, or validate on
 physical MPC hardware. No native device operation is implied.
+
+
+## Protocol-aware disconnect owner
+
+`NativeUiUnixStreamProtocolOwner` is the control-thread teardown boundary for
+an already-adopted stream connection. Its `disconnect(epoch)` sequence is
+intentionally ordered:
+
+1. Reject a stale epoch or an already-disconnected connection without changing
+   the current session.
+2. Cancel the stream writer's queued frame bytes.
+3. Reset hello/snapshot request tracking and cancel any prepared snapshot.
+4. Cancel any staged audio ACK without consuming the session's applied-ticket
+   record.
+5. Invalidate the connection session, reset the receive pump, and release the
+   owned descriptor.
+
+This class does not create, bind, listen, accept, or connect sockets, and it
+does not own a polling loop or application event source. The application
+transport thread must supply an already-connected descriptor and drive receive,
+dispatch, send, and disconnect calls. The browser prototype and real MPC audio
+engine remain unconnected.
