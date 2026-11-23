@@ -215,7 +215,16 @@ int main() {
         }
         break;
     }
-    assert(drained > 0);
+    assert(drained == sizeof(drain));
+
+    // Refill half of the released space so the snapshot cannot fit in the
+    // remaining send window; this makes the subsequent flush genuinely
+    // partial rather than merely blocked before its first byte.
+    std::uint8_t reserve[2048]{};
+    const auto reserved = NativeUiUnixStreamIo::transmit(
+        connection.descriptor(), reserve, sizeof(reserve));
+    assert(reserved.status == NativeUiUnixStreamIo::Status::Progress);
+    assert(reserved.bytes == sizeof(reserve));
 
     const auto partialFlush = driver.flushOne();
     assert(partialFlush.status ==
