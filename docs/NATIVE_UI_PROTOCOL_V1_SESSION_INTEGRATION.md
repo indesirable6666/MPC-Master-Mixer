@@ -89,3 +89,35 @@ epoch entry before it can publish anything for the new connection. The test
 asserts that no stale ACK payload is produced and the obsolete ledger entry is
 drained. This preserves the distinction between cancelling a transport-stage
 copy and consuming an acknowledgement as delivered.
+
+
+## Explicit-step stream protocol driver
+
+`NativeUiUnixStreamProtocolDriver` composes the existing connection, ingress,
+command, snapshot, ACK, and teardown owners behind a caller-driven API. It
+provides separate steps rather than starting a thread or polling source:
+
+1. `receiveOne()` incrementally reads until one complete frame is available
+   or the nonblocking descriptor would block.
+2. `dispatchOne()` handles exactly that frame as a hello, snapshot request,
+   or command. It will not dispatch another frame while a response is staged
+   or the single-frame writer is occupied.
+3. `prepareNextResponse()` stages at most one deferred snapshot or applied
+   audio ACK when no response is already staged.
+4. `flushOne()` queues and advances the current response. Snapshot readiness
+   and ACK consumption are committed only after the writer reports `Sent`.
+5. `disconnect(epoch)` delegates ordered teardown to the protocol owner and
+   clears the driver's staged metadata only when that epoch is actually closed.
+
+The driver uses the existing caller-provided frame buffers and bounded
+single-frame writer. JSON work remains on the control/transport thread; the
+audio callback does not call the driver or serialize protocol messages. The
+embedding application remains responsible for descriptor creation, readiness
+notification, scheduling these steps, and choosing its error/reconnect policy.
+
+A socketpair host test, `native_ui_unix_stream_protocol_driver_test`, walks
+through hello, snapshot synchronization, command result, audio callback
+application, and delivered ACK using the driver's public steps. This is an
+explicit-step integration pilot only: it does not create a production socket,
+run an event loop, attach to MPC startup, or connect the prototype UI to the
+native engine.
