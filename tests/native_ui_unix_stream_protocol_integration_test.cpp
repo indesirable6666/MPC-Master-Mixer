@@ -2,6 +2,7 @@
 #include "native_ui_protocol_v1_snapshot_delivery.hpp"
 #include "native_ui_unix_stream_connection.hpp"
 #include "native_ui_frame_codec.hpp"
+#include "native_ui_protocol_v1_snapshot_decoder.hpp"
 
 #include "../../third_party/nlohmann/json.hpp"
 
@@ -17,7 +18,7 @@ using namespace mpcmixer;
 namespace {
 
 bool sendFrame(int descriptor, const std::string& payload) {
-    std::uint8_t frame[256]{};
+    std::uint8_t frame[NativeUiProtocolV1SnapshotSerializer::kMaximumPayloadBytes + NativeUiFrameCodec::kHeaderBytes]{};
     if (payload.empty() || payload.size() > sizeof(frame) -
             NativeUiFrameCodec::kHeaderBytes)
         return false;
@@ -38,7 +39,7 @@ std::string receiveFrame(int descriptor) {
         static_cast<ssize_t>(sizeof(header)))
         return {};
     const std::uint32_t length = NativeUiFrameCodec::decodeLength(header);
-    if (length == 0 || length > 256)
+    if (length == 0 || length > NativeUiProtocolV1SnapshotSerializer::kMaximumPayloadBytes)
         return {};
     std::string payload(length, '\0');
     if (::recv(descriptor, &payload[0], length, MSG_WAITALL) !=
@@ -50,16 +51,23 @@ std::string receiveFrame(int descriptor) {
 } // namespace
 
 int main() {
-    std::uint8_t txStorage[512]{};
-    NativeUiUnixStreamFrameWriter writer(txStorage, sizeof(txStorage), 256);
-    std::uint8_t rxPayload[256]{};
-    std::uint8_t rxScratch[32]{};
+    std::uint8_t txStorage[NativeUiProtocolV1SnapshotSerializer::kMaximumPayloadBytes +
+                          NativeUiFrameCodec::kHeaderBytes]{};
+    NativeUiUnixStreamFrameWriter writer(
+        txStorage, sizeof(txStorage),
+        NativeUiProtocolV1SnapshotSerializer::kMaximumPayloadBytes);
+    std::uint8_t rxPayload[NativeUiProtocolV1SnapshotSerializer::kMaximumPayloadBytes]{};
+    std::uint8_t rxScratch[4096]{};
     NativeUiUnixStreamFrameReaderPump reader(
-        rxPayload, sizeof(rxPayload), sizeof(rxPayload),
+        rxPayload, sizeof(rxPayload),
+        NativeUiProtocolV1SnapshotSerializer::kMaximumPayloadBytes,
         rxScratch, sizeof(rxScratch));
     NativeUiUnixStreamConnection connection(writer, reader);
     NativeUiProtocolV1ClientMessageHandler ingress;
     NativeUiProtocolV1SnapshotDelivery delivery;
+    AudioEngineCommandBridge bridge;
+    MixerController controller(bridge);
+    MixerPresentationPublisher publisher(controller);
 
     int pair[2] = {-1, -1};
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, pair) == 0);
@@ -145,11 +153,63 @@ int main() {
            NativeUiProtocolV1ClientMessageStatus::SnapshotRequested);
     assert(ingress.lastSnapshotRequest() == 1);
 
-    // Reset also clears a request accepted but not yet prepared, so the next
-    // transport epoch starts with a clean request watermark.
+    // Complete snapshot path: receive request, prepare from the publisher,
+    // queue and fully write the frame, decode it at the peer, then commit
+    // readiness only after the transport reports Sent.
+    reader.acknowledgeFrame();
+    assert(ingress.prepareSnapshot(nextEpoch, currentRequest.request,
+                                   publisher, connection.session(), delivery,
+                                   response));
+    const std::uint64_t snapshotSequence = delivery.pendingSequence();
+    assert(snapshotSequence != 0);
+    assert(delivery.hasPendingDelivery());
+    assert(!connection.session().isReady(nextEpoch));
+    assert(writer.queue(response.data(), response.size()).status ==
+           NativeUiUnixStreamFrameWriter::Status::Queued);
+    const auto snapshotWrite = writer.flush(connection.descriptor());
+    assert(snapshotWrite.status == NativeUiUnixStreamFrameWriter::Status::Sent);
+    assert(!writer.pending());
+
+    const std::string snapshotPayload = receiveFrame(reconnect[1]);
+    assert(!snapshotPayload.empty());
+    const auto snapshotJson = nlohmann::json::parse(snapshotPayload);
+    assert(snapshotJson["kind"] == "snapshot");
+    assert(snapshotJson["version"] == 1);
+    assert(snapshotJson["epoch"] == nextEpoch);
+    assert(snapshotJson["request"] == 1);
+    assert(snapshotJson["sequence"] == snapshotSequence);
+    assert(snapshotJson["state"].is_object());
+    assert(snapshotJson["state"]["tracks"].is_array());
+    assert(snapshotJson["state"]["tracks"].size() == MixerPresentationSnapshot::kTrackCount);
+    assert(ingress.markSnapshotDelivered(nextEpoch, currentRequest.request,
+                                         snapshotSequence,
+                                         connection.session(), delivery));
+    assert(!delivery.hasPendingDelivery());
+    assert(connection.session().isReady(nextEpoch));
+
+    // A prepared but unsent snapshot is cancelled with its connection and
+    // must never make the session ready.
+    const std::string secondSnapshotRequest =
+        std::string(R"({"version":1,"kind":"snapshot_request","epoch":)") +
+        std::to_string(nextEpoch) + R"(,"request":2})";
+    const auto secondRequest =
+        ingress.handle(secondSnapshotRequest, connection.session(), response);
+    assert(secondRequest.status ==
+           NativeUiProtocolV1ClientMessageStatus::SnapshotRequested);
+    assert(ingress.prepareSnapshot(nextEpoch, secondRequest.request,
+                                   publisher, connection.session(), delivery,
+                                   response));
+    assert(delivery.hasPendingDelivery());
+    assert(writer.queue(response.data(), response.size()).status ==
+           NativeUiUnixStreamFrameWriter::Status::Queued);
+
+    // Reset protocol state and invalidate transport: queued bytes are dropped,
+    // pending delivery is cancelled, and the session is closed.
     assert(ingress.resetConnectionState(nextEpoch, delivery));
-    assert(ingress.lastSnapshotRequest() == 0);
+    assert(!delivery.hasPendingDelivery());
     assert(connection.invalidate(nextEpoch));
+    assert(!writer.pending());
+    assert(connection.session().activeEpoch() == 0);
     ::close(reconnect[1]);
     return 0;
 }
