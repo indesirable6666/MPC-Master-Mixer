@@ -45,6 +45,7 @@ int main() {
     assert(result.commandResult.accepted());
     assert(result.commandResult.sequence == 1);
     assert(result.commandResult.audioTicket != 0);
+    const std::uint32_t acceptedAudioTicket = result.commandResult.audioTicket;
     const auto json = nlohmann::json::parse(response);
     assert(json["kind"] == "command_result");
     assert(json["epoch"] == epoch);
@@ -89,7 +90,7 @@ int main() {
     assert(ackJson["kind"] == "audio_ack");
     assert(ackJson["epoch"] == epoch);
     assert(ackJson["sequence"] == 1);
-    assert(ackJson["audio_ticket"] == result.commandResult.audioTicket);
+    assert(ackJson["audio_ticket"] == acceptedAudioTicket);
     assert(ackJson["status"] == "applied");
     assert(!ackPublisher.publishNext(controller, session, ackPayload));
 
