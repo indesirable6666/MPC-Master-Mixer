@@ -50,8 +50,10 @@ to a DOM and inspecting the resulting object:
 1. Enforce the transport frame-size limit before parsing.
 2. Accept exactly one top-level object and scalar values only; reject nested
    objects and arrays.
-3. Track the six permitted keys in a fixed enum/bit mask. Reject a repeated
-   key as soon as its SAX `key` event arrives; reject every unknown key.
+3. Track the nine permitted keys in a fixed enum/bit mask: `sequence`, `type`,
+   `track`, `index`, `value`, `flag`, `frequencyHz`, `q`, and `gainDb`.
+   Reject a repeated key as soon as its SAX `key` event arrives; reject every
+   unknown key.
 4. Accept `sequence` only from the unsigned-integer SAX event and require
    1..UINT64_MAX. This deliberately rejects negative, floating-point, and
    exponent-form numbers.
@@ -61,10 +63,13 @@ to a DOM and inspecting the resulting object:
    fits `int`; reject floating-point events, including exponent notation.
 7. Accept `flag` only from the boolean event and `type` only from the
    string event.
-8. After parsing, require the exact command-specific field set documented in
+8. Accept `frequencyHz`, `q`, and `gainDb` only as finite floating-point or
+   integer JSON numbers that remain representable as `float`; reject them on
+   commands other than `SetTrackEqBand`.
+9. After parsing, require the exact command-specific field set documented in
    `NATIVE_UI_ADAPTER_CONTRACT.md`, then construct
    `NativeUiCommandMessage`. Do not dispatch from inside the SAX handler.
-9. Keep all parsing and allocation on the serialized control thread.
+10. Keep all parsing and allocation on the serialized control thread.
 
 The decoder must report a decode error separately from dispatcher statuses.
 The existing typed adapter remains the second validation boundary.
