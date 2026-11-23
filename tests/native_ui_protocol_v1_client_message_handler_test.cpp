@@ -59,6 +59,12 @@ int main() {
     assert(handler.prepareSnapshot(epoch, 1, publisher, session, delivery,
                                    snapshotWire));
     const std::uint64_t firstSnapshotSequence = delivery.pendingSequence();
+    // Failed transport confirmations must not release the accepted request.
+    assert(!handler.markSnapshotDelivered(epoch, 2, firstSnapshotSequence,
+                                          session, delivery));
+    assert(!handler.markSnapshotDelivered(epoch, 1, firstSnapshotSequence + 1,
+                                          session, delivery));
+    assert(delivery.hasPendingDelivery());
     assert(!handler.prepareSnapshot(epoch, 1, publisher, session, delivery,
                                     snapshotWire));
     assert(handler.markSnapshotDelivered(epoch, 1, firstSnapshotSequence,
