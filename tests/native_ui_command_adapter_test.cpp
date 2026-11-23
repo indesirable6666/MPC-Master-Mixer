@@ -44,6 +44,8 @@ int main() {
 
     message.sequence = 6;
     message.type = "SetMasterMute";
+    message.hasTrack = false;
+    message.hasIndex = false;
     message.hasValue = false;
     message.flag = true;
     assert(mpcmixer::NativeUiCommandAdapter::dispatch(message, dispatcher).accepted());
