@@ -80,3 +80,17 @@ a deployable application and its output cannot be treated as an MPC benchmark.
 A representative target measurement still requires a verified target build
 and an approved way to execute the benchmark on the actual ARMv7 device.
 No hardware run, audio-device access, or MPC filesystem change was performed.
+
+### ARMv7 artifact build details
+
+The ARMv7 workflow compiles the benchmark with its shared `COMMON_FLAGS`:
+`-O2 -Wall -Wextra -Werror -march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard`,
+plus `-std=c++14`. This differs from the host timing baseline's
+`-O3 -DNDEBUG`; the ARMv7 artifact is intended for a later controlled target
+run, not for a direct performance comparison with the host measurements.
+
+The artifact inventory for run #45184541591 reports the benchmark binary at
+8,061 bytes, not expired when checked on 2026-11-23, with a scheduled artifact
+expiry of 2027-02-21. Artifact availability is temporary; retain a local copy
+if it is needed for a future approved test. Its size and successful upload do
+not establish that it will execute against the MPC runtime libraries.
