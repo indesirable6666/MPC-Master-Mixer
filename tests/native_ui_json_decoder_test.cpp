@@ -24,6 +24,14 @@ int main() {
     assert(message.value == -100);
 
     assert(NativeUiJsonDecoder::decode(
+        R"({"sequence":7,"type":"SetTrackAuxSend","track":15,"index":3,"value":100})",
+        message) == NativeUiJsonDecodeStatus::Ok);
+    assert(message.hasTrack && message.track == 15);
+    assert(message.hasIndex && message.index == 3);
+    assert(message.hasValue && message.value == 100);
+    assert(!message.hasFlag);
+
+    assert(NativeUiJsonDecoder::decode(
         R"({"sequence":3,"type":"SetTrackMute","track":4,"flag":false})",
         message) == NativeUiJsonDecodeStatus::Ok);
     assert(message.hasFlag && !message.flag);
@@ -88,6 +96,11 @@ int main() {
     reject(R"({"sequence":1,"type":"SetMasterFader","value":2147483648})");
     reject(R"({"sequence":1,"type":"SetTrackFader","value":10})");
     reject(R"({"sequence":1,"type":"SetTrackFader","track":0,"value":10,"flag":false})");
+    reject(R"({"sequence":1,"type":"SetTrackFader","track":0,"index":0,"value":10})");
+    reject(R"({"sequence":1,"type":"SetTrackAuxSend","track":0,"value":10})");
+    reject(R"({"sequence":1,"type":"SetTrackAuxSend","track":0,"index":0,"value":10,"flag":false})");
+    reject(R"({"sequence":1,"type":"SetTrackAuxSend","track":0,"index":0.0,"value":10})");
+    reject(R"({"sequence":1,"type":"SetTrackAuxSend","track":0,"index":18446744073709551616,"value":10})");
     reject(R"({"sequence":1,"type":"SetTrackMute","track":0,"value":1,"flag":true})");
     reject(R"({"sequence":1,"type":"SetTrackMute","track":-1,"flag":true})");
     reject(R"({"sequence":1,"type":"SetTrackMute","track":0.0,"flag":true})");
