@@ -21,11 +21,17 @@ snapshot, dispatch mixer commands, or access the audio callback.
 - A snapshot request must name the active epoch and pass the strict increasing
   request-ID tracker. Gaps are allowed; zero, duplicates, decreasing IDs, and
   stale epochs are rejected.
-- An accepted snapshot request returns its epoch and request ID to the caller.
-  The transport/control loop remains responsible for obtaining a fresh
-  `MixerPresentationSnapshot`, serializing it, queueing it, and marking the
-  snapshot delivered to the session gate only after the complete frame has
-  actually been sent.
+- Only one snapshot request may be in flight. A later request receives Busy
+  until the accepted request has been prepared and its complete frame has been
+  delivered. Busy does not consume the later request ID.
+- `prepareSnapshot(epoch, request, publisher, session, delivery, output)`
+  prepares only the exact accepted request. A successful prepare reserves that
+  request until `markSnapshotDelivered` confirms the full frame was sent.
+  Failed preparation leaves the accepted request retryable.
+- `markSnapshotDelivered` validates epoch and request identity and delegates
+  delivery confirmation to `NativeUiProtocolV1SnapshotDelivery`; only then
+  can another request be accepted. This prevents accepted request IDs from
+  silently accumulating while the single-slot delivery object is occupied.
 - `invalidate(epoch, session)` closes the exact active session and resets
   request tracking, but leaves snapshot-delivery cleanup to its owner.
 - Prefer `invalidate(epoch, session, delivery)` when the connection owns a
@@ -43,6 +49,6 @@ delivered merely because serialization succeeded; delivery is a transport
 event.
 
 The host test covers hello issuance, overlapping hello rejection, stale epoch,
-snapshot request acceptance, duplicate rejection, request gaps, disconnect,
+snapshot request backpressure, exact prepare/deliver matching, request gaps, disconnect,
 and malformed JSON. The same test is compiled by the ARMv7 cross-toolchain
 workflow; this is not an on-device execution test.
