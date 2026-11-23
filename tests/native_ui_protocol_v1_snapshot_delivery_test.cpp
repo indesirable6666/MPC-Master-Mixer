@@ -60,8 +60,22 @@ int main() {
     assert(delivery.markDelivered(epoch, secondSequence, session));
     assert(session.isReady(epoch));
 
-    // Disconnect invalidates the epoch; old delivery confirmations are stale.
+    // Disconnect while another snapshot is queued. Its pending delivery must
+    // be explicitly cancelled before a new connection can prepare a snapshot.
+    assert(delivery.prepare(epoch, 3, publisher, session, wire));
+    const std::uint64_t abandonedSequence = delivery.pendingSequence();
     assert(session.invalidate(epoch));
-    assert(!delivery.markDelivered(epoch, secondSequence, session));
+    assert(!delivery.markDelivered(epoch, abandonedSequence, session));
+
+    std::uint64_t nextEpoch = 0;
+    assert(session.beginConnection(nextEpoch));
+    assert(nextEpoch != epoch);
+    assert(!delivery.prepare(nextEpoch, 1, publisher, session, wire));
+    assert(!delivery.cancelPending(nextEpoch));
+    assert(delivery.cancelPending(epoch));
+    assert(!delivery.hasPendingDelivery());
+    assert(delivery.prepare(nextEpoch, 1, publisher, session, wire));
+    assert(delivery.pendingEpoch() == nextEpoch);
+    assert(delivery.cancelPending(nextEpoch));
     return 0;
 }
