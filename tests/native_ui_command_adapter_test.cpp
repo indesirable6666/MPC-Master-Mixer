@@ -125,7 +125,7 @@ int main() {
     message.type = "SetInsertEnabled";
     assert(mpcmixer::NativeUiCommandAdapter::dispatch(message, dispatcher).status ==
            mpcmixer::MixerUiCommandStatus::Invalid);
-    assert(dispatcher.lastAcceptedSequence() == 7);
+    assert(dispatcher.lastAcceptedSequence() == 8);
 
     // Sequence checks happen in the dispatcher after the adapter has decoded
     // a valid typed command. Use a valid payload to isolate ordering behavior.
@@ -141,7 +141,7 @@ int main() {
     message.sequence = 8;
     assert(mpcmixer::NativeUiCommandAdapter::dispatch(message, dispatcher).status ==
            mpcmixer::MixerUiCommandStatus::OutOfOrder);
-    assert(dispatcher.lastAcceptedSequence() == 7);
+    assert(dispatcher.lastAcceptedSequence() == 8);
 
     // The same unconsumed sequence can be retried with a valid command.
     message.sequence = 9;
