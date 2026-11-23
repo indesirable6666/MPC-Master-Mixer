@@ -47,6 +47,7 @@ int main() {
     message.hasTrack = false;
     message.hasIndex = false;
     message.hasValue = false;
+    message.hasFlag = true;
     message.flag = true;
     assert(mpcmixer::NativeUiCommandAdapter::dispatch(message, dispatcher).accepted());
 
