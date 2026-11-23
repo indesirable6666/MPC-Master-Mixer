@@ -35,6 +35,7 @@ on:
       - "tests/native_ui_frame_codec_test.cpp"
       - "tests/native_ui_unix_stream_io_test.cpp"
       - "tests/native_ui_unix_stream_frame_channel_test.cpp"
+      - "tests/native_ui_unix_stream_connection_lifecycle_test.cpp"
       - "tests/native_ui_unix_stream_protocol_integration_test.cpp"
       - "tests/native_ui_unix_stream_protocol_driver_test.cpp"
       - "tests/native_ui_unix_socket_descriptor_test.cpp"
@@ -239,7 +240,11 @@ jobs:
 
           arm-linux-gnueabihf-g++ $COMMON_FLAGS -std=c++14 -Isrc/mixer \
             tests/native_ui_unix_stream_frame_channel_test.cpp \
-            -o build/mpc-native-ui-unix-stream-frame-channel-test-armv7
+            -o build/mpc-native-ui-unix-stream-frame-channel-test-armv7 build/mpc-native-ui-unix-stream-connection-lifecycle-test-armv7
+
+          arm-linux-gnueabihf-g++ $COMMON_FLAGS -std=c++14 -Isrc/mixer \
+            tests/native_ui_unix_stream_connection_lifecycle_test.cpp \
+            -o build/mpc-native-ui-unix-stream-connection-lifecycle-test-armv7
 
           arm-linux-gnueabihf-g++ $COMMON_FLAGS -std=c++14 -Isrc/mixer \
             tests/native_ui_unix_stream_protocol_driver_test.cpp \
@@ -546,6 +551,13 @@ jobs:
         with:
           name: mpc-native-ui-unix-stream-frame-channel-test-armv7
           path: build/mpc-native-ui-unix-stream-frame-channel-test-armv7
+          if-no-files-found: error
+
+      - name: Upload ARMv7 native UI Unix stream connection lifecycle test binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: mpc-native-ui-unix-stream-connection-lifecycle-test-armv7
+          path: build/mpc-native-ui-unix-stream-connection-lifecycle-test-armv7
           if-no-files-found: error
 
 
