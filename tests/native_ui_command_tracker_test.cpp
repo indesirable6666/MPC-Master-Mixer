@@ -37,9 +37,20 @@ int main() {
     float right[1]{};
     bridge.process(inputs, left, right, 1);
 
+    mpcmixer::NativeUiAudioAck inspected;
+    assert(tracker.peekApplied(controller, inspected));
+    assert(inspected.sequence == 1 && inspected.audioTicket == first.audioTicket &&
+           inspected.connectionEpoch == 7);
+    assert(tracker.pendingCount() == 2);
+    auto mismatched = inspected;
+    ++mismatched.sequence;
+    assert(!tracker.consumeApplied(mismatched));
+    assert(tracker.pendingCount() == 2);
+    assert(tracker.consumeApplied(inspected));
+    assert(tracker.pendingCount() == 1);
     assert(tracker.popApplied(controller, ack));
-    assert(ack.sequence == 1 && ack.audioTicket == first.audioTicket && ack.connectionEpoch == 7);
-    assert(tracker.popApplied(controller, ack));
+    assert(ack.sequence == 2 && ack.audioTicket == second.audioTicket && ack.connectionEpoch == 7);
+    assert(!tracker.popApplied(controller, ack));
     assert(ack.sequence == 2 && ack.audioTicket == second.audioTicket && ack.connectionEpoch == 7);
     assert(!tracker.popApplied(controller, ack));
     assert(tracker.pendingCount() == 0);
