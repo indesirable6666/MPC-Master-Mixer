@@ -240,7 +240,7 @@ jobs:
 
           arm-linux-gnueabihf-g++ $COMMON_FLAGS -std=c++14 -Isrc/mixer \
             tests/native_ui_unix_stream_frame_channel_test.cpp \
-            -o build/mpc-native-ui-unix-stream-frame-channel-test-armv7 build/mpc-native-ui-unix-stream-connection-lifecycle-test-armv7
+            -o build/mpc-native-ui-unix-stream-frame-channel-test-armv7
 
           arm-linux-gnueabihf-g++ $COMMON_FLAGS -std=c++14 -Isrc/mixer \
             tests/native_ui_unix_stream_connection_lifecycle_test.cpp \
