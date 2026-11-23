@@ -281,25 +281,26 @@ private:
                 message_.type == "SetTrackSolo";
             const bool masterFader = message_.type == "SetMasterFader";
             const bool masterMute = message_.type == "SetMasterMute";
+            const bool hasEqFields = message_.hasFrequencyHz || message_.hasQ || message_.hasGainDb;
 
             if (trackFaderOrPan) {
-                if (!message_.hasTrack || !message_.hasValue || message_.hasFlag || message_.hasIndex)
+                if (!message_.hasTrack || !message_.hasValue || message_.hasFlag || message_.hasIndex || hasEqFields)
                     return false;
             } else if (trackAuxSend) {
-                if (!message_.hasTrack || !message_.hasIndex || !message_.hasValue || message_.hasFlag)
+                if (!message_.hasTrack || !message_.hasIndex || !message_.hasValue || message_.hasFlag || hasEqFields)
                     return false;
             } else if (trackEqBand) {
                 if (!message_.hasTrack || !message_.hasIndex || message_.hasValue || message_.hasFlag ||
                     !message_.hasFrequencyHz || !message_.hasQ || !message_.hasGainDb)
                     return false;
             } else if (trackMuteOrSolo) {
-                if (!message_.hasTrack || message_.hasValue || message_.hasIndex || !message_.hasFlag)
+                if (!message_.hasTrack || message_.hasValue || message_.hasIndex || !message_.hasFlag || hasEqFields)
                     return false;
             } else if (masterFader) {
-                if (message_.hasTrack || message_.hasIndex || !message_.hasValue || message_.hasFlag)
+                if (message_.hasTrack || message_.hasIndex || !message_.hasValue || message_.hasFlag || hasEqFields)
                     return false;
             } else if (masterMute) {
-                if (message_.hasTrack || message_.hasIndex || message_.hasValue || !message_.hasFlag)
+                if (message_.hasTrack || message_.hasIndex || message_.hasValue || !message_.hasFlag || hasEqFields)
                     return false;
             } else {
                 return false;
