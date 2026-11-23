@@ -91,7 +91,14 @@ int main() {
     assert(!acknowledgements.publishNext(controller, session, outbound));
     assert(outbound == "keep");
     bridge.process(inputs, left, right, 1);
+    NativeUiAudioAck inspectedAck;
+    const std::size_t pendingBeforePublish = session.pendingAcknowledgements();
+    assert(session.peekApplied(controller, inspectedAck));
+    assert(inspectedAck.connectionEpoch == epoch);
+    assert(inspectedAck.sequence == 1);
+    assert(session.pendingAcknowledgements() == pendingBeforePublish);
     assert(acknowledgements.publishNext(controller, session, outbound));
+    assert(session.pendingAcknowledgements() + 1 == pendingBeforePublish);
     const auto applied = nlohmann::json::parse(outbound);
     assert(applied["kind"] == "audio_ack");
     assert(applied["epoch"] == epoch);
