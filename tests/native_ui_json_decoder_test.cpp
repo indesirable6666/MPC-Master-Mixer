@@ -110,7 +110,7 @@ int main() {
     reject(R"({"sequence":1,"type":"SetTrackAuxSend","track":0,"index":0,"value":10,"flag":false})");
     reject(R"({"sequence":1,"type":"SetTrackAuxSend","track":0,"index":0.0,"value":10})");
     reject(R"({"sequence":1,"type":"SetTrackAuxSend","track":0,"index":18446744073709551616,"value":10})");
-    reject(R"({"sequence":1,"type":"SetTrackEqBand","track":0,"index":0,"frequencyHz":1000,"q":1.0,"gainDb":0})");
+    reject(R"({"sequence":1,"type":"SetTrackEqBand","track":0,"index":0.0,"frequencyHz":1000,"q":1.0,"gainDb":0})");
     reject(R"({"sequence":1,"type":"SetTrackEqBand","track":0,"index":0,"frequencyHz":1000,"q":1.0})");
     reject(R"({"sequence":1,"type":"SetTrackEqBand","track":0,"index":0,"frequencyHz":1000,"q":1.0,"gainDb":0,"value":1})");
     reject(R"({"sequence":1,"type":"SetTrackEqBand","track":0,"index":0,"frequencyHz":"1000","q":1.0,"gainDb":0})");
