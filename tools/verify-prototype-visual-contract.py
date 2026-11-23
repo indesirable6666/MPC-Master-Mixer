@@ -23,7 +23,7 @@ checks = {
     "four independent Aux controls": r"\.aux\{display:grid;grid-template-columns:repeat\(4,1fr\)",
     "green vertical volume fader": r"\.fader\{appearance:none;-webkit-appearance:none;flex:none;height:100%",
     "fixed Master dock at right": r"\.master-dock\{width:194px;min-width:194px",
-    "Master stays outside scrolling channel viewport": r'<div class="scroll-area"[^>]*>.*?</div>\\s*</div>\\s*<aside class="master-dock"',
+    "Master stays outside scrolling channel viewport": r'<div class="scroll-area"[^>]*>.*?</div>\s*</div>\s*<aside class="master-dock"',
     "Peak/RMS/Clip meter presentation": r'data-meter="peak".*?data-meter="rms".*?data-clip',
     "approved mixer view tabs": r'>MIXER</button>.*?>EQ</button>.*?>AUX</button>.*?>VU MÈTRE</button>',
 }
