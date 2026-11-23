@@ -186,7 +186,7 @@ private:
                 return false;
 
             Field next = Field::None;
-            std::uint8_t bit = 0;
+            std::uint16_t bit = 0;
             if (value == "sequence") {
                 next = Field::Sequence; bit = 1u << 0;
             } else if (value == "type") {
@@ -211,7 +211,7 @@ private:
 
             if ((seenFields_ & bit) != 0)
                 return false;
-            seenFields_ = static_cast<std::uint8_t>(seenFields_ | bit);
+            seenFields_ = static_cast<std::uint16_t>(seenFields_ | bit);
             field_ = next;
             return true;
         }
@@ -295,7 +295,7 @@ private:
 
         NativeUiCommandMessage message_;
         Field field_ = Field::None;
-        std::uint8_t seenFields_ = 0;
+        std::uint16_t seenFields_ = 0;
         std::size_t depth_ = 0;
         bool rootStarted_ = false;
         bool rootEnded_ = false;
