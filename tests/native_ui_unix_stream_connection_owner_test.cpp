@@ -38,6 +38,13 @@ int main() {
     ::close(rejectedPair[0]);
     ::close(rejectedPair[1]);
 
+    // Leave an incomplete frame header buffered by the receive pump.
+    const std::uint8_t partialHeader[2] = {0, 0};
+    assert(::send(firstPair[1], partialHeader, sizeof(partialHeader), 0) ==
+           static_cast<ssize_t>(sizeof(partialHeader)));
+    assert(reader.receiveNext(connection.descriptor()) ==
+           NativeUiFrameCodec::Status::NeedMore);
+
     assert(writer.queue("old", 4).status ==
            NativeUiUnixStreamFrameWriter::Status::Queued);
     assert(!connection.invalidate(firstEpoch + 1));
