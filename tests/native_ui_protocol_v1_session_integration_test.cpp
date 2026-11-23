@@ -99,8 +99,20 @@ int main() {
     assert(applied["audio_ticket"] == commandResult.commandResult.audioTicket);
     assert(applied["status"] == "applied");
 
-    // Disconnect invalidates the session and its request sequence together.
-    assert(ingress.invalidate(epoch, session));
+    // A prepared but unsent snapshot belongs to the connection too.
+    const std::string requestThree =
+        std::string(R"({"version":1,"kind":"snapshot_request","epoch":)") +
+        std::to_string(epoch) + R"(,"request":3})";
+    message = ingress.handle(requestThree, session, outbound);
+    assert(message.status == NativeUiProtocolV1ClientMessageStatus::SnapshotRequested);
+    assert(delivery.prepare(epoch, message.request, publisher, session, outbound));
+    assert(delivery.hasPendingDelivery());
+
+    // Disconnect invalidates the session, request tracker, and pending
+    // snapshot together. The transport owner discards its queued old-epoch
+    // frame before invoking this overload.
+    assert(ingress.invalidate(epoch, session, delivery));
+    assert(!delivery.hasPendingDelivery());
     assert(!session.isReady(epoch));
     assert(session.activeEpoch() == 0);
     return 0;
