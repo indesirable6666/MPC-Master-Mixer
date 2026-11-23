@@ -29,8 +29,10 @@ int main() {
     assert(writer.queue("old", 4).status ==
            NativeUiUnixStreamFrameWriter::Status::Queued);
     ::close(firstPair[1]);
-    const auto closed = writer.flush(first.get());
-    assert(closed.status == NativeUiUnixStreamFrameWriter::Status::PeerClosed);
+    std::uint8_t closeProbe = 0;
+    const auto closed = NativeUiUnixStreamIo::receive(
+        first.get(), &closeProbe, sizeof(closeProbe));
+    assert(closed.status == NativeUiUnixStreamIo::Status::PeerClosed);
     // The transport owner explicitly drops the old-epoch frame before reuse.
     writer.cancelPending();
     first.reset();
