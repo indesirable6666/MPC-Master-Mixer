@@ -367,6 +367,17 @@ jobs:
           arm-linux-gnueabihf-readelf -d build/mpc-arm-egl-offscreen-pbuffer-probe | grep -E 'NEEDED|RPATH|RUNPATH' || true
           arm-linux-gnueabihf-readelf --version-info build/mpc-arm-egl-offscreen-pbuffer-probe
 
+          echo "=== Aux send/return DSP test ELF compatibility audit ==="
+          file build/mpc-audio-aux-send-return-test-armv7
+          arm-linux-gnueabihf-readelf -h build/mpc-audio-aux-send-return-test-armv7
+          arm-linux-gnueabihf-readelf -A build/mpc-audio-aux-send-return-test-armv7
+          echo "--- Dynamic interpreter ---"
+          arm-linux-gnueabihf-readelf -l build/mpc-audio-aux-send-return-test-armv7 | grep -E 'INTERP|Requesting program interpreter' || true
+          echo "--- Dynamic dependencies and search paths ---"
+          arm-linux-gnueabihf-readelf -d build/mpc-audio-aux-send-return-test-armv7 | grep -E 'NEEDED|RPATH|RUNPATH' || true
+          echo "--- Required symbol versions ---"
+          arm-linux-gnueabihf-readelf --version-info build/mpc-audio-aux-send-return-test-armv7
+
           echo "=== Cross-toolchain runtime library locations ==="
           arm-linux-gnueabihf-g++ -print-file-name=libstdc++.so.6
           arm-linux-gnueabihf-g++ -print-file-name=libgcc_s.so.1
