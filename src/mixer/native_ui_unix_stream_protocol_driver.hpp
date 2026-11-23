@@ -89,7 +89,7 @@ public:
             ingress_.handle(payload, connection_.session(), response);
         if (handled.status ==
             NativeUiProtocolV1ClientMessageStatus::HelloAccepted) {
-            stage(response, ResponseKind::Ordinary, 0, 0);
+            stage(response, ResponseKind::Ordinary, 0, 0, 0);
             return {Status::ResponsePrepared, 0};
         }
         if (handled.status ==
@@ -127,7 +127,8 @@ public:
                     connection_.session(), snapshots_, candidate))
                 return {Status::Busy, 0};
             stage(candidate, ResponseKind::Snapshot,
-                  snapshotEpoch_, snapshots_.pendingSequence());
+                  snapshotEpoch_, snapshotRequest_,
+                  snapshots_.pendingSequence());
             snapshotEpoch_ = 0;
             snapshotRequest_ = 0;
             return {Status::ResponsePrepared, 0};
@@ -137,7 +138,7 @@ public:
         if (!acknowledgements_.publishNext(
                 controller_, connection_.session(), candidate))
             return {Status::Idle, 0};
-        stage(candidate, ResponseKind::AudioAck, 0, 0);
+        stage(candidate, ResponseKind::AudioAck, 0, 0, 0);
         return {Status::ResponsePrepared, 0};
     }
 
@@ -171,7 +172,7 @@ public:
         bool committed = true;
         if (responseKind_ == ResponseKind::Snapshot) {
             committed = ingress_.markSnapshotDelivered(
-                responseEpoch_, responseSequence_, responseSequence_,
+                responseEpoch_, responseRequest_, responseSequence_,
                 connection_.session(), snapshots_);
         } else if (responseKind_ == ResponseKind::AudioAck) {
             committed = acknowledgements_.markDelivered(connection_.session());
@@ -197,10 +198,12 @@ private:
     enum class ResponseKind : std::uint8_t { Ordinary, Snapshot, AudioAck };
 
     void stage(const std::string& response, ResponseKind kind,
-               std::uint64_t epoch, std::uint64_t sequence) {
+               std::uint64_t epoch, std::uint64_t request,
+               std::uint64_t sequence) {
         response_ = response;
         responseKind_ = kind;
         responseEpoch_ = epoch;
+        responseRequest_ = request;
         responseSequence_ = sequence;
         responseStaged_ = true;
     }
@@ -209,6 +212,7 @@ private:
         response_.clear();
         responseKind_ = ResponseKind::Ordinary;
         responseEpoch_ = 0;
+        responseRequest_ = 0;
         responseSequence_ = 0;
         responseStaged_ = false;
     }
@@ -224,6 +228,7 @@ private:
     MixerPresentationPublisher& publisher_;
     std::string response_;
     std::uint64_t responseEpoch_ = 0;
+    std::uint64_t responseRequest_ = 0;
     std::uint64_t responseSequence_ = 0;
     std::uint64_t snapshotEpoch_ = 0;
     std::uint64_t snapshotRequest_ = 0;
