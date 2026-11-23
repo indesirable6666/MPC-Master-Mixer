@@ -2,13 +2,22 @@
 # MPC Master Mixer — diagnostic d'environnement en lecture seule.
 # Compatible POSIX sh / BusyBox ash. Seul le rapport est écrit sur le stockage utilisateur.
 OUT="/media/az01-internal/mpc-mixer-audit-auto.txt"
-TMP="${OUT}.tmp"
 umask 077
 
 if [ ! -d /media/az01-internal ] || [ ! -w /media/az01-internal ]; then
   echo "ERREUR: /media/az01-internal absent ou non inscriptible."
   exit 1
 fi
+
+# Répertoire temporaire privé et unique : ne jamais suivre un .tmp préexistant.
+TMPDIR="${OUT}.tmp.$"
+if ! mkdir "$TMPDIR"; then
+  echo "ERREUR: impossible de créer le répertoire temporaire."
+  exit 1
+fi
+TMP="$TMPDIR/report"
+trap 'rm -f "$TMP"; rmdir "$TMPDIR" 2>/dev/null' 0
+trap 'exit 1' HUP INT TERM
 
 {
   echo "MPC MASTER MIXER — RAPPORT AUTOMATIQUE"
@@ -143,7 +152,6 @@ if mv "$TMP" "$OUT"; then
   wc -c "$OUT"
   echo "Pour l'afficher : cat $OUT"
 else
-  rm -f "$TMP"
   echo "ERREUR: impossible d'enregistrer le rapport."
   exit 1
 fi
