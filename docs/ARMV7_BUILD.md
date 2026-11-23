@@ -9,19 +9,23 @@ The `ARMv7 toolchain check` workflow uses Debian Bullseye's
 -march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard
 ```
 
-It compiles the C++14 audio-engine, duplex host, stereo Audio In pair, meter,
-and shared signal-reference test programs as ARMv7 executables, then checks
-ELF architecture, interpreter and runtime symbol versions. The workflow also
-builds small graphics-loader capability probes. Test executables are uploaded
-as CI artifacts for inspection; they are not executed on the MPC.
+It compiles the C++14 audio-engine, duplex host, stereo Audio In pair, logical
+Main-plus-Aux output host, meter, and shared signal-reference test programs as
+ARMv7 executables, then checks ELF architecture, interpreter and runtime
+symbol versions. The duplex Aux host test covers the ten-channel logical
+layout (Main L/R plus four stereo Aux pairs) and a partial one-Aux layout. The
+workflow also builds small graphics-loader capability probes. Test executables
+are uploaded as CI artifacts for inspection; they are not executed on the MPC.
 
 ## What this does and does not prove
 
-A successful cross-compile confirms that the current portable DSP and silent
-capture interface compile for this ARMv7 hard-float target configuration. It
-does not prove binary compatibility with every library in the MPC Buildroot
-image, real-time performance, availability of ALSA capture, graphics
-compatibility, or safe coexistence with the stock MPC application.
+A successful cross-compile confirms that the current portable DSP, duplex
+callback host, and logical Main/Aux buffer layout compile for this ARMv7
+hard-float target configuration. The Aux test validates buffer indexing and
+DSP send values using synthetic memory only. It does not prove binary
+compatibility with every library in the MPC Buildroot image, real-time
+performance, availability of ALSA capture/playback, physical output mapping,
+graphics compatibility, or safe coexistence with the stock MPC application.
 
 The Debian cross compiler is a compatibility check, not a replacement for the
 exact Buildroot SDK/sysroot. Before producing a deployable application, obtain
@@ -75,3 +79,19 @@ emulator or hardware test is currently part of this repository workflow.
 
 No command in this procedure connects to an MPC, changes its filesystem or
 services, configures ALSA/MIDI, or initializes EGL/DRM.
+
+
+## Logical duplex output layout
+
+The portable duplex host accepts 2, 4, 6, 8, or 10 output planes. Its logical
+order is Main L/R at 0/1, then Aux 1 L/R at 2/3, Aux 2 at 4/5, Aux 3 at 6/7,
+and Aux 4 at 8/9. A format may expose a prefix of complete stereo Aux pairs.
+These indices describe buffers passed to the host, not ALSA device numbers or
+physical MPC sockets. A future backend must map them explicitly using the
+actual target SDK/device API and must report unavailable or unsupported routes
+rather than silently assuming a channel order.
+
+The host currently provides Aux send outputs only. Captured Aux returns,
+device enumeration, channel negotiation, and physical output routing are
+separate future integration tasks. They must remain outside the portable DSP
+until an independently testable adapter exists.
