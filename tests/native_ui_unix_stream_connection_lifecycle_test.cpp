@@ -87,5 +87,55 @@ int main() {
     assert(released >= 0);
     assert(!second.valid());
     ::close(released);
+
+    // A partially received payload from an old epoch must not consume bytes
+    // from the next connection after reconnect.
+    std::uint8_t epochTxStorage[128]{};
+    std::uint8_t epochRxPayload[64]{};
+    std::uint8_t epochRxScratch[9]{};
+    NativeUiUnixStreamFrameWriter epochWriter(
+        epochTxStorage, sizeof(epochTxStorage), 64);
+    NativeUiUnixStreamFrameReaderPump epochReader(
+        epochRxPayload, sizeof(epochRxPayload), sizeof(epochRxPayload),
+        epochRxScratch, sizeof(epochRxScratch));
+    NativeUiUnixStreamConnection connection(epochWriter, epochReader);
+
+    int oldEpochPair[2] = {-1, -1};
+    assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, oldEpochPair) == 0);
+    std::uint64_t oldEpoch = 0;
+    assert(connection.adopt(oldEpochPair[0], oldEpoch));
+    std::uint8_t oldPartialFrame[6]{};
+    assert(NativeUiFrameCodec::encodeLength(4, oldPartialFrame));
+    oldPartialFrame[4] = 'o';
+    oldPartialFrame[5] = 'l';
+    const auto oldPartialSent = NativeUiUnixStreamIo::transmit(
+        oldEpochPair[1], oldPartialFrame, sizeof(oldPartialFrame));
+    assert(oldPartialSent.status == NativeUiUnixStreamIo::Status::Progress);
+    assert(oldPartialSent.bytes == sizeof(oldPartialFrame));
+    assert(epochReader.receiveNext(connection.descriptor()) ==
+           NativeUiFrameCodec::Status::NeedMore);
+    assert(!epochReader.hasFrame());
+    assert(connection.invalidate(oldEpoch));
+    ::close(oldEpochPair[1]);
+
+    int newEpochPair[2] = {-1, -1};
+    assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, newEpochPair) == 0);
+    std::uint64_t newEpoch = 0;
+    assert(connection.adopt(newEpochPair[0], newEpoch));
+    assert(newEpoch != oldEpoch);
+    std::uint8_t freshFrame[8]{};
+    assert(NativeUiFrameCodec::encodeLength(4, freshFrame));
+    std::memcpy(freshFrame + NativeUiFrameCodec::kHeaderBytes, "new!", 4);
+    const auto freshSent = NativeUiUnixStreamIo::transmit(
+        newEpochPair[1], freshFrame, sizeof(freshFrame));
+    assert(freshSent.status == NativeUiUnixStreamIo::Status::Progress);
+    assert(freshSent.bytes == sizeof(freshFrame));
+    assert(epochReader.receiveNext(connection.descriptor()) ==
+           NativeUiFrameCodec::Status::FrameReady);
+    assert(epochReader.payloadSize() == 4);
+    assert(std::memcmp(epochReader.payload(), "new!", 4) == 0);
+    epochReader.acknowledgeFrame();
+    assert(connection.invalidate(newEpoch));
+    ::close(newEpochPair[1]);
     return 0;
 }
