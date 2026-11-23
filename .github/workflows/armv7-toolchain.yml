@@ -17,6 +17,7 @@ on:
       - "tests/audio_duplex_meter_tap_test.cpp"
       - "tests/audio_input_pair_host_test.cpp"
       - "tests/audio_duplex_aux_output_test.cpp"
+      - "tests/audio_control_bridge_queue_lifecycle_test.cpp"
       - "tests/audio_native_signal_scenarios_test.cpp"
       - "tests/audio_signal_reference_test.cpp"
       - "tests/audio_meter_ui_consumer_test.cpp"
@@ -65,6 +66,7 @@ on:
       - "tests/audio_duplex_meter_tap_test.cpp"
       - "tests/audio_input_pair_host_test.cpp"
       - "tests/audio_duplex_aux_output_test.cpp"
+      - "tests/audio_control_bridge_queue_lifecycle_test.cpp"
       - "tests/audio_native_signal_scenarios_test.cpp"
       - "tests/audio_signal_reference_test.cpp"
       - "tests/audio_meter_ui_consumer_test.cpp"
@@ -161,6 +163,10 @@ jobs:
           arm-linux-gnueabihf-g++ $COMMON_FLAGS -std=c++14 \
             tests/audio_duplex_aux_output_test.cpp \
             -o build/mpc-audio-duplex-aux-output-test-armv7
+
+          arm-linux-gnueabihf-g++ $COMMON_FLAGS -std=c++14 \\
+            tests/audio_control_bridge_queue_lifecycle_test.cpp \\
+            -o build/mpc-audio-control-bridge-queue-lifecycle-test-armv7
 
           arm-linux-gnueabihf-g++ $COMMON_FLAGS -std=c++14 \
             tests/audio_native_signal_scenarios_test.cpp \
