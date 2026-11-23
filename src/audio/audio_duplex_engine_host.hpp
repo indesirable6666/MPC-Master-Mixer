@@ -240,7 +240,7 @@ public:
         const std::size_t availableChannels =
             block.outputChannelCount < AudioDuplexFormat::kMaxOutputChannels
                 ? block.outputChannelCount
-                : AudioDuplexFormat::kMaxOutputChannels;
+                : static_cast<std::size_t>(AudioDuplexFormat::kMaxOutputChannels);
         for (std::size_t channel = 0; channel < availableChannels; ++channel) {
             if (block.outputChannels[channel] == nullptr) continue;
             for (std::size_t frame = 0; frame < block.frameCount; ++frame)
