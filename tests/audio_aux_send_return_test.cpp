@@ -4,6 +4,7 @@
 #include <cassert>
 #include <cmath>
 #include <cstddef>
+#include <limits>
 
 namespace {
 bool near(float actual, float expected, float tolerance = 1.0e-6f) {
@@ -133,6 +134,44 @@ int main() {
     assert(near(result.right, 0.0f));
     assert(near(result.sendLeft[0], 0.2f * std::sqrt(0.5f)));
     assert(near(result.sendRight[0], 0.2f * std::sqrt(0.5f)));
+
+    // Non-finite return samples and absent input planes are treated as
+    // silence independently, rather than contaminating the stereo mix.
+    Engine returnRobustnessEngine;
+    std::array<const float*, Engine::kTrackCount> silentInputs{};
+    std::array<float*, Engine::kAuxBusCount> noSends{};
+    std::array<const float*, Engine::kAuxBusCount> robustReturnLeft{};
+    std::array<const float*, Engine::kAuxBusCount> robustReturnRight{};
+    const float invalidReturn = std::numeric_limits<float>::quiet_NaN();
+    const float validReturn = 0.4f;
+    robustReturnLeft[0] = &invalidReturn;
+    robustReturnRight[0] = &validReturn;
+    float robustLeft = 9.0f;
+    float robustRight = 9.0f;
+    returnRobustnessEngine.processWithAuxAndReturns(
+        silentInputs.data(), &robustLeft, &robustRight,
+        noSends.data(), noSends.data(),
+        robustReturnLeft.data(), robustReturnRight.data(), 1);
+    assert(near(robustLeft, 0.0f));
+    assert(near(robustRight, 0.4f));
+
+    // A missing return plane is independently silent; the other side remains
+    // valid. Master mute still silences the complete main output.
+    robustReturnLeft[0] = nullptr;
+    robustReturnRight[0] = &validReturn;
+    returnRobustnessEngine.processWithAuxAndReturns(
+        silentInputs.data(), &robustLeft, &robustRight,
+        noSends.data(), noSends.data(),
+        robustReturnLeft.data(), robustReturnRight.data(), 1);
+    assert(near(robustLeft, 0.0f));
+    assert(near(robustRight, 0.4f));
+    returnRobustnessEngine.setMasterMute(true);
+    returnRobustnessEngine.processWithAuxAndReturns(
+        silentInputs.data(), &robustLeft, &robustRight,
+        noSends.data(), noSends.data(),
+        robustReturnLeft.data(), robustReturnRight.data(), 1);
+    assert(near(robustLeft, 0.0f));
+    assert(near(robustRight, 0.0f));
 
     return 0;
 }
