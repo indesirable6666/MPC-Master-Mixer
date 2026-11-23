@@ -87,3 +87,35 @@ ctest --test-dir build/host --output-on-failure
 ```
 
 The test programs use `assert`, so a Release configuration that defines `NDEBUG` would disable their checks. The CI validation therefore uses Debug for tests. The optional host benchmark is a separate non-gating target. This CMake project must not be mistaken for an MPC application or exact Buildroot cross-build.
+
+## Official MPC Plugin SDK discovery (2026-11-23)
+
+A new upstream project is now publicly available:
+[inMusic's MPC Plugin SDK](https://github.com/inmusic-software/mpc-plugin-builder-sdk).
+Its README states that the External Plugin Support feature requires MPC OS
+3.10.1 or later. The supported 32-bit family explicitly includes MPC Live II;
+the SDK builds VST2-compatible shared libraries loaded inside the MPC process.
+Its UI is described as data/JSON skins rather than an independently hosted
+window or application.
+
+The SDK's build documentation gives an ARM32 Zig target of
+`arm-linux-gnueabihf.2.31` with `-mcpu=cortex_a17`, and describes a GCC
+alternative using ARMv7 hard-float flags. This is substantially more concrete
+than the repository's generic Debian cross-compile profile, but it is a
+plugin ABI/build route, not a general-purpose MPC application SDK or a
+replacement for the native UI host/presentation path sought by this project.
+
+**Decision for this branch:** do not integrate the SDK or change the build
+system for the current MPC OS 2.15 target. The published SDK requires MPC OS
+3.10.1+ and External Plugin Support, neither of which is established for the
+target profile. Do not infer compatibility from the ARM32 CPU target or the
+SDK's glibc compatibility note. Reassess only if the target firmware is
+intentionally upgraded and the plugin-host feature is confirmed; even then,
+this route would require redesigning the project as an in-process plugin and
+would not provide a standalone mixer application or an independent screen
+renderer.
+
+Upstream references checked 2026-11-23:
+
+- [SDK README: supported devices and firmware requirement](https://github.com/inmusic-software/mpc-plugin-builder-sdk/blob/main/README.md)
+- [SDK build notes: ARM32 toolchain, ABI and UI model](https://github.com/inmusic-software/mpc-plugin-builder-sdk/blob/main/docs/building.md)
