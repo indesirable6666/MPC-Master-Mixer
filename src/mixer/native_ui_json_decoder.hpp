@@ -223,19 +223,19 @@ private:
             const bool masterMute = message_.type == "SetMasterMute";
 
             if (trackFaderOrPan) {
-                if (!message_.hasTrack || !message_.hasValue || message_.hasFlag)
+                if (!message_.hasTrack || !message_.hasValue || message_.hasFlag || message_.hasIndex)
                     return false;
             } else if (trackAuxSend) {
                 if (!message_.hasTrack || !message_.hasIndex || !message_.hasValue || message_.hasFlag)
                     return false;
             } else if (trackMuteOrSolo) {
-                if (!message_.hasTrack || message_.hasValue || !message_.hasFlag)
+                if (!message_.hasTrack || message_.hasValue || message_.hasIndex || !message_.hasFlag)
                     return false;
             } else if (masterFader) {
-                if (message_.hasTrack || !message_.hasValue || message_.hasFlag)
+                if (message_.hasTrack || message_.hasIndex || !message_.hasValue || message_.hasFlag)
                     return false;
             } else if (masterMute) {
-                if (message_.hasTrack || message_.hasValue || !message_.hasFlag)
+                if (message_.hasTrack || message_.hasIndex || message_.hasValue || !message_.hasFlag)
                     return false;
             } else {
                 return false;
