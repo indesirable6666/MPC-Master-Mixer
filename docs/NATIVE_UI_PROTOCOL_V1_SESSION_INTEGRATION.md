@@ -20,7 +20,7 @@ calling the session coordinator directly:
 
 A companion transport integration test,
 `native_ui_unix_stream_protocol_integration_test`, exercises the same
-hello/snapshot path over an in-process `AF_UNIX` socketpair:
+hello/snapshot/command/audio-ack path over an in-process `AF_UNIX` socketpair:
 
 1. The connection owner adopts a socketpair endpoint and assigns its epoch.
 2. The peer sends a framed hello; the receive pump and protocol handler
@@ -32,18 +32,25 @@ hello/snapshot path over an in-process `AF_UNIX` socketpair:
    frame, and the peer validates the snapshot kind, epoch, request, sequence,
    and track array.
 5. The session is marked ready only after the writer reports the complete
-   frame as sent. A second prepared but queued snapshot is cancelled when the
-   connection is invalidated; queued bytes and pending delivery do not cross
-   the epoch boundary.
+   snapshot frame as sent.
+6. A framed command is dispatched and its `command_result` is returned
+   independently of audio application. No ACK is available before the callback.
+7. After the callback applies the ticket, the control thread stages and sends
+   `audio_ack`. The pending acknowledgement is consumed only after the
+   writer reports `Sent` and the peer validates the frame.
+8. A second prepared but queued snapshot is cancelled when the connection is
+   invalidated; queued bytes and pending delivery do not cross the epoch boundary.
 
 The socketpair test is host-only and uses no filesystem endpoint or external
 service. The ARM workflow validates the relevant portable components and
 toolchain probes separately; it does not claim to execute this host socketpair
 integration test on ARM hardware.
 
-The ACK publisher uses a peek/serialize/consume sequence. If response
-construction fails, the ticket remains pending for a later retry; the output
-buffer is changed only after successful serialization and consumption.
+The ACK publisher uses a peek/serialize/send/consume sequence. The staged ACK
+does not consume its ticket; only a complete framed write reported as
+`Sent` permits `markDelivered`. Serialization failure, a busy writer,
+partial write, or disconnect therefore cannot silently discard an
+undelivered acknowledgement.
 
 This remains a host/ARM compile validation of transport-neutral components.
 It does not create or bind a Unix socket, launch a service, integrate the
