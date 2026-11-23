@@ -159,6 +159,15 @@ public:
         frameReady_ = false;
     }
 
+    // Discard every byte and parser state associated with the previous
+    // connection, including a partial header/payload or an unacknowledged frame.
+    void resetConnection() noexcept {
+        reader_.reset();
+        pendingBytes_ = 0;
+        pendingOffset_ = 0;
+        frameReady_ = false;
+    }
+
     const std::uint8_t* payload() const noexcept { return reader_.payload(); }
     std::size_t payloadSize() const noexcept { return reader_.payloadSize(); }
     bool hasFrame() const noexcept { return frameReady_; }
