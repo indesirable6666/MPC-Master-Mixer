@@ -53,10 +53,10 @@ int main() {
     // values, so callers outside the command bridge cannot publish bad state.
     Engine validationEngine;
     const Engine::AuxReturn originalReturn = validationEngine.auxReturn(0);
-    Engine::AuxReturn invalidReturn;
-    invalidReturn.gain = std::numeric_limits<float>::quiet_NaN();
-    assert(!validationEngine.setAuxReturn(0, invalidReturn));
-    invalidReturn.gain = std::numeric_limits<float>::infinity();
+    Engine::AuxReturn invalidReturnState;
+    invalidReturnState.gain = std::numeric_limits<float>::quiet_NaN();
+    assert(!validationEngine.setAuxReturn(0, invalidReturnState));
+    invalidReturnState.gain = std::numeric_limits<float>::infinity();
     assert(!validationEngine.setAuxReturn(0, invalidReturn));
     invalidReturn.gain = -0.01f;
     assert(!validationEngine.setAuxReturn(0, invalidReturn));
@@ -72,7 +72,7 @@ int main() {
     invalidReturn.balance = 1.01f;
     assert(!validationEngine.setAuxReturn(0, invalidReturn));
     invalidReturn.balance = 0.0f;
-    assert(!validationEngine.setAuxReturn(Engine::kAuxBusCount, invalidReturn));
+    assert(!validationEngine.setAuxReturn(Engine::kAuxBusCount, invalidReturnState));
     assert(near(validationEngine.auxReturn(0).gain, originalReturn.gain));
     assert(near(validationEngine.auxReturn(0).balance, originalReturn.balance));
     assert(validationEngine.auxReturn(0).mute == originalReturn.mute);
@@ -171,9 +171,9 @@ int main() {
     std::array<float*, Engine::kAuxBusCount> noSends{};
     std::array<const float*, Engine::kAuxBusCount> robustReturnLeft{};
     std::array<const float*, Engine::kAuxBusCount> robustReturnRight{};
-    const float invalidReturn = std::numeric_limits<float>::quiet_NaN();
+    const float invalidReturnSample = std::numeric_limits<float>::quiet_NaN();
     const float validReturn = 0.4f;
-    robustReturnLeft[0] = &invalidReturn;
+    robustReturnLeft[0] = &invalidReturnSample;
     robustReturnRight[0] = &validReturn;
     float robustLeft = 9.0f;
     float robustRight = 9.0f;
