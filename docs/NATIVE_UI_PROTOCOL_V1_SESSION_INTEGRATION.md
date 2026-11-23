@@ -127,3 +127,11 @@ The driver socketpair test also constrains the peer receive window to exercise a
 real partial outbound snapshot write. It verifies that `flushOne()` returns `WouldBlock` with a positive byte count,
 the writer retains the remaining framed bytes, and disconnect clears both the queued remainder and the driver's staged
 response before the connection can be reused.
+
+The same driver test fragments an inbound hello across the four-byte frame
+header and payload, verifying that repeated `receiveOne()` calls preserve
+partial parser state until the complete frame arrives. It then sends two
+snapshot requests in one concatenated stream write. The driver retains the
+second decoded frame while the first snapshot response is pending, and
+dispatches it only after the first snapshot has been delivered. This prevents
+a later request from overwriting the driver's single deferred snapshot slot.
