@@ -5,6 +5,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <cmath>
 #include <limits>
 #include <string>
 
@@ -136,8 +137,30 @@ private:
             return true;
         }
 
-        bool number_float(number_float_t, const string_t&) override {
-            return false;
+        bool number_float(number_float_t value, const string_t&) override {
+            if (!beginValue() || !std::isfinite(value))
+                return false;
+            switch (field_) {
+            case Field::FrequencyHz:
+                message_.frequencyHz = static_cast<float>(value);
+                if (!std::isfinite(message_.frequencyHz)) return false;
+                message_.hasFrequencyHz = true;
+                break;
+            case Field::Q:
+                message_.q = static_cast<float>(value);
+                if (!std::isfinite(message_.q)) return false;
+                message_.hasQ = true;
+                break;
+            case Field::GainDb:
+                message_.gainDb = static_cast<float>(value);
+                if (!std::isfinite(message_.gainDb)) return false;
+                message_.hasGainDb = true;
+                break;
+            default:
+                return false;
+            }
+            finishValue();
+            return true;
         }
 
         bool string(string_t& value) override {
@@ -176,6 +199,12 @@ private:
                 next = Field::Value; bit = 1u << 3;
             } else if (value == "flag") {
                 next = Field::Flag; bit = 1u << 4;
+            } else if (value == "frequencyHz") {
+                next = Field::FrequencyHz; bit = 1u << 6;
+            } else if (value == "q") {
+                next = Field::Q; bit = 1u << 7;
+            } else if (value == "gainDb") {
+                next = Field::GainDb; bit = 1u << 8;
             } else {
                 return false;
             }
@@ -216,6 +245,7 @@ private:
                 message_.type == "SetTrackFader" ||
                 message_.type == "SetTrackPan";
             const bool trackAuxSend = message_.type == "SetTrackAuxSend";
+            const bool trackEqBand = message_.type == "SetTrackEqBand";
             const bool trackMuteOrSolo =
                 message_.type == "SetTrackMute" ||
                 message_.type == "SetTrackSolo";
@@ -227,6 +257,10 @@ private:
                     return false;
             } else if (trackAuxSend) {
                 if (!message_.hasTrack || !message_.hasIndex || !message_.hasValue || message_.hasFlag)
+                    return false;
+            } else if (trackEqBand) {
+                if (!message_.hasTrack || !message_.hasIndex || message_.hasValue || message_.hasFlag ||
+                    !message_.hasFrequencyHz || !message_.hasQ || !message_.hasGainDb)
                     return false;
             } else if (trackMuteOrSolo) {
                 if (!message_.hasTrack || message_.hasValue || message_.hasIndex || !message_.hasFlag)
@@ -247,7 +281,7 @@ private:
 
     private:
         enum class Field : std::uint8_t {
-            None, Sequence, Type, Track, Index, Value, Flag
+            None, Sequence, Type, Track, Index, Value, Flag, FrequencyHz, Q, GainDb
         };
 
         bool beginValue() const noexcept {
