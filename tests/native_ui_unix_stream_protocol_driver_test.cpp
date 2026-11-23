@@ -154,5 +154,83 @@ int main() {
     assert(driver.disconnect(epoch));
     assert(!connection.connected());
     ::close(pair[1]);
+
+    // Reconnect and force a partial outbound snapshot write. Fill the
+    // nonblocking socket's send queue, free only a small amount of peer
+    // receive space, then verify the driver's staged frame survives EAGAIN
+    // and is discarded by epoch teardown.
+    int backpressurePair[2] = {-1, -1};
+    assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, backpressurePair) == 0);
+    int sendBufferBytes = 4096;
+    assert(::setsockopt(backpressurePair[0], SOL_SOCKET, SO_SNDBUF,
+                        &sendBufferBytes, sizeof(sendBufferBytes)) == 0);
+    std::uint64_t backpressureEpoch = 0;
+    assert(connection.adopt(backpressurePair[0], backpressureEpoch));
+    assert(backpressureEpoch > epoch);
+
+    assert(sendFrame(backpressurePair[1], hello));
+    assert(driver.receiveOne().status ==
+           NativeUiUnixStreamProtocolDriver::Status::FrameReady);
+    assert(driver.dispatchOne().status ==
+           NativeUiUnixStreamProtocolDriver::Status::ResponsePrepared);
+    assert(driver.flushOne().status ==
+           NativeUiUnixStreamProtocolDriver::Status::Sent);
+    response = nlohmann::json::parse(receiveFrame(backpressurePair[1]));
+    assert(response["kind"] == "hello");
+    assert(response["epoch"] == backpressureEpoch);
+
+    const std::string backpressureSnapshotRequest =
+        std::string(R"({"version":1,"kind":"snapshot_request","epoch":)") +
+        std::to_string(backpressureEpoch) + R"(,"request":1})";
+    assert(sendFrame(backpressurePair[1], backpressureSnapshotRequest));
+    assert(driver.receiveOne().status ==
+           NativeUiUnixStreamProtocolDriver::Status::FrameReady);
+    assert(driver.dispatchOne().status ==
+           NativeUiUnixStreamProtocolDriver::Status::SnapshotRequested);
+    assert(driver.prepareNextResponse().status ==
+           NativeUiUnixStreamProtocolDriver::Status::ResponsePrepared);
+    assert(driver.hasStagedResponse());
+
+    std::uint8_t filler[4096]{};
+    bool sendQueueFull = false;
+    for (unsigned attempt = 0; attempt < 256; ++attempt) {
+        const auto fill = NativeUiUnixStreamIo::transmit(
+            connection.descriptor(), filler, sizeof(filler));
+        if (fill.status == NativeUiUnixStreamIo::Status::Progress)
+            continue;
+        assert(fill.status == NativeUiUnixStreamIo::Status::WouldBlock);
+        sendQueueFull = true;
+        break;
+    }
+    assert(sendQueueFull);
+
+    std::uint8_t drain[1024]{};
+    std::size_t drained = 0;
+    while (drained < sizeof(drain)) {
+        const ssize_t count = ::recv(backpressurePair[1], drain,
+                                     sizeof(drain) - drained, MSG_DONTWAIT);
+        if (count > 0) {
+            drained += static_cast<std::size_t>(count);
+            continue;
+        }
+        break;
+    }
+    assert(drained > 0);
+
+    const auto partialFlush = driver.flushOne();
+    assert(partialFlush.status ==
+           NativeUiUnixStreamProtocolDriver::Status::WouldBlock);
+    assert(partialFlush.bytes > 0);
+    assert(connection.writer().pending());
+    assert(connection.writer().remainingBytes() > 0);
+    assert(driver.hasStagedResponse());
+
+    assert(driver.disconnect(backpressureEpoch));
+    assert(!connection.connected());
+    assert(!connection.writer().pending());
+    assert(connection.writer().remainingBytes() == 0);
+    assert(!driver.hasStagedResponse());
+    assert(!driver.hasPendingSnapshotRequest());
+    ::close(backpressurePair[1]);
     return 0;
 }
