@@ -104,7 +104,7 @@ int main() {
     message.hasValue = false;
     assert(mpcmixer::NativeUiCommandAdapter::dispatch(message, dispatcher).status ==
            mpcmixer::MixerUiCommandStatus::Invalid);
-    assert(dispatcher.lastAcceptedSequence() == 7);
+    assert(dispatcher.lastAcceptedSequence() == 8);
 
     message.hasValue = true;
     message.value = 128;
@@ -138,13 +138,13 @@ int main() {
     message.sequence = 0;
     assert(mpcmixer::NativeUiCommandAdapter::dispatch(message, dispatcher).status ==
            mpcmixer::MixerUiCommandStatus::OutOfOrder);
-    message.sequence = 7;
+    message.sequence = 8;
     assert(mpcmixer::NativeUiCommandAdapter::dispatch(message, dispatcher).status ==
            mpcmixer::MixerUiCommandStatus::OutOfOrder);
     assert(dispatcher.lastAcceptedSequence() == 7);
 
     // The same unconsumed sequence can be retried with a valid command.
-    message.sequence = 8;
+    message.sequence = 9;
     message.type = "SetTrackFader";
     message.hasTrack = true;
     message.track = 5;
