@@ -54,6 +54,18 @@ public:
         return true;
     }
 
+    // Cancel an unsent snapshot when its owning connection is invalidated.
+    // The transport owner must discard any queued frame for the same epoch.
+    bool cancelPending(std::uint64_t epoch) noexcept {
+        if (!pending_ || epoch == 0 || epoch != pendingEpoch_)
+            return false;
+        pendingSnapshot_ = MixerPresentationSnapshot{};
+        pendingEpoch_ = 0;
+        pendingSequence_ = 0;
+        pending_ = false;
+        return true;
+    }
+
     bool hasPendingDelivery() const noexcept { return pending_; }
     std::uint64_t pendingEpoch() const noexcept { return pendingEpoch_; }
     std::uint64_t pendingSequence() const noexcept { return pendingSequence_; }
