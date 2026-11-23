@@ -24,7 +24,10 @@ gate. It deliberately separates *serialization* from *delivery*.
 
 A wrong epoch, wrong sequence, missing pending delivery, or stale connection
 cannot open the gate. Failed confirmation leaves the pending delivery intact
-so the caller can handle the transport failure or invalidate the session.
+so the caller can handle the transport failure. On disconnect, the owner must
+invalidate the session, discard any queued frame for that epoch, and call
+`cancelPending(epoch)` to release the abandoned snapshot. A new connection can
+then prepare its own snapshot without inheriting stale delivery state.
 
 ## Boundaries
 
@@ -38,5 +41,6 @@ so the caller can handle the transport failure or invalidate the session.
 
 The host test verifies the two-stage delivery contract, stale confirmation
 rejection, readiness remaining closed while audio work is pending, and
-readiness opening only after a newer caught-up snapshot is fully confirmed.
+readiness opening only after a newer caught-up snapshot is fully confirmed, and
+an abandoned delivery being cancelled before the next epoch can prepare one.
 The ARMv7 workflow compiles the same test; it is not run on the MPC device.
