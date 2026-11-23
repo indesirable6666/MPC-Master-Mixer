@@ -73,7 +73,7 @@ public:
     // requests use the session handler; command envelopes use the command
     // processor. A staged response must be flushed before another frame is
     // dispatched, preserving the writer's single-frame backpressure.
-    Result dispatchOne() noexcept {
+    Result dispatchOne() {
         if (!connection_.connected()) return {Status::Disconnected, 0};
         if (!connection_.reader().hasFrame()) return {Status::Idle, 0};
         if (responseStaged_ || connection_.writer().pending())
@@ -107,7 +107,7 @@ public:
             payload, connection_.session(), dispatcher_, response);
         if (command.status == NativeUiProtocolV1CommandProcessStatus::Accepted ||
             command.status == NativeUiProtocolV1CommandProcessStatus::Rejected) {
-            stage(response, ResponseKind::Ordinary, 0, 0);
+            stage(response, ResponseKind::Ordinary, 0, 0, 0);
             return {Status::ResponsePrepared, 0};
         }
         return {Status::ProtocolRejected, 0};
@@ -115,7 +115,7 @@ public:
 
     // Prepares at most one deferred response. Snapshot readiness and audio
     // ticket consumption remain pending until flushOne() reports Sent.
-    Result prepareNextResponse() noexcept {
+    Result prepareNextResponse() {
         if (!connection_.connected()) return {Status::Disconnected, 0};
         if (responseStaged_ || connection_.writer().pending())
             return {Status::Busy, 0};
