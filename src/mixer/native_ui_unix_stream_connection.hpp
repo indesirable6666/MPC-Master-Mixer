@@ -10,8 +10,10 @@
 namespace mpcmixer {
 
 // Control-thread-only owner for one already-created AF_UNIX stream descriptor.
-// adopt() takes ownership of the supplied descriptor, including on failure.
-// It deliberately does not create, bind, connect, listen, or accept sockets.
+// adopt() takes ownership once it accepts a nonnegative descriptor while
+// disconnected, including if descriptor setup or session creation then fails.
+// Rejected preconditions leave ownership with the caller. This class does not
+// create, bind, connect, listen, or accept sockets.
 class NativeUiUnixStreamConnection {
 public:
     explicit NativeUiUnixStreamConnection(
