@@ -38,6 +38,7 @@ int main() {
     message.type = "SetMasterFader";
     message.hasFlag = false;
     message.hasTrack = false;
+    message.hasValue = true;
     message.value = 110;
     assert(mpcmixer::NativeUiCommandAdapter::dispatch(message, dispatcher).accepted());
 
