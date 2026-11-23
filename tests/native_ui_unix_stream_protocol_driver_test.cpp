@@ -232,5 +232,86 @@ int main() {
     assert(!driver.hasStagedResponse());
     assert(!driver.hasPendingSnapshotRequest());
     ::close(backpressurePair[1]);
+
+    // Fragmented inbound header and payload must remain incremental across
+    // receiveOne() calls without losing parser state.
+    int receivePair[2] = {-1, -1};
+    assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, receivePair) == 0);
+    std::uint64_t receiveEpoch = 0;
+    assert(connection.adopt(receivePair[0], receiveEpoch));
+    std::uint8_t helloHeader[NativeUiFrameCodec::kHeaderBytes]{};
+    assert(NativeUiFrameCodec::encodeLength(
+        static_cast<std::uint32_t>(hello.size()), helloHeader));
+    assert(::send(receivePair[1], helloHeader, 2, 0) == 2);
+    assert(driver.receiveOne().status ==
+           NativeUiUnixStreamProtocolDriver::Status::WouldBlock);
+    assert(::send(receivePair[1], helloHeader + 2, 2, 0) == 2);
+    assert(::send(receivePair[1], hello.data(), 5, 0) == 5);
+    assert(driver.receiveOne().status ==
+           NativeUiUnixStreamProtocolDriver::Status::WouldBlock);
+    assert(::send(receivePair[1], hello.data() + 5, hello.size() - 5, 0) ==
+           static_cast<ssize_t>(hello.size() - 5));
+    assert(driver.receiveOne().status ==
+           NativeUiUnixStreamProtocolDriver::Status::FrameReady);
+    assert(driver.dispatchOne().status ==
+           NativeUiUnixStreamProtocolDriver::Status::ResponsePrepared);
+    assert(driver.flushOne().status ==
+           NativeUiUnixStreamProtocolDriver::Status::Sent);
+    response = nlohmann::json::parse(receiveFrame(receivePair[1]));
+    assert(response["kind"] == "hello");
+    assert(response["epoch"] == receiveEpoch);
+
+    // Two concatenated snapshot requests are retained in order. The second
+    // must not overwrite the first while its response is awaiting delivery.
+    const std::string requestOne =
+        std::string(R"({"version":1,"kind":"snapshot_request","epoch":)") +
+        std::to_string(receiveEpoch) + R"(,"request":1})";
+    const std::string requestTwo =
+        std::string(R"({"version":1,"kind":"snapshot_request","epoch":)") +
+        std::to_string(receiveEpoch) + R"(,"request":2})";
+    auto encodeFrame = [](const std::string& payload,
+                          std::uint8_t* output) -> std::size_t {
+        std::uint8_t header[NativeUiFrameCodec::kHeaderBytes]{};
+        assert(NativeUiFrameCodec::encodeLength(
+            static_cast<std::uint32_t>(payload.size()), header));
+        std::memcpy(output, header, sizeof(header));
+        std::memcpy(output + sizeof(header), payload.data(), payload.size());
+        return sizeof(header) + payload.size();
+    };
+    std::uint8_t concatenated[1024]{};
+    const std::size_t firstBytes = encodeFrame(requestOne, concatenated);
+    const std::size_t secondBytes =
+        encodeFrame(requestTwo, concatenated + firstBytes);
+    assert(::send(receivePair[1], concatenated, firstBytes + secondBytes, 0) ==
+           static_cast<ssize_t>(firstBytes + secondBytes));
+    assert(driver.receiveOne().status ==
+           NativeUiUnixStreamProtocolDriver::Status::FrameReady);
+    assert(driver.dispatchOne().status ==
+           NativeUiUnixStreamProtocolDriver::Status::SnapshotRequested);
+    assert(driver.receiveOne().status ==
+           NativeUiUnixStreamProtocolDriver::Status::FrameReady);
+    assert(driver.dispatchOne().status ==
+           NativeUiUnixStreamProtocolDriver::Status::Busy);
+    assert(driver.hasPendingSnapshotRequest());
+    assert(driver.prepareNextResponse().status ==
+           NativeUiUnixStreamProtocolDriver::Status::ResponsePrepared);
+    assert(driver.flushOne().status ==
+           NativeUiUnixStreamProtocolDriver::Status::Sent);
+    response = nlohmann::json::parse(receiveFrame(receivePair[1]));
+    assert(response["kind"] == "snapshot");
+    assert(response["request"] == 1);
+
+    assert(driver.dispatchOne().status ==
+           NativeUiUnixStreamProtocolDriver::Status::SnapshotRequested);
+    assert(driver.prepareNextResponse().status ==
+           NativeUiUnixStreamProtocolDriver::Status::ResponsePrepared);
+    assert(driver.flushOne().status ==
+           NativeUiUnixStreamProtocolDriver::Status::Sent);
+    response = nlohmann::json::parse(receiveFrame(receivePair[1]));
+    assert(response["kind"] == "snapshot");
+    assert(response["request"] == 2);
+
+    assert(driver.disconnect(receiveEpoch));
+    ::close(receivePair[1]);
     return 0;
 }
