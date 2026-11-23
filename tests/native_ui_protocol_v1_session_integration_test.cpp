@@ -74,7 +74,8 @@ int main() {
         std::to_string(epoch) + R"(,"request":2})";
     message = ingress.handle(requestTwo, session, outbound);
     assert(message.status == NativeUiProtocolV1ClientMessageStatus::SnapshotRequested);
-    assert(delivery.prepare(epoch, message.request, publisher, session, outbound));
+    assert(ingress.prepareSnapshot(epoch, message.request, publisher, session,
+                                   delivery, outbound));
     const std::uint64_t secondSequence = delivery.pendingSequence();
     assert(secondSequence > firstSequence);
     assert(ingress.markSnapshotDelivered(epoch, message.request, secondSequence,
