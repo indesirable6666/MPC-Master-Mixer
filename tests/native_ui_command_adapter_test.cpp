@@ -44,15 +44,39 @@ int main() {
     message.flag = true;
     assert(mpcmixer::NativeUiCommandAdapter::dispatch(message, dispatcher).accepted());
 
+    message.sequence = 7;
+    message.type = "SetTrackAuxSend";
+    message.hasIndex = true;
+    message.index = 2;
+    message.hasValue = true;
+    message.value = 42;
+    assert(mpcmixer::NativeUiCommandAdapter::dispatch(message, dispatcher).accepted());
+
     mpcmixer::MixerPresentationPublisher publisher(controller);
     auto snapshot = publisher.publish();
     assert(snapshot.tracks[5].faderValue == 96);
     assert(snapshot.tracks[5].panPercent == -35);
     assert(snapshot.tracks[5].mute && snapshot.tracks[5].solo);
     assert(snapshot.masterFaderValue == 110 && snapshot.masterMute);
+    assert(snapshot.tracks[5].auxSendPercent[2] == 42);
 
     // Missing fields and out-of-range values must not consume the sequence.
-    message.sequence = 7;
+    message.sequence = 8;
+    message.type = "SetTrackAuxSend";
+    message.hasIndex = false;
+    assert(mpcmixer::NativeUiCommandAdapter::dispatch(message, dispatcher).status ==
+           mpcmixer::MixerUiCommandStatus::Invalid);
+    message.hasIndex = true;
+    message.index = mpcmixer::AudioEngine::kAuxBusCount;
+    assert(mpcmixer::NativeUiCommandAdapter::dispatch(message, dispatcher).status ==
+           mpcmixer::MixerUiCommandStatus::Invalid);
+    message.index = 0;
+    message.value = 101;
+    assert(mpcmixer::NativeUiCommandAdapter::dispatch(message, dispatcher).status ==
+           mpcmixer::MixerUiCommandStatus::Invalid);
+    assert(dispatcher.lastAcceptedSequence() == 7);
+
+    message.sequence = 8;
     message.type = "SetTrackFader";
     message.hasValue = false;
     assert(mpcmixer::NativeUiCommandAdapter::dispatch(message, dispatcher).status ==
@@ -99,11 +123,11 @@ int main() {
     message.value = 0;
     assert(mpcmixer::NativeUiCommandAdapter::dispatch(message, dispatcher).accepted());
 
-    message.sequence = 8;
+    message.sequence = 9;
     message.value = mpcmixer::MixerController::kFaderMaximum;
     assert(mpcmixer::NativeUiCommandAdapter::dispatch(message, dispatcher).accepted());
 
     snapshot = publisher.publish();
     assert(snapshot.tracks[5].faderValue == mpcmixer::MixerController::kFaderMaximum);
-    assert(dispatcher.lastAcceptedSequence() == 8);
+    assert(dispatcher.lastAcceptedSequence() == 9);
 }
