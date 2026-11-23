@@ -15,8 +15,9 @@ namespace mpcmixer {
 class NativeUiUnixStreamConnection {
 public:
     explicit NativeUiUnixStreamConnection(
-        NativeUiUnixStreamFrameWriter& writer) noexcept
-        : writer_(writer) {}
+        NativeUiUnixStreamFrameWriter& writer,
+        NativeUiUnixStreamFrameReaderPump& reader) noexcept
+        : writer_(writer), reader_(reader) {}
 
     NativeUiUnixStreamConnection(const NativeUiUnixStreamConnection&) = delete;
     NativeUiUnixStreamConnection& operator=(
@@ -47,6 +48,7 @@ public:
             return false;
 
         writer_.cancelPending();
+        reader_.resetConnection();
         descriptor_.reset();
         epoch_ = 0;
         return true;
@@ -61,6 +63,7 @@ public:
 private:
     NativeUiUnixSocketDescriptor descriptor_;
     NativeUiUnixStreamFrameWriter& writer_;
+    NativeUiUnixStreamFrameReaderPump& reader_;
     NativeUiSessionCoordinator session_;
     std::uint64_t epoch_ = 0;
 };
