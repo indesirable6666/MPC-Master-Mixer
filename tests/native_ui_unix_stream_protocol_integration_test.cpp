@@ -268,9 +268,27 @@ int main() {
     assert(writer.queue(response.data(), response.size()).status ==
            NativeUiUnixStreamFrameWriter::Status::Queued);
 
-    // Reset protocol state and invalidate transport: queued bytes are dropped,
-    // pending delivery is cancelled, and the session is closed.
+    // Stage a second applied ACK while the snapshot occupies the single-frame
+    // writer. Disconnect must cancel both staged ACK state and queued bytes.
+    const std::string secondCommand =
+        std::string(R"({"version":1,"kind":"command","epoch":)") +
+        std::to_string(nextEpoch) +
+        R"(,"sequence":2,"type":"SetTrackFader","track":2,"value":73})";
+    const auto secondCommandResult =
+        commands.process(secondCommand, connection.session(), dispatcher, response);
+    assert(secondCommandResult.status ==
+           NativeUiProtocolV1CommandProcessStatus::Accepted);
+    bridge.process(inputs, left, right, 1);
+    std::string stagedAck;
+    assert(acknowledgements.publishNext(controller, connection.session(), stagedAck));
+    assert(acknowledgements.hasPendingDelivery());
+    assert(writer.pending());
+
+    // Reset protocol state and invalidate transport: explicitly cancel the
+    // ACK publisher before the owner closes the old epoch.
     assert(ingress.resetConnectionState(nextEpoch, delivery));
+    acknowledgements.cancelPending();
+    assert(!acknowledgements.hasPendingDelivery());
     assert(!delivery.hasPendingDelivery());
     assert(connection.invalidate(nextEpoch));
     assert(!writer.pending());
