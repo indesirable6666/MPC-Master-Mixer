@@ -1,4 +1,5 @@
 #include "native_ui_unix_socket_descriptor.hpp"
+#include "native_ui_unix_stream_connection.hpp"
 #include "native_ui_unix_stream_frame_channel.hpp"
 
 #include <cassert>
@@ -105,7 +106,9 @@ int main() {
     std::uint64_t oldEpoch = 0;
     assert(connection.adopt(oldEpochPair[0], oldEpoch));
     std::uint8_t oldPartialFrame[6]{};
-    assert(NativeUiFrameCodec::encodeLength(4, oldPartialFrame));
+    std::uint8_t oldPartialHeader[NativeUiFrameCodec::kHeaderBytes]{};
+    assert(NativeUiFrameCodec::encodeLength(4, oldPartialHeader));
+    std::memcpy(oldPartialFrame, oldPartialHeader, sizeof(oldPartialHeader));
     oldPartialFrame[4] = 'o';
     oldPartialFrame[5] = 'l';
     const auto oldPartialSent = NativeUiUnixStreamIo::transmit(
@@ -124,7 +127,9 @@ int main() {
     assert(connection.adopt(newEpochPair[0], newEpoch));
     assert(newEpoch != oldEpoch);
     std::uint8_t freshFrame[8]{};
-    assert(NativeUiFrameCodec::encodeLength(4, freshFrame));
+    std::uint8_t freshHeader[NativeUiFrameCodec::kHeaderBytes]{};
+    assert(NativeUiFrameCodec::encodeLength(4, freshHeader));
+    std::memcpy(freshFrame, freshHeader, sizeof(freshHeader));
     std::memcpy(freshFrame + NativeUiFrameCodec::kHeaderBytes, "new!", 4);
     const auto freshSent = NativeUiUnixStreamIo::transmit(
         newEpochPair[1], freshFrame, sizeof(freshFrame));
