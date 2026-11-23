@@ -68,7 +68,9 @@ int main() {
     // A fresh frame is decoded independently after reconnect; the old
     // partial header must not prefix or corrupt it.
     std::uint8_t frame[7]{};
-    assert(NativeUiFrameCodec::encodeLength(3, frame));
+    std::uint8_t frameHeader[NativeUiFrameCodec::kHeaderBytes]{};
+    assert(NativeUiFrameCodec::encodeLength(3, frameHeader));
+    std::memcpy(frame, frameHeader, sizeof(frameHeader));
     frame[4] = 'n';
     frame[5] = 'e';
     frame[6] = 'w';
