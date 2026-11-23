@@ -18,6 +18,7 @@ on:
       - "tests/audio_input_pair_host_test.cpp"
       - "tests/audio_duplex_aux_output_test.cpp"
       - "tests/audio_control_bridge_queue_lifecycle_test.cpp"
+      - "tests/audio_aux_send_return_test.cpp"
       - "tests/audio_native_signal_scenarios_test.cpp"
       - "tests/audio_signal_reference_test.cpp"
       - "tests/audio_meter_ui_consumer_test.cpp"
@@ -67,6 +68,7 @@ on:
       - "tests/audio_input_pair_host_test.cpp"
       - "tests/audio_duplex_aux_output_test.cpp"
       - "tests/audio_control_bridge_queue_lifecycle_test.cpp"
+      - "tests/audio_aux_send_return_test.cpp"
       - "tests/audio_native_signal_scenarios_test.cpp"
       - "tests/audio_signal_reference_test.cpp"
       - "tests/audio_meter_ui_consumer_test.cpp"
@@ -165,7 +167,11 @@ jobs:
             -o build/mpc-audio-duplex-aux-output-test-armv7
           arm-linux-gnueabihf-g++ $COMMON_FLAGS -std=c++14 \
             tests/audio_control_bridge_queue_lifecycle_test.cpp \
-            -o build/mpc-audio-control-bridge-queue-lifecycle-test-armv7
+            -o build/mpc-audio-control-bridge-queue-lifecycle-test-armv7 build/mpc-audio-aux-send-return-test-armv7
+
+          arm-linux-gnueabihf-g++ $COMMON_FLAGS -std=c++14 \
+            tests/audio_aux_send_return_test.cpp \
+            -o build/mpc-audio-aux-send-return-test-armv7
 
           arm-linux-gnueabihf-g++ $COMMON_FLAGS -std=c++14 \
             tests/audio_native_signal_scenarios_test.cpp \
@@ -612,6 +618,13 @@ jobs:
         with:
           name: mpc-armv7-audio-input-pair-host-test
           path: build/mpc-audio-input-pair-host-test-armv7
+          if-no-files-found: error
+
+      - name: Upload ARMv7 Aux send/return DSP test binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: mpc-armv7-audio-aux-send-return-test
+          path: build/mpc-audio-aux-send-return-test-armv7
           if-no-files-found: error
 
       - name: Upload ARMv7 duplex Aux output test binary
