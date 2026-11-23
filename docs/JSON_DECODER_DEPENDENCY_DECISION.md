@@ -50,7 +50,7 @@ to a DOM and inspecting the resulting object:
 1. Enforce the transport frame-size limit before parsing.
 2. Accept exactly one top-level object and scalar values only; reject nested
    objects and arrays.
-3. Track the five permitted keys in a fixed enum/bit mask. Reject a repeated
+3. Track the six permitted keys in a fixed enum/bit mask. Reject a repeated
    key as soon as its SAX `key` event arrives; reject every unknown key.
 4. Accept `sequence` only from the unsigned-integer SAX event and require
    1..UINT64_MAX. This deliberately rejects negative, floating-point, and
