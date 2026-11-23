@@ -43,6 +43,10 @@ public:
         return true;
     }
 
+    // Drop queued bytes before protocol-level pending responses are cancelled.
+    // This lets the protocol owner enforce teardown ordering explicitly.
+    void cancelPendingOutput() noexcept { writer_.cancelPending(); }
+
     bool invalidate(std::uint64_t epoch) noexcept {
         if (!descriptor_.valid() || epoch == 0 || epoch != epoch_)
             return false;
