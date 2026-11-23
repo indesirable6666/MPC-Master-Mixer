@@ -1,0 +1,26 @@
+name: UI visual contract
+
+on:
+  push:
+    paths:
+      - "prototype/index.html"
+      - "tools/verify-prototype-visual-contract.py"
+      - ".github/workflows/ui-visual-contract.yml"
+  pull_request:
+    paths:
+      - "prototype/index.html"
+      - "tools/verify-prototype-visual-contract.py"
+      - ".github/workflows/ui-visual-contract.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  approved-prototype-appearance:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Verify approved prototype visual contract (read-only)
+        run: python3 tools/verify-prototype-visual-contract.py
