@@ -37,6 +37,33 @@ int main() {
     assert(!first.valid());
     assert(!writer.pending());
 
+    // Force a partial nonblocking write, then cancel the remainder before
+    // the writer is reused. A small send buffer and a much larger frame make
+    // EAGAIN deterministic without relying on peer timing.
+    int partialPair[2] = {-1, -1};
+    assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, partialPair) == 0);
+    NativeUiUnixSocketDescriptor partial(partialPair[0]);
+    NativeUiUnixSocketDescriptor partialPeer(partialPair[1]);
+    assert(partial.setNonBlocking());
+    int sendBuffer = 1024;
+    assert(::setsockopt(partial.get(), SOL_SOCKET, SO_SNDBUF,
+                        &sendBuffer, sizeof(sendBuffer)) == 0);
+    std::uint8_t largeStorage[60004]{};
+    std::uint8_t largePayload[60000]{};
+    NativeUiUnixStreamFrameWriter partialWriter(
+        largeStorage, sizeof(largeStorage), sizeof(largePayload));
+    assert(partialWriter.queue(largePayload, sizeof(largePayload)).status ==
+           NativeUiUnixStreamFrameWriter::Status::Queued);
+    const auto partialResult = partialWriter.flush(partial.get());
+    assert(partialResult.status ==
+           NativeUiUnixStreamFrameWriter::Status::WouldBlock);
+    assert(partialResult.bytes > 0);
+    assert(partialWriter.pending());
+    assert(partialWriter.remainingBytes() > 0);
+    partialWriter.cancelPending();
+    assert(!partialWriter.pending());
+    assert(partialWriter.remainingBytes() == 0);
+
     // Reconnect using a fresh pair. No bytes or state from the old connection
     // may be observed on the new descriptor.
     int secondPair[2] = {-1, -1};
