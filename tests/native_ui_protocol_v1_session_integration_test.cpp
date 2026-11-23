@@ -42,7 +42,8 @@ int main() {
         std::to_string(epoch) + R"(,"request":1})";
     message = ingress.handle(requestOne, session, outbound);
     assert(message.status == NativeUiProtocolV1ClientMessageStatus::SnapshotRequested);
-    assert(delivery.prepare(epoch, message.request, publisher, session, outbound));
+    assert(ingress.prepareSnapshot(epoch, message.request, publisher, session,
+                                   delivery, outbound));
     const std::uint64_t firstSequence = delivery.pendingSequence();
 
     MixerPresentationSnapshot decoded;
@@ -50,7 +51,8 @@ int main() {
         outbound, epoch, message.request, decoded) ==
         NativeUiProtocolV1SnapshotDecodeStatus::Ok);
     assert(!decoded.audioStateCaughtUp);
-    assert(delivery.markDelivered(epoch, firstSequence, session));
+    assert(ingress.markSnapshotDelivered(epoch, message.request, firstSequence,
+                                         session, delivery));
     assert(!session.isReady(epoch));
 
     const std::string command =
@@ -75,7 +77,8 @@ int main() {
     assert(delivery.prepare(epoch, message.request, publisher, session, outbound));
     const std::uint64_t secondSequence = delivery.pendingSequence();
     assert(secondSequence > firstSequence);
-    assert(delivery.markDelivered(epoch, secondSequence, session));
+    assert(ingress.markSnapshotDelivered(epoch, message.request, secondSequence,
+                                         session, delivery));
     assert(session.isReady(epoch));
 
     commandResult = commands.process(command, session, dispatcher, outbound);
