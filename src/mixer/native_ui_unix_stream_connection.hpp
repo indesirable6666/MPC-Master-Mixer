@@ -63,6 +63,8 @@ public:
     }
 
     int descriptor() const noexcept { return descriptor_.get(); }
+    NativeUiUnixStreamFrameWriter& writer() noexcept { return writer_; }
+    NativeUiUnixStreamFrameReaderPump& reader() noexcept { return reader_; }
     bool connected() const noexcept { return descriptor_.valid(); }
     std::uint64_t epoch() const noexcept { return epoch_; }
     NativeUiSessionCoordinator& session() noexcept { return session_; }
