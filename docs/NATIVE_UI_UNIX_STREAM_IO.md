@@ -32,8 +32,10 @@ invoked here.
 
 The host test uses an `AF_UNIX` `socketpair` only inside the test process to
 verify transfer, nonblocking backpressure, zero-length calls, invalid input,
-peer EOF, and bad descriptors. It does not open a filesystem socket, connect
-to a device, or interact with MPC services.
+peer EOF, bad descriptors, and a write after peer shutdown. On platforms
+with `MSG_NOSIGNAL`, the latter verifies that the adapter reports `EPIPE`
+without raising `SIGPIPE` in the process. It does not open a filesystem
+socket, connect to a device, or interact with MPC services.
 
 Cross-compilation, if added to CI, proves only that the code compiles for the
 selected ARM hard-float toolchain. It does not prove that the MPC kernel,
