@@ -1,7 +1,9 @@
 #include "native_ui_unix_stream_connection.hpp"
+#include "native_ui_frame_codec.hpp"
 
 #include <cassert>
 #include <cstdint>
+#include <cstring>
 #include <sys/socket.h>
 #include <unistd.h>
 
@@ -10,7 +12,11 @@ using namespace mpcmixer;
 int main() {
     std::uint8_t txStorage[128]{};
     NativeUiUnixStreamFrameWriter writer(txStorage, sizeof(txStorage), 64);
-    NativeUiUnixStreamConnection connection(writer);
+    std::uint8_t rxPayload[64]{};
+    std::uint8_t rxScratch[64]{};
+    NativeUiUnixStreamFrameReaderPump reader(
+        rxPayload, sizeof(rxPayload), 64, rxScratch, sizeof(rxScratch));
+    NativeUiUnixStreamConnection connection(writer, reader);
 
     std::uint64_t firstEpoch = 0;
     int firstPair[2] = {-1, -1};
@@ -40,6 +46,7 @@ int main() {
     assert(!connection.connected());
     assert(connection.epoch() == 0);
     assert(!writer.pending());
+    assert(!reader.hasFrame());
     ::close(firstPair[1]);
 
     // Epochs increase across reconnects; stale invalidation cannot tear down
@@ -50,6 +57,21 @@ int main() {
     assert(connection.adopt(secondPair[0], secondEpoch));
     assert(secondEpoch > firstEpoch);
     assert(!connection.invalidate(firstEpoch));
+
+    // A fresh frame is decoded independently after reconnect; the old
+    // partial header must not prefix or corrupt it.
+    std::uint8_t frame[7]{};
+    assert(NativeUiFrameCodec::encodeLength(3, frame));
+    frame[4] = 'n';
+    frame[5] = 'e';
+    frame[6] = 'w';
+    assert(::send(secondPair[1], frame, sizeof(frame), 0) ==
+           static_cast<ssize_t>(sizeof(frame)));
+    assert(reader.receiveNext(connection.descriptor()) ==
+           NativeUiFrameCodec::Status::FrameReady);
+    assert(reader.payloadSize() == 3);
+    assert(std::memcmp(reader.payload(), "new", 3) == 0);
+    reader.acknowledgeFrame();
     assert(connection.connected());
     assert(connection.epoch() == secondEpoch);
     assert(connection.invalidate(secondEpoch));
