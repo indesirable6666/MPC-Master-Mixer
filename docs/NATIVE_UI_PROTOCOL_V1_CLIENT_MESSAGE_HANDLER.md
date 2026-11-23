@@ -26,9 +26,13 @@ snapshot, dispatch mixer commands, or access the audio callback.
   `MixerPresentationSnapshot`, serializing it, queueing it, and marking the
   snapshot delivered to the session gate only after the complete frame has
   actually been sent.
-- `invalidate(epoch)` closes only the exact active session and resets request
-  tracking. It does not clear unapplied audio tickets held by the session
-  coordinator.
+- `invalidate(epoch, session)` closes the exact active session and resets
+  request tracking, but leaves snapshot-delivery cleanup to its owner.
+- Prefer `invalidate(epoch, session, delivery)` when the connection owns a
+  `NativeUiProtocolV1SnapshotDelivery`: it also cancels an unsent snapshot for
+  that epoch. The transport must discard any queued old-epoch frame before
+  calling it. Neither overload clears unapplied audio tickets held by the
+  session coordinator.
 
 ## Threading and validation
 
