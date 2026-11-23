@@ -237,10 +237,14 @@ public:
 
     static void silence(const AudioDuplexBuffer& block) noexcept {
         if (block.outputChannels == nullptr) return;
-        const std::size_t availableChannels =
+        std::size_t availableChannels =
             block.outputChannelCount < AudioDuplexFormat::kMaxOutputChannels
                 ? block.outputChannelCount
                 : static_cast<std::size_t>(AudioDuplexFormat::kMaxOutputChannels);
+        // Never touch an orphaned Aux plane from a malformed odd-sized layout;
+        // a single supplied plane is still cleared as a partial main pair.
+        if (availableChannels > 2 && (availableChannels % 2) != 0)
+            --availableChannels;
         for (std::size_t channel = 0; channel < availableChannels; ++channel) {
             if (block.outputChannels[channel] == nullptr) continue;
             for (std::size_t frame = 0; frame < block.frameCount; ++frame)
