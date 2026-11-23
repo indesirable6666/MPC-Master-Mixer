@@ -147,8 +147,14 @@ int main() {
     const std::string currentSnapshotRequest =
         std::string(R"({"version":1,"kind":"snapshot_request","epoch":)") +
         std::to_string(nextEpoch) + R"(,"request":1})";
+    assert(sendFrame(reconnect[1], currentSnapshotRequest));
+    assert(reader.receiveNext(connection.descriptor()) ==
+           NativeUiFrameCodec::Status::FrameReady);
+    const std::string currentRequestPayload(
+        reinterpret_cast<const char*>(reader.payload()),
+        reader.payloadSize());
     const auto currentRequest =
-        ingress.handle(currentSnapshotRequest, connection.session(), response);
+        ingress.handle(currentRequestPayload, connection.session(), response);
     assert(currentRequest.status ==
            NativeUiProtocolV1ClientMessageStatus::SnapshotRequested);
     assert(ingress.lastSnapshotRequest() == 1);
