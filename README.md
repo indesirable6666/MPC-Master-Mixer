@@ -47,6 +47,7 @@ The benchmark is diagnostic for the build machine only; it is not an MPC perform
 - [Project plan](docs/PROJECT_PLAN.md)
 - [UI architecture, presentation snapshot and command contract](docs/UI_ARCHITECTURE.md)
 - [Host runtime discovery](docs/HOST_RUNTIME_DISCOVERY.md)
+- [Read-only MPC device diagnostic](docs/DEVICE_DIAGNOSTIC.md)
 - [JUCE feasibility assessment](docs/JUCE_FEASIBILITY.md)
 - [Graphics probe status](docs/GRAPHICS_PROBE_STATUS.md)
 - [ARMv7 build notes](docs/ARMV7_BUILD.md)
