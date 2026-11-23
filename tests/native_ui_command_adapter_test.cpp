@@ -81,7 +81,7 @@ int main() {
     message.hasValue = false;
     assert(mpcmixer::NativeUiCommandAdapter::dispatch(message, dispatcher).status ==
            mpcmixer::MixerUiCommandStatus::Invalid);
-    assert(dispatcher.lastAcceptedSequence() == 6);
+    assert(dispatcher.lastAcceptedSequence() == 7);
 
     message.hasValue = true;
     message.value = 128;
@@ -99,7 +99,7 @@ int main() {
     message.type = "SetInsertEnabled";
     assert(mpcmixer::NativeUiCommandAdapter::dispatch(message, dispatcher).status ==
            mpcmixer::MixerUiCommandStatus::Invalid);
-    assert(dispatcher.lastAcceptedSequence() == 6);
+    assert(dispatcher.lastAcceptedSequence() == 7);
 
     // Sequence checks happen in the dispatcher after the adapter has decoded
     // a valid typed command. Use a valid payload to isolate ordering behavior.
@@ -109,13 +109,13 @@ int main() {
     message.sequence = 0;
     assert(mpcmixer::NativeUiCommandAdapter::dispatch(message, dispatcher).status ==
            mpcmixer::MixerUiCommandStatus::OutOfOrder);
-    message.sequence = 6;
+    message.sequence = 7;
     assert(mpcmixer::NativeUiCommandAdapter::dispatch(message, dispatcher).status ==
            mpcmixer::MixerUiCommandStatus::OutOfOrder);
-    assert(dispatcher.lastAcceptedSequence() == 6);
+    assert(dispatcher.lastAcceptedSequence() == 7);
 
     // The same unconsumed sequence can be retried with a valid command.
-    message.sequence = 7;
+    message.sequence = 8;
     message.type = "SetTrackFader";
     message.hasTrack = true;
     message.track = 5;
