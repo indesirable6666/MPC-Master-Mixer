@@ -79,7 +79,7 @@ int main() {
     message.hasFrequencyHz = true; message.frequencyHz = 1200.0f;
     message.hasQ = true; message.q = 0.8f;
     message.hasGainDb = true; message.gainDb = 3.0f;
-    assert(NativeUiCommandAdapter::dispatch(message, dispatcher).accepted());
+    assert(mpcmixer::NativeUiCommandAdapter::dispatch(message, dispatcher).accepted());
 
     // Missing fields and out-of-range values must not consume the sequence.
     message.sequence = 9;
