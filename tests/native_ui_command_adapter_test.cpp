@@ -137,6 +137,8 @@ int main() {
     message.type = "SetTrackFader";
     message.hasTrack = true;
     message.track = 5;
+    message.hasIndex = false;
+    message.hasFlag = false;
     message.hasValue = true;
     message.value = 0;
     assert(mpcmixer::NativeUiCommandAdapter::dispatch(message, dispatcher).accepted());
