@@ -12,8 +12,10 @@ The `ARMv7 toolchain check` workflow uses Debian Bullseye's
 It compiles the C++14 audio-engine, duplex host, stereo Audio In pair, logical
 Main-plus-Aux output host, meter, and shared signal-reference test programs as
 ARMv7 executables, then checks ELF architecture, interpreter and runtime
-symbol versions. The duplex Aux host test covers the ten-channel logical
-layout (Main L/R plus four stereo Aux pairs) and a partial one-Aux layout. The
+symbol versions. The duplex host test covers the ten-channel logical output layout (Main L/R
+plus four stereo Aux send pairs), partial send layouts, and the ten-channel
+logical input layout (source L/R plus four stereo Aux Return pairs), including
+return gain, balance, mute, and malformed-pair handling. The
 workflow also builds small graphics-loader capability probes. Test executables
 are uploaded as CI artifacts for inspection; they are not executed on the MPC.
 
@@ -91,7 +93,9 @@ physical MPC sockets. A future backend must map them explicitly using the
 actual target SDK/device API and must report unavailable or unsupported routes
 rather than silently assuming a channel order.
 
-The host currently provides Aux send outputs only. Captured Aux returns,
-device enumeration, channel negotiation, and physical output routing are
-separate future integration tasks. They must remain outside the portable DSP
+The portable host accepts logical Aux Return input pairs as well as Aux send
+output pairs. CI exercises these with synthetic planar buffers only; this is
+not evidence of physical capture or playback. Device enumeration, channel
+negotiation, and physical input/output routing remain separate future
+integration tasks. They must remain outside the portable DSP
 until an independently testable adapter exists.

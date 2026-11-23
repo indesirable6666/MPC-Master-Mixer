@@ -2,7 +2,7 @@
 #include <cstddef>
 namespace mpcmixer {
 struct AudioDuplexFormat {
-    enum { kMaxInputChannels = 2, kMaxOutputChannels = 10 };
+    enum { kMaxInputChannels = 10, kMaxOutputChannels = 10 };
 
     unsigned sampleRate = 48000;
     std::size_t inputChannels = 2, outputChannels = 2, maxFramesPerBlock = 512;

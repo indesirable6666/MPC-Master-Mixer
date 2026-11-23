@@ -22,7 +22,8 @@ public:
         kUnmappedTrack = AudioEngine::kTrackCount,
         // These meter slots match the prototype's Audio In 1/2 strips.
         kAudioInputLeftTrackIndex = 13,
-        kAudioInputRightTrackIndex = 14
+        kAudioInputRightTrackIndex = 14,
+        kFirstAuxReturnInputChannel = 2
     };
 
     explicit AudioDuplexEngineHost(
@@ -55,9 +56,9 @@ public:
             : kUnmappedTrack;
     }
 
-    // Opt-in stereo Audio In consumes both prepared input channels as one
-    // linked/unlinked pair. Configure before prepare(); pair mode and per-track
-    // routing are mutually exclusive for those physical input channels.
+    // Opt-in stereo Audio In consumes source input channels 0/1 as one
+    // linked/unlinked pair. Optional Aux Return pairs may follow on channels
+    // 2..9; the source pair and per-track routes are mutually exclusive.
     bool setStereoInputPairEnabled(bool enabled) noexcept {
         if (backend_ != nullptr) return false;
         if (enabled && (inputRoute(0) != kUnmappedTrack ||
@@ -70,14 +71,18 @@ public:
         return stereoInputPairEnabled_;
     }
 
+    // Input channels 0/1 are source inputs (stereo Audio In or independently
+    // routed mono tracks). Optional Aux Returns follow as complete stereo pairs:
+    // Aux 1 L/R at 2/3, Aux 2 at 4/5, Aux 3 at 6/7, and Aux 4 at 8/9.
     // Output layout is logical and device-neutral: Main L/R occupy channels
     // 0/1, followed by up to four stereo Aux buses at 2+2*bus / 3+2*bus.
     // A format may expose the main pair alone or a prefix of complete Aux pairs.
     bool prepare(AudioDuplexBackend& backend, const AudioDuplexFormat& format) noexcept {
-        if (backend_ != nullptr || !format.valid() || format.outputChannels < 2 ||
-            (format.outputChannels % 2) != 0 ||
-            format.inputChannels > inputTrack_.size() ||
-            (stereoInputPairEnabled_ && format.inputChannels != 2)) return false;
+        const bool validInputLayout = format.inputChannels <= 2 ||
+            (format.inputChannels >= 4 && (format.inputChannels % 2) == 0);
+        if (backend_ != nullptr || !format.valid() || !validInputLayout ||
+            format.outputChannels < 2 || (format.outputChannels % 2) != 0 ||
+            (stereoInputPairEnabled_ && format.inputChannels < 2)) return false;
         backend_ = &backend;
         if (!backend_->prepare(format, &AudioDuplexEngineHost::processCallback, this)) {
             backend_ = nullptr;
@@ -128,11 +133,33 @@ public:
             }
         }
         if (block.inputChannelCount != expectedInputChannels_ ||
-            block.inputChannelCount > inputTrack_.size() ||
+            block.inputChannelCount > AudioDuplexFormat::kMaxInputChannels ||
             (block.inputChannelCount != 0 && block.inputChannels == nullptr)) {
             silence(block);
             return;
         }
+
+        const std::size_t sourceInputChannels =
+            block.inputChannelCount < 2 ? block.inputChannelCount : 2;
+        const std::size_t availableAuxReturns =
+            block.inputChannelCount > kFirstAuxReturnInputChannel
+                ? (block.inputChannelCount - kFirstAuxReturnInputChannel) / 2
+                : 0;
+        std::array<const float*, AudioEngine::kAuxBusCount> returnLeft{};
+        std::array<const float*, AudioEngine::kAuxBusCount> returnRight{};
+        for (std::size_t bus = 0; bus < availableAuxReturns; ++bus) {
+            const std::size_t leftChannel = kFirstAuxReturnInputChannel + bus * 2;
+            returnLeft[bus] = block.inputChannels[leftChannel];
+            returnRight[bus] = block.inputChannels[leftChannel + 1];
+            if (returnLeft[bus] == nullptr || returnRight[bus] == nullptr) {
+                silence(block);
+                return;
+            }
+        }
+        const float* const* auxReturnLeftInputs =
+            availableAuxReturns == 0 ? nullptr : returnLeft.data();
+        const float* const* auxReturnRightInputs =
+            availableAuxReturns == 0 ? nullptr : returnRight.data();
 
         std::array<const float*, AudioEngine::kTrackCount> trackInputs{};
         std::array<std::size_t, 2> blockRoutes{{kUnmappedTrack, kUnmappedTrack}};
@@ -148,7 +175,7 @@ public:
         float* const* auxRightOutputs =
             availableAuxBuses == 0 ? nullptr : auxRight.data();
         if (stereoInputPairEnabled_) {
-            if (block.inputChannelCount != 2 ||
+            if (block.inputChannelCount < 2 ||
                 block.inputChannels[0] == nullptr ||
                 block.inputChannels[1] == nullptr) {
                 silence(block);
@@ -157,9 +184,10 @@ public:
             bridge_.processWithAudioInputPair(
                 trackInputs.data(), block.inputChannels[0], block.inputChannels[1],
                 block.outputChannels[0], block.outputChannels[1], block.frameCount,
-                auxLeftOutputs, auxRightOutputs);
+                auxLeftOutputs, auxRightOutputs,
+                auxReturnLeftInputs, auxReturnRightInputs);
         } else {
-            for (std::size_t channel = 0; channel < block.inputChannelCount; ++channel) {
+            for (std::size_t channel = 0; channel < sourceInputChannels; ++channel) {
                 const std::size_t track =
                     inputTrack_[channel].load(std::memory_order_acquire);
                 blockRoutes[channel] = track;
@@ -174,11 +202,11 @@ public:
                 }
                 trackInputs[track] = block.inputChannels[channel];
             }
-            if (availableAuxBuses != 0) {
-                bridge_.processWithAux(
+            if (availableAuxBuses != 0 || availableAuxReturns != 0) {
+                bridge_.processWithAuxAndReturns(
                     trackInputs.data(), block.outputChannels[0],
-                    block.outputChannels[1], auxLeft.data(), auxRight.data(),
-                    block.frameCount);
+                    block.outputChannels[1], auxLeftOutputs, auxRightOutputs,
+                    auxReturnLeftInputs, auxReturnRightInputs, block.frameCount);
             } else {
                 bridge_.process(trackInputs.data(), block.outputChannels[0],
                                 block.outputChannels[1], block.frameCount);
@@ -199,7 +227,7 @@ public:
                     block.inputChannels[1], block.frameCount,
                     snapshot.channels[kAudioInputRightTrackIndex]);
             } else {
-                for (std::size_t channel = 0; channel < block.inputChannelCount; ++channel) {
+                for (std::size_t channel = 0; channel < sourceInputChannels; ++channel) {
                     const std::size_t track = blockRoutes[channel];
                     if (track == kUnmappedTrack) continue;
                     if (!AudioBlockMeter::measure(

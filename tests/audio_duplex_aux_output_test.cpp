@@ -29,6 +29,11 @@ int main() {
     assert(!format.valid());
     format.outputChannels = 10; // Main L/R followed by four stereo Aux pairs.
     assert(format.valid());
+    format.inputChannels = 3; // Source pair plus an incomplete Aux Return.
+    assert(!host.prepare(backend, format));
+    format.inputChannels = AudioDuplexFormat::kMaxInputChannels + 1;
+    assert(!format.valid());
+    format.inputChannels = 2;
     assert(host.prepare(backend, format));
     assert(host.start());
 
@@ -118,6 +123,112 @@ int main() {
     assert(near(mainRight[0], -0.0625f));
     assert(near(auxLeft[0], 0.125f));
     assert(near(auxRight[0], -0.0625f));
+
+    host.stop();
+    host.shutdown();
+
+    // Aux Return 1 follows the source pair and is mixed through its own
+    // gain, balance and mute controls into the Master output.
+    host.stop();
+    host.shutdown();
+    assert(host.setInputRoute(0, AudioDuplexEngineHost::kUnmappedTrack));
+    assert(host.setInputRoute(1, AudioDuplexEngineHost::kUnmappedTrack));
+
+    AudioDuplexFormat returnFormat;
+    returnFormat.inputChannels = 4; // Source L/R + Aux Return 1 L/R.
+    returnFormat.outputChannels = 2;
+    returnFormat.maxFramesPerBlock = 4;
+    assert(returnFormat.valid());
+    assert(host.prepare(backend, returnFormat));
+    assert(host.start());
+
+    const float returnInputLeft[] = {0.4f, -0.2f};
+    const float returnInputRight[] = {-0.6f, 0.8f};
+    const float* returnInputs[] = {
+        inputLeft, inputRight, returnInputLeft, returnInputRight
+    };
+    float returnMainLeft[2] = {}, returnMainRight[2] = {};
+    float* returnOutputs[] = {returnMainLeft, returnMainRight};
+    const AudioDuplexBuffer returnBlock{returnInputs, returnOutputs, 4, 2, 2};
+
+    AudioEngine::AuxReturn returnState;
+    returnState.gain = 0.5f;
+    returnState.balance = 0.5f;
+    assert(bridge.enqueueAuxReturn(0, returnState));
+    assert(backend.processBlock(returnBlock) == AudioDuplexStatus::Processed);
+    assert(near(returnMainLeft[0], 0.1f));
+    assert(near(returnMainRight[0], -0.3f));
+    assert(near(returnMainLeft[1], -0.05f));
+    assert(near(returnMainRight[1], 0.4f));
+
+    returnState.mute = true;
+    assert(bridge.enqueueAuxReturn(0, returnState));
+    assert(backend.processBlock(returnBlock) == AudioDuplexStatus::Processed);
+    assert(near(returnMainLeft[0], 0.0f));
+    assert(near(returnMainRight[0], 0.0f));
+
+    // A missing plane in a declared return pair rejects the block and clears
+    // Main instead of processing only one side of the return.
+    const float* malformedReturnInputs[] = {
+        inputLeft, inputRight, returnInputLeft, nullptr
+    };
+    returnMainLeft[0] = returnMainRight[0] = 9.0f;
+    const AudioDuplexBuffer malformedReturn{
+        malformedReturnInputs, returnOutputs, 4, 2, 2
+    };
+    host.processBlock(malformedReturn);
+    assert(near(returnMainLeft[0], 0.0f));
+    assert(near(returnMainRight[0], 0.0f));
+
+    host.stop();
+    host.shutdown();
+
+    // The ten-channel layout carries all four stereo Aux Returns alongside
+    // the dedicated stereo Audio In source pair.
+    assert(host.setStereoInputPairEnabled(true));
+    returnFormat.inputChannels = 10;
+    assert(host.prepare(backend, returnFormat));
+    assert(host.start());
+
+    const float return2Left[] = {0.2f, -0.4f};
+    const float return2Right[] = {0.4f, -0.2f};
+    const float return3Left[] = {-0.1f, 0.3f};
+    const float return3Right[] = {0.2f, -0.1f};
+    const float return4Left[] = {0.1f, -0.2f};
+    const float return4Right[] = {-0.2f, 0.2f};
+    const float* allReturnInputs[] = {
+        inputLeft, inputRight,
+        returnInputLeft, returnInputRight,
+        return2Left, return2Right,
+        return3Left, return3Right,
+        return4Left, return4Right
+    };
+    const AudioDuplexBuffer allReturnBlock{
+        allReturnInputs, returnOutputs, 10, 2, 2
+    };
+
+    returnState.mute = false;
+    assert(bridge.enqueueAuxReturn(0, returnState));
+    AudioEngine::AuxReturn secondReturn;
+    secondReturn.gain = 0.25f;
+    secondReturn.balance = -0.5f;
+    assert(bridge.enqueueAuxReturn(1, secondReturn));
+    AudioEngine::AuxReturn thirdReturn;
+    thirdReturn.gain = 1.0f;
+    assert(bridge.enqueueAuxReturn(2, thirdReturn));
+    AudioEngine::AuxReturn fourthReturn;
+    fourthReturn.gain = 0.5f;
+    fourthReturn.balance = 0.25f;
+    assert(bridge.enqueueAuxReturn(3, fourthReturn));
+
+    assert(bridge.enqueueAudioInputPairLinked(true));
+    AudioInputPair::StereoControls pairState;
+    pairState.gain = 0.5f;
+    assert(bridge.enqueueAudioInputPairStereoControls(pairState));
+    returnMainLeft[0] = returnMainRight[0] = 0.0f;
+    assert(backend.processBlock(allReturnBlock) == AudioDuplexStatus::Processed);
+    assert(near(returnMainLeft[0], 0.3375f));
+    assert(near(returnMainRight[0], -0.275f));
 
     host.stop();
     host.shutdown();

@@ -6,12 +6,17 @@ through the mixer, to the main stereo output and up to four stereo Aux outputs.
 
 ## Explicit input routing
 
-The host supports up to two input channels and between two and ten output
-channels. Each input channel is unmapped by default. The native application
-must explicitly map each input channel to one of the mixer's 16 mono tracks
+The host accepts up to ten input channels and between two and ten output
+channels. Input channels 0/1 are the source pair: in stereo-pair mode they feed
+Audio In L/R; otherwise each may be mapped independently to one of the mixer's
+16 mono tracks. Optional Aux Return pairs follow the source pair: Return 1 L/R
+at inputs 2/3, Return 2 at 4/5, Return 3 at 6/7, and Return 4 at 8/9.
+Supported input counts are 0, 1, 2, 4, 6, 8, and 10; a partial return pair is
+rejected. The native application explicitly maps each source input to a track
 before starting the backend. This deliberately avoids assuming that any
 physical MPC, USB, or ALSA channel number corresponds to a particular mixer
 strip.
+
 
 Output channels use a fixed logical (not physical-device) layout: channels 0/1
 are Main L/R; channels 2/3 are Aux 1 L/R; 4/5 are Aux 2 L/R; 6/7 are Aux 3
@@ -21,22 +26,23 @@ channels). The host never guesses how those logical channels map to physical
 ports; a future device adapter must supply that mapping explicitly.
 
 A duplicated route is rejected for that block and all complete supported
-output pairs are silenced. Missing or invalid input pointers are handled the
-same way. If the output-channel count differs from the prepared format, the
-available complete stereo pairs are silenced without indexing beyond the
-supplied pointer array; an orphaned plane in a malformed odd-sized layout is
-left untouched. If one output plane is missing, every other available prepared
-output plane is silenced. A callback whose input-channel count differs from
-the prepared format is rejected and outputs are silenced. A block larger than
-the prepared maximum is ignored because the host cannot know whether the
-supplied buffers are large enough to clear safely. Unmapped inputs are ignored;
-the mixer treats their tracks as silence.
+output pairs are silenced. A null pointer for a mapped source input or either
+plane of a declared Aux Return pair rejects the block and silences its outputs;
+unmapped source inputs are ignored. If the output-channel count differs from
+the prepared format, the available complete stereo pairs are silenced without
+indexing beyond the supplied pointer array; an orphaned plane in a malformed
+odd-sized layout is left untouched. If one output plane is missing, every
+other available prepared output plane is silenced. A callback whose input-
+channel count differs from the prepared format is rejected and outputs are
+silenced. A block larger than the prepared maximum is ignored because the host
+cannot know whether the supplied buffers are large enough to clear safely.
+
 
 ## Optional stereo Audio In pair
 
 `AudioDuplexEngineHost::setStereoInputPairEnabled(true)` enables a
 separate, opt-in stereo pair path. Select it before `prepare()`; the
-prepared format must contain exactly two input channels. The pair reserves
+prepared format must contain at least two source input channels; optional Aux Return pairs may follow. The pair reserves
 physical input channels 0 and 1, so they cannot also be assigned to ordinary
 mono tracks. Disabling pair mode requires the host to be shut down first.
 
@@ -62,8 +68,13 @@ When Aux output pairs are present, the host passes their caller-owned buffers
 to both the normal track mixer and the Audio In pair. Track sends are written
 first; Audio In sends are added to the same bus buffers. Aux sends remain
 post-source-fader/pan and pre-Master, matching the engine contract. Formats
-with only two outputs retain the original Main-only behavior. Aux return
-capture/processing is not part of this duplex output layout yet.
+with only two outputs retain the original Main-only behavior. Aux Return
+capture is carried on the duplex input side, independently of the number of
+Aux send output pairs. Each complete input return pair is passed to its
+matching Aux Return processor, whose gain, balance and mute are applied before
+the Master stage. Return channels are logical buffer indices only; a future
+backend must provide an explicit physical mapping.
+
 
 ## Thread and lifecycle contract
 
@@ -91,11 +102,12 @@ capture/processing is not part of this duplex output layout yet.
 ## Current implementation boundary
 
 The offline backend drives explicit mono routing, the optional stereo pair,
-and the logical Main-plus-Aux output layouts in automated tests using synthetic
-buffers. There is still no ALSA, JACK, or MPC-specific backend, no physical
-input/output device selection or port mapping, no Aux return input path, and no
-live hardware validation. This host is a reusable integration point, not proof
-that audio is already connected on the MPC.
+four logical Aux Return input pairs, and the Main-plus-Aux output layouts in
+automated tests using synthetic buffers. There is still no ALSA, JACK, or
+MPC-specific backend, no physical input/output device selection or port
+mapping, and no live hardware validation. This host is a reusable integration
+point, not proof that audio is already connected on the MPC.
+
 
 
 The same pair controls are represented in the framework-neutral
