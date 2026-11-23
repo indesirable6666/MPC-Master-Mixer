@@ -9,7 +9,7 @@ if [ ! -d /media/az01-internal ] || [ ! -w /media/az01-internal ]; then
   exit 1
 fi
 
-# Répertoire temporaire privé et unique : ne jamais suivre un .tmp préexistant.
+# Répertoire temporaire privé créé atomiquement ; refuser tout .tmp préexistant.
 TMPDIR="$OUT.tmp"
 if ! mkdir "$TMPDIR"; then
   echo "ERREUR: impossible de créer le répertoire temporaire."
