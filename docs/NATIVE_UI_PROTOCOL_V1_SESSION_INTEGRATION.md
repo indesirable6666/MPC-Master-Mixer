@@ -121,3 +121,10 @@ application, and delivered ACK using the driver's public steps. This is an
 explicit-step integration pilot only: it does not create a production socket,
 run an event loop, attach to MPC startup, or connect the prototype UI to the
 native engine.
+
+
+The driver socketpair test also constrains the peer receive window to exercise a
+real partial outbound snapshot write. It verifies that `flushOne()` reports
+progress followed by `WouldBlock`, the writer retains the remaining framed
+bytes, and disconnect clears both the queued remainder and the driver's staged
+response before the connection can be reused.
