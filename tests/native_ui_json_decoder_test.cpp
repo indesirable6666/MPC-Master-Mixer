@@ -3,7 +3,6 @@
 #include <cassert>
 #include <cstdint>
 #include <limits>
-#include <iostream>
 #include <string>
 
 using namespace mpcmixer;
@@ -66,7 +65,6 @@ int main() {
         const std::uint64_t previousSequence = message.sequence;
         const NativeUiJsonDecodeStatus status =
             NativeUiJsonDecoder::decode(json, message);
-        if (status == NativeUiJsonDecodeStatus::Ok) std::cerr << "Unexpectedly accepted: " << json << "\\n";
         assert(status != NativeUiJsonDecodeStatus::Ok);
         assert(message.sequence == previousSequence);
     };
@@ -108,6 +106,7 @@ int main() {
     reject(R"({"sequence":1,"type":"SetTrackFader","value":10})");
     reject(R"({"sequence":1,"type":"SetTrackFader","track":0,"value":10,"flag":false})");
     reject(R"({"sequence":1,"type":"SetTrackFader","track":0,"index":0,"value":10})");
+    reject(R"({"sequence":1,"type":"SetTrackFader","track":0,"value":10,"frequencyHz":1000,"q":1,"gainDb":0})");
     reject(R"({"sequence":1,"type":"SetTrackAuxSend","track":0,"value":10})");
     reject(R"({"sequence":1,"type":"SetTrackAuxSend","track":0,"index":0,"value":10,"flag":false})");
     reject(R"({"sequence":1,"type":"SetTrackAuxSend","track":0,"index":0.0,"value":10})");
