@@ -16,19 +16,26 @@ public:
         NativeUiSessionCoordinator& session,
         std::string& payload) const noexcept {
         NativeUiAudioAck acknowledgement;
-        if (!session.popApplied(controller, acknowledgement))
+        if (!session.peekApplied(controller, acknowledgement))
             return false;
 
-        std::string candidate;
-        if (!NativeUiProtocolV1ResponseSerializer::audioAck(
-                acknowledgement.connectionEpoch,
-                acknowledgement.sequence,
-                acknowledgement.audioTicket,
-                candidate))
-            return false;
+        try {
+            std::string candidate;
+            if (!NativeUiProtocolV1ResponseSerializer::audioAck(
+                    acknowledgement.connectionEpoch,
+                    acknowledgement.sequence,
+                    acknowledgement.audioTicket,
+                    candidate))
+                return false;
 
-        payload.swap(candidate);
-        return true;
+            if (!session.consumeApplied(acknowledgement))
+                return false;
+            payload.swap(candidate);
+            return true;
+        } catch (...) {
+            // Keep the acknowledgement queued if response construction fails.
+            return false;
+        }
     }
 };
 
