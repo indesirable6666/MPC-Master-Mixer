@@ -1,4 +1,5 @@
 #include "native_ui_protocol_v1_client_message_handler.hpp"
+#include "native_ui_protocol_v1_snapshot_delivery.hpp"
 
 #include <cassert>
 #include <cstdint>
@@ -9,6 +10,10 @@ using namespace mpcmixer;
 int main() {
     NativeUiProtocolV1ClientMessageHandler handler;
     NativeUiSessionCoordinator session;
+    AudioEngineCommandBridge bridge;
+    MixerController controller(bridge);
+    MixerPresentationPublisher publisher(controller);
+    NativeUiProtocolV1SnapshotDelivery delivery;
     std::string response = "unchanged";
 
     auto result = handler.handle(
@@ -44,8 +49,21 @@ int main() {
         std::string(R"({"version":1,"kind":"snapshot_request","epoch":)") +
             std::to_string(epoch) + R"(,"request":1})",
         session, response);
-    assert(result.status == NativeUiProtocolV1ClientMessageStatus::InvalidMessage);
+    assert(result.status == NativeUiProtocolV1ClientMessageStatus::Busy);
     assert(handler.lastSnapshotRequest() == 1);
+
+    std::string snapshotWire = "preserve";
+    assert(!handler.prepareSnapshot(epoch, 2, publisher, session, delivery,
+                                    snapshotWire));
+    assert(snapshotWire == "preserve");
+    assert(handler.prepareSnapshot(epoch, 1, publisher, session, delivery,
+                                   snapshotWire));
+    const std::uint64_t firstSnapshotSequence = delivery.pendingSequence();
+    assert(!handler.prepareSnapshot(epoch, 1, publisher, session, delivery,
+                                    snapshotWire));
+    assert(handler.markSnapshotDelivered(epoch, 1, firstSnapshotSequence,
+                                         session, delivery));
+    assert(!delivery.hasPendingDelivery());
 
     result = handler.handle(
         std::string(R"({"version":1,"kind":"snapshot_request","epoch":)") +
@@ -53,6 +71,16 @@ int main() {
         session, response);
     assert(result.status == NativeUiProtocolV1ClientMessageStatus::SnapshotRequested);
     assert(handler.lastSnapshotRequest() == 3);
+    assert(!handler.handle(
+        std::string(R"({"version":1,"kind":"snapshot_request","epoch":)") +
+            std::to_string(epoch) + R"(,"request":4})",
+        session, response).status ==
+        NativeUiProtocolV1ClientMessageStatus::SnapshotRequested);
+    assert(handler.prepareSnapshot(epoch, 3, publisher, session, delivery,
+                                   snapshotWire));
+    const std::uint64_t thirdSnapshotSequence = delivery.pendingSequence();
+    assert(handler.markSnapshotDelivered(epoch, 3, thirdSnapshotSequence,
+                                         session, delivery));
 
     assert(handler.invalidate(epoch, session));
     assert(session.activeEpoch() == 0);
