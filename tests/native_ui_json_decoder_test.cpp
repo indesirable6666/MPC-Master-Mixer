@@ -31,6 +31,15 @@ int main() {
     assert(message.hasValue && message.value == 100);
     assert(!message.hasFlag);
 
+
+    assert(NativeUiJsonDecoder::decode(
+        R"({"sequence":8,"type":"SetTrackEqBand","track":5,"index":2,"frequencyHz":1200.5,"q":0.8,"gainDb":-3.25})",
+        message) == NativeUiJsonDecodeStatus::Ok);
+    assert(message.hasTrack && message.track == 5 && message.hasIndex && message.index == 2);
+    assert(message.hasFrequencyHz && message.frequencyHz == 1200.5f);
+    assert(message.hasQ && message.q == 0.8f);
+    assert(message.hasGainDb && message.gainDb == -3.25f);
+
     assert(NativeUiJsonDecoder::decode(
         R"({"sequence":3,"type":"SetTrackMute","track":4,"flag":false})",
         message) == NativeUiJsonDecodeStatus::Ok);
@@ -101,6 +110,11 @@ int main() {
     reject(R"({"sequence":1,"type":"SetTrackAuxSend","track":0,"index":0,"value":10,"flag":false})");
     reject(R"({"sequence":1,"type":"SetTrackAuxSend","track":0,"index":0.0,"value":10})");
     reject(R"({"sequence":1,"type":"SetTrackAuxSend","track":0,"index":18446744073709551616,"value":10})");
+    reject(R"({"sequence":1,"type":"SetTrackEqBand","track":0,"index":0,"frequencyHz":1000,"q":1.0,"gainDb":0})");
+    reject(R"({"sequence":1,"type":"SetTrackEqBand","track":0,"index":0,"frequencyHz":1000,"q":1.0})");
+    reject(R"({"sequence":1,"type":"SetTrackEqBand","track":0,"index":0,"frequencyHz":1000,"q":1.0,"gainDb":0,"value":1})");
+    reject(R"({"sequence":1,"type":"SetTrackEqBand","track":0,"index":0,"frequencyHz":"1000","q":1.0,"gainDb":0})");
+    reject(R"({"sequence":1,"type":"SetTrackEqBand","track":0,"index":0,"frequencyHz":1e999,"q":1.0,"gainDb":0})");
     reject(R"({"sequence":1,"type":"SetTrackMute","track":0,"value":1,"flag":true})");
     reject(R"({"sequence":1,"type":"SetTrackMute","track":-1,"flag":true})");
     reject(R"({"sequence":1,"type":"SetTrackMute","track":0.0,"flag":true})");
