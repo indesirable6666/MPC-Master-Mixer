@@ -1,4 +1,6 @@
 #include "native_ui_protocol_v1_client_message_handler.hpp"
+#include "native_ui_protocol_v1_command_processor.hpp"
+#include "native_ui_protocol_v1_audio_ack_publisher.hpp"
 #include "native_ui_protocol_v1_snapshot_delivery.hpp"
 #include "native_ui_unix_stream_connection.hpp"
 #include "native_ui_frame_codec.hpp"
@@ -65,8 +67,11 @@ int main() {
     NativeUiUnixStreamConnection connection(writer, reader);
     NativeUiProtocolV1ClientMessageHandler ingress;
     NativeUiProtocolV1SnapshotDelivery delivery;
+    NativeUiProtocolV1CommandProcessor commands;
+    NativeUiProtocolV1AudioAckPublisher acknowledgements;
     AudioEngineCommandBridge bridge;
     MixerController controller(bridge);
+    MixerUiCommandDispatcher dispatcher(controller);
     MixerPresentationPublisher publisher(controller);
 
     int pair[2] = {-1, -1};
@@ -192,6 +197,58 @@ int main() {
                                          connection.session(), delivery));
     assert(!delivery.hasPendingDelivery());
     assert(connection.session().isReady(nextEpoch));
+
+    // Command acceptance and audio application are separate transport events.
+    const std::string command =
+        std::string(R"({"version":1,"kind":"command","epoch":)") +
+        std::to_string(nextEpoch) +
+        R"(,"sequence":1,"type":"SetTrackFader","track":2,"value":81})";
+    assert(sendFrame(reconnect[1], command));
+    assert(reader.receiveNext(connection.descriptor()) ==
+           NativeUiFrameCodec::Status::FrameReady);
+    const std::string commandPayload(
+        reinterpret_cast<const char*>(reader.payload()), reader.payloadSize());
+    const auto commandResult =
+        commands.process(commandPayload, connection.session(), dispatcher, response);
+    assert(commandResult.status == NativeUiProtocolV1CommandProcessStatus::Accepted);
+    reader.acknowledgeFrame();
+    assert(writer.queue(response.data(), response.size()).status ==
+           NativeUiUnixStreamFrameWriter::Status::Queued);
+    assert(writer.flush(connection.descriptor()).status ==
+           NativeUiUnixStreamFrameWriter::Status::Sent);
+    const auto resultJson = nlohmann::json::parse(receiveFrame(reconnect[1]));
+    assert(resultJson["kind"] == "command_result");
+    assert(resultJson["epoch"] == nextEpoch);
+    assert(resultJson["sequence"] == 1);
+    assert(resultJson["status"] == "accepted");
+    assert(resultJson["audio_ticket"] == commandResult.commandResult.audioTicket);
+
+    std::string ackPayload = "unchanged";
+    assert(connection.session().pendingAcknowledgements() == 0);
+    assert(!acknowledgements.publishNext(controller, connection.session(), ackPayload));
+    assert(ackPayload == "unchanged");
+    const float* inputs[AudioEngine::kTrackCount]{};
+    float left[1]{};
+    float right[1]{};
+    bridge.process(inputs, left, right, 1);
+    assert(connection.session().pendingAcknowledgements() == 1);
+    assert(acknowledgements.publishNext(controller, connection.session(), ackPayload));
+    assert(acknowledgements.hasPendingDelivery());
+    assert(connection.session().pendingAcknowledgements() == 1);
+    assert(writer.queue(ackPayload.data(), ackPayload.size()).status ==
+           NativeUiUnixStreamFrameWriter::Status::Queued);
+    assert(writer.flush(connection.descriptor()).status ==
+           NativeUiUnixStreamFrameWriter::Status::Sent);
+    const auto ackJson = nlohmann::json::parse(receiveFrame(reconnect[1]));
+    assert(ackJson["kind"] == "audio_ack");
+    assert(ackJson["epoch"] == nextEpoch);
+    assert(ackJson["sequence"] == 1);
+    assert(ackJson["audio_ticket"] == commandResult.commandResult.audioTicket);
+    assert(ackJson["status"] == "applied");
+    assert(acknowledgements.markDelivered(connection.session()));
+    assert(!acknowledgements.hasPendingDelivery());
+    assert(connection.session().pendingAcknowledgements() == 0);
+
 
     // A prepared but unsent snapshot is cancelled with its connection and
     // must never make the session ready.
