@@ -210,9 +210,10 @@ channel states, per-side six-band EQ parameters and sample rates, four Aux-send
 levels, and insert-occupancy flags (never raw effect pointers). LINK seeds the
 right-side EQ and Aux state from the left; linked EQ edits update both channels
 as one queued configuration. The pair DSP now runs its own EQ and insert chains
-and contributes to caller-provided stereo Aux-send buffers. The current duplex
-host still exposes only the two main output channels, so Aux routing beyond the
-DSP/bridge boundary is not yet a device output route.
+and contributes to caller-provided stereo Aux-send buffers. The duplex host
+accepts Main L/R plus up to four logical stereo Aux output pairs, and up to four
+logical stereo Aux Return input pairs. These are caller-owned planar buffers
+with logical indices only; no device backend or physical port mapping exists.
 
 Like track state, the snapshot is a producer-side desired copy: it is not proof
 that the audio callback has applied a command, and it is not hardware feedback.
