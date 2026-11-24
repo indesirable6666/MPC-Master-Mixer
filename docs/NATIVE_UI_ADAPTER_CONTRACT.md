@@ -2,10 +2,12 @@
 
 ## Status and scope
 
-The first transport-independent native command adapter is implemented in
-`src/mixer/native_ui_command_adapter.hpp`. It maps a typed, already-decoded
-message into the first vertical slice of `MixerUiCommand` and dispatches it
-on the serialized control thread.
+The transport-independent native command adapter is implemented in
+`src/mixer/native_ui_command_adapter.hpp`. It maps typed, already-decoded
+messages into `MixerUiCommand` and dispatches them on the serialized control
+thread. The typed adapter includes Audio In pair and per-side commands; the
+legacy JSON decoder and protocol-v1 wire decoder intentionally expose narrower
+command subsets until their schemas are extended.
 
 This is not an IPC transport, native UI toolkit, or device integration. The
 browser prototype remains offline and simulated. A strict JSON decoder is now
@@ -20,21 +22,27 @@ not implement IPC, a native UI toolkit, or device integration.
 
 The browser must never call the DSP engine or audio callback directly.
 
-## Implemented first vertical slice
+## Implemented typed command surface
 
-The adapter currently maps these commands:
+The adapter maps track fader/pan/Mute/Solo, track Aux Send and EQ band,
+Master fader/Mute, and these Audio In operations:
 
-1. Track fader (`SetTrackFader`)
-2. Track pan (`SetTrackPan`)
-3. Track Mute (`SetTrackMute`)
-4. Track Solo (`SetTrackSolo`)
-5. Master fader (`SetMasterFader`)
-6. Master Mute (`SetMasterMute`)
-7. Track Aux Send (`SetTrackAuxSend`)
-8. Track EQ band (`SetTrackEqBand`)
+- Pair LINK/UNLINK, shared stereo gain, balance and Mute.
+- Per-side gain, pan, Mute and Solo (pan is rejected while linked).
+- Per-side Aux Sends and six-band EQ. In linked mode, channel-side gain,
+  Mute, Solo, Aux and EQ edits follow the controller's shared-pair semantics.
+- Audio In EQ messages require an explicit sample rate; the dispatcher
+  validates the complete six-band configuration before queueing it.
 
-Track indices are zero-based (0..15), Aux indices are zero-based (0..3), faders are 0..127, pan is -100..100, and Aux send levels are 0..100 percent. Required-field presence and ranges are checked before dispatch. Unknown command names are rejected. The adapter enables per-track EQ band updates using `track`, `index`, `frequencyHz`, `q`, and `gainDb`. Band indices are 0..5; frequency must be at least 20 Hz and below Nyquist, Q 0.1..10, and gain -12..12 dB. The dispatcher prepares and validates the complete six-band configuration at the 48 kHz default sample rate before queueing the update. The adapter does not enable Aux returns, inserts, meters,
-audio capture, MIDI, or device routing.
+Track indices are zero-based (0..15); Audio In side indices use 0 for left and
+1 for right. Aux indices are zero-based (0..3), EQ bands are 0..5, faders are
+0..127, pan/balance are -100..100, and Aux send levels are 0..100 percent.
+Frequency must be at least 20 Hz and below Nyquist, Q 0.1..10, and gain -12..12
+dB. The adapter rejects missing, contradictory, or out-of-range typed fields.
+Insert enable remains unsupported because effect construction, ownership and
+replacement acknowledgement belong to a future native host. These mappings
+are not a browser binding, IPC transport, audio capture path, MIDI adapter, or
+device route.
 
 ## Message mapping
 
@@ -52,6 +60,16 @@ command name, and explicit presence flags for wire fields.
 | Track EQ band | `SetTrackEqBand` | `track`, `index`, `frequencyHz`, `q`, `gainDb` | track 0..15, band 0..5, frequency 20 Hz..below Nyquist, Q 0.1..10, gain -12..12 dB |
 | Master fader | `SetMasterFader` | `value` | value 0..127 |
 | Master Mute | `SetMasterMute` | `flag` | boolean |
+| Audio In LINK | `SetAudioInputPairLinked` | `flag` | boolean |
+| Audio In stereo gain | `SetAudioInputPairStereoGain` | `value` | linked; 0..127 |
+| Audio In balance | `SetAudioInputPairBalance` | `value` | linked; -100..100 |
+| Audio In stereo Mute | `SetAudioInputPairStereoMute` | `flag` | linked; boolean |
+| Audio In channel gain | `SetAudioInputChannelGain` | `track`, `value` | side 0..1, value 0..127 |
+| Audio In channel pan | `SetAudioInputChannelPan` | `track`, `value` | unlinked; side 0..1, -100..100 |
+| Audio In channel Mute | `SetAudioInputChannelMute` | `track`, `flag` | side 0..1, boolean |
+| Audio In channel Solo | `SetAudioInputChannelSolo` | `track`, `flag` | side 0..1, boolean |
+| Audio In Aux Send | `SetAudioInputChannelAuxSend` | `track`, `index`, `value` | side 0..1, bus 0..3, 0..100% |
+| Audio In EQ band | `SetAudioInputChannelEqBand` | `track`, `index`, `frequencyHz`, `q`, `gainDb`, `sampleRate` | side 0..1, band 0..5, frequency below Nyquist, Q 0.1..10, gain -12..12 dB, sample rate 8..192 kHz |
 
 Example decoded message:
 
@@ -66,8 +84,10 @@ Example decoded message:
 
 ### Normative decoder rules
 
-The implemented JSON decoder enforces these rules before constructing the typed
-message. They are part of the wire contract, not optional parser preferences.
+The legacy JSON decoder enforces the following narrower wire rules before
+constructing its typed message. The Audio In mappings above are available to
+future transports that construct `NativeUiCommandMessage` directly; neither
+the legacy JSON decoder nor protocol v1 currently exposes those new commands.
 The selected parser dependency and SAX implementation constraints are recorded
 in [JSON decoder dependency decision](JSON_DECODER_DEPENDENCY_DECISION.md).
 
@@ -95,9 +115,12 @@ in [JSON decoder dependency decision](JSON_DECODER_DEPENDENCY_DECISION.md).
   `int`; command-specific validation then applies the fader or pan range.
   Reject fractions, exponent notation, booleans, strings, null, and overflow.
 - `frequencyHz`, `q`, and `gainDb`, when present, must be finite JSON numbers
-  representable as `float`; they are accepted only for `SetTrackEqBand`. The
-  dispatcher validates frequency against the 48 kHz default sample rate and
-  the complete EQ parameter ranges before queueing.
+  representable as `float`; the legacy decoder accepts them only for
+  `SetTrackEqBand`. The dispatcher validates frequency against the 48 kHz
+  default sample rate and the complete EQ parameter ranges before queueing.
+- The typed Audio In EQ adapter additionally requires an explicit finite
+  `sampleRate` in the 8000..192000 Hz range; this field is not yet accepted by
+  either wire decoder.
 - `flag`, when present, must be a JSON boolean. Do not coerce 0/1, strings,
   or null to booleans.
 - Required fields are command-specific as shown in the mapping table. Reject
@@ -105,7 +128,8 @@ in [JSON decoder dependency decision](JSON_DECODER_DEPENDENCY_DECISION.md).
   selected command, rather than silently ignoring contradictory payload data.
 - Set each presence flag (`hasTrack`, `hasIndex`, `hasValue`, `hasFlag`,
   `hasFrequencyHz`, `hasQ`, and `hasGainDb`) only after the corresponding
-  field has passed exact JSON type and representability checks.
+  field has passed exact JSON type and representability checks. A future decoder
+  for Audio In EQ must also set `hasSampleRate` only after validating it.
   Never manufacture a default value to make a missing field appear present.
 - Bound the transport frame size before parsing. The decoder currently enforces
   a 1024-byte maximum; the future transport must apply the same bound while
