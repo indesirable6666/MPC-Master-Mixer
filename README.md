@@ -7,9 +7,10 @@ Touchscreen mixer project for the Akai MPC Live II.
 - Browser-based tactile UI prototype in `prototype/index.html` (local demo state only).
 - Optional browser Web Audio test tone in the prototype, controlled by the selected track fader/pan/mute/solo and Master level/mute (local synthetic signal only).
 - Portable C++14 DSP and mixer-control core with host tests.
-- Device-neutral full-duplex host with explicit mono input routing and an
-  opt-in linked/unlinked stereo Audio In pair path, driven by an offline test
-  backend; the pair's current native path is gain/balance/mute/solo only.
+- Device-neutral full-duplex host with explicit mono routing, an optional
+  linked/unlinked stereo Audio In pair (six-band EQ, insert chains and four Aux
+  sends), four logical stereo Aux Return input pairs, and Main plus up to four
+  stereo Aux output pairs; exercised with synthetic/offline buffers only.
 - Framework-neutral mixer presentation snapshots and a validated, sequenced UI command dispatcher, including value-only linked/unlinked Audio In pair controls (host-side contract only).
 - Native audio meter snapshot, UI consumer and framework-neutral presentation adapter.
 - ARMv7 hard-float cross-compilation probes and test binaries in GitHub Actions.
