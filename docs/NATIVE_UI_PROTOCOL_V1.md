@@ -4,12 +4,13 @@
 
 **Protocol codecs and transport-neutral session logic implemented; transport and device integration remain unimplemented.** The repository has strict decoders for v1 commands, client `hello` / `snapshot_request`, and full snapshots; serializers cover full snapshots and the server responses `hello`, `command_result`, `audio_ack`, and `protocol_error`. A host integration test exercises snapshot decode, readiness gating, command dispatch, and audio acknowledgement. The socket/IPC endpoint, native UI integration, and device integration are not implemented. The target OS and process permissions remain unverified.
 
-Protocol v1 deliberately exposes only six wire commands: track fader, pan,
-mute, solo, master fader, and master mute. The typed
-`NativeUiCommandAdapter` also maps track Aux/EQ and Audio In pair controls,
-but those additional commands are not accepted by the v1 decoder or exposed on
-the v1 wire surface. Other controls visible in `MixerUiCommandDispatcher` are
-not implicitly available over this protocol. Inserts remain unsupported.
+Protocol v1 exposes track fader/pan/Mute/Solo, track Aux Send and EQ,
+Master fader/Mute, and the typed Audio In pair/per-side controls listed below.
+The strict v1 decoder maps these fields into `NativeUiCommandMessage`; the
+existing typed adapter and dispatcher remain the final range and state
+validators. Aux Return control and insert enable are not exposed as v1 wire
+commands. The older unversioned JSON decoder remains a separate, narrower
+surface and does not accept Audio In commands.
 
 The protocol is transport-independent. The proposed four-byte big-endian length
 prefix from `NATIVE_UI_IPC_TRANSPORT_DECISION.md` frames UTF-8 JSON payloads; the
@@ -166,24 +167,45 @@ a client reconnecting to the same adapter must continue with a sequence greater
 than its last accepted sequence. A rejected `QueueFull` command may be retried
 with the same sequence. Do not resend an accepted command as a new command.
 
-The six supported command forms are exact:
+The supported command forms and exact field sets are:
 
 | `type` | Required fields besides envelope | Constraints |
 |---|---|---|
 | `SetTrackFader` | `track`, `value` | track 0..15; value 0..127 |
 | `SetTrackPan` | `track`, `value` | track 0..15; value -100..100 |
-| `SetTrackMute` | `track`, `flag` | track 0..15; boolean flag |
-| `SetTrackSolo` | `track`, `flag` | track 0..15; boolean flag |
+| `SetTrackMute` | `track`, `flag` | track 0..15; boolean |
+| `SetTrackSolo` | `track`, `flag` | track 0..15; boolean |
+| `SetTrackAuxSend` | `track`, `index`, `value` | track 0..15; Aux 0..3; value 0..100 |
+| `SetTrackEqBand` | `track`, `index`, `frequencyHz`, `q`, `gainDb` | track 0..15; band 0..5; EQ ranges below; optional `sampleRate` defaults to 48000 Hz |
 | `SetMasterFader` | `value` | value 0..127 |
-| `SetMasterMute` | `flag` | boolean flag |
+| `SetMasterMute` | `flag` | boolean |
+| `SetAudioInputPairLinked` | `flag` | boolean |
+| `SetAudioInputPairStereoGain` | `value` | linked; 0..127 |
+| `SetAudioInputPairBalance` | `value` | linked; -100..100 |
+| `SetAudioInputPairStereoMute` | `flag` | linked; boolean |
+| `SetAudioInputChannelGain` | `track`, `value` | side 0..1; value 0..127 |
+| `SetAudioInputChannelPan` | `track`, `value` | unlinked; side 0..1; -100..100 |
+| `SetAudioInputChannelMute` | `track`, `flag` | side 0..1; boolean |
+| `SetAudioInputChannelSolo` | `track`, `flag` | side 0..1; boolean |
+| `SetAudioInputChannelAuxSend` | `track`, `index`, `value` | side 0..1; Aux 0..3; value 0..100 |
+| `SetAudioInputChannelEqBand` | `track`, `index`, `frequencyHz`, `q`, `gainDb`, `sampleRate` | side 0..1; band 0..5; explicit sample rate 8000..192000 Hz |
 
-Reject any extra command field, including `track` on master commands, and any
-command name not listed. `track` is a nonnegative integer representable as
-`size_t`; `value` is an integer representable as `int`; `sequence` is
-exact unsigned 64-bit. The legacy `NativeUiJsonDecoder` accepts an unversioned command object and
-is intentionally kept separate. The dedicated `NativeUiProtocolV1CommandDecoder`
-validates this exact v1 envelope; do not weaken or silently reinterpret either
-decoder.
+For every EQ command, `frequencyHz` is at least 20 Hz and strictly below
+Nyquist for the selected sample rate, `q` is 0.1..10, and `gainDb` is
+-12..12 dB. The track EQ command may omit `sampleRate`, in which case the
+typed adapter uses 48000 Hz; Audio In EQ must provide it explicitly. EQ values
+and sample rate are finite JSON numbers representable as `float`. Integer
+JSON numbers are accepted for these numeric fields as well.
+
+Reject any extra command field, including `track` on pair/master commands,
+and any command name not listed. `track` and `index` are nonnegative JSON
+integers representable as `size_t`; `value` is a JSON integer representable
+as `int`; `sequence` and `epoch` are exact unsigned 64-bit integers.
+Boolean fields accept JSON booleans only. The legacy
+`NativeUiJsonDecoder` accepts its separate unversioned command object and
+does not expose Audio In controls. The dedicated
+`NativeUiProtocolV1CommandDecoder` validates this exact v1 envelope; do not
+weaken or silently reinterpret either decoder.
 
 ### 6. Command result
 
@@ -298,6 +320,7 @@ model.
       successfully queued configurations publish their actual requested rate.
 - [x] Set a separate 32 KiB full-snapshot payload ceiling; the worst-case valid fixture measured 8,653 bytes on the host CI runner and asserts the serialized payload remains within the limit.
 - [x] Implement strict v1 command/client-message decoders and server serializers for the four non-snapshot response kinds.
+- [x] Expose track Aux/EQ and Audio In pair/per-side controls through the v1 command decoder and typed dispatcher path, with exact field sets and sample-rate validation.
 - [x] Implement bounded full snapshot serialization after sample-rate provenance and payload ceiling are resolved.
 - [x] Implement strict full snapshot decoding with exact field sets, duplicate-key rejection, fixed array lengths, integer/float validation, EQ ranges, epoch/request matching, and unchanged output on failure.
 - [x] Add focused golden JSON and malformed-input tests for command, client hello/snapshot request, and the four non-snapshot server response kinds.
