@@ -94,6 +94,92 @@ int main() {
     assert(ackJson["status"] == "applied");
     assert(!ackPublisher.publishNext(controller, session, ackPayload));
 
+    // Audio In commands now traverse the same strict v1 wire decoder,
+    // readiness gate, typed adapter, dispatcher and acknowledgement ledger.
+    const auto submit = [&](const std::string& payload, std::uint64_t sequence) {
+        const auto submitted = processor.process(payload, session, dispatcher, response);
+        assert(submitted.status == NativeUiProtocolV1CommandProcessStatus::Accepted);
+        assert(submitted.commandResult.accepted());
+        assert(submitted.commandResult.sequence == sequence);
+        assert(submitted.commandResult.audioTicket != 0);
+        const auto reply = nlohmann::json::parse(response);
+        assert(reply["kind"] == "command_result");
+        assert(reply["sequence"] == sequence);
+        assert(reply["status"] == "accepted");
+        return submitted.commandResult.audioTicket;
+    };
+
+    const std::string link =
+        std::string(R"({"version":1,"kind":"command","epoch":)") +
+        std::to_string(epoch) +
+        R"(,"sequence":2,"type":"SetAudioInputPairLinked","flag":true})";
+    const std::uint32_t linkTicket = submit(link, 2);
+
+    const std::string gain =
+        std::string(R"({"version":1,"kind":"command","epoch":)") +
+        std::to_string(epoch) +
+        R"(,"sequence":3,"type":"SetAudioInputPairStereoGain","value":88})";
+    const std::uint32_t gainTicket = submit(gain, 3);
+
+    const std::string aux =
+        std::string(R"({"version":1,"kind":"command","epoch":)") +
+        std::to_string(epoch) +
+        R"(,"sequence":4,"type":"SetAudioInputChannelAuxSend","track":0,"index":1,"value":65})";
+    const std::uint32_t auxTicket = submit(aux, 4);
+
+    const std::string eq =
+        std::string(R"({"version":1,"kind":"command","epoch":)") +
+        std::to_string(epoch) +
+        R"(,"sequence":5,"type":"SetAudioInputChannelEqBand","track":1,"index":2,"frequencyHz":1000,"q":0.8,"gainDb":3,"sampleRate":48000})";
+    const std::uint32_t eqTicket = submit(eq, 5);
+
+    const std::string invalidPan =
+        std::string(R"({"version":1,"kind":"command","epoch":)") +
+        std::to_string(epoch) +
+        R"(,"sequence":6,"type":"SetAudioInputChannelPan","track":1,"value":-20})";
+    result = processor.process(invalidPan, session, dispatcher, response);
+    assert(result.status == NativeUiProtocolV1CommandProcessStatus::Rejected);
+    assert(result.commandResult.status == MixerUiCommandStatus::Invalid);
+    assert(dispatcher.lastAcceptedSequence() == 5);
+
+    const std::string unlink =
+        std::string(R"({"version":1,"kind":"command","epoch":)") +
+        std::to_string(epoch) +
+        R"(,"sequence":6,"type":"SetAudioInputPairLinked","flag":false})";
+    const std::uint32_t unlinkTicket = submit(unlink, 6);
+
+    const std::string pan =
+        std::string(R"({"version":1,"kind":"command","epoch":)") +
+        std::to_string(epoch) +
+        R"(,"sequence":7,"type":"SetAudioInputChannelPan","track":1,"value":-20})";
+    const std::uint32_t panTicket = submit(pan, 7);
+
+    // All commands are applied together at a block boundary. Desired state
+    // is visible in the snapshot, while the audio ACKs remain FIFO and explicit.
+    bridge.process(inputs, left, right, 1);
+    const auto audioInputSnapshot = publisher.publish().audioInputPair;
+    assert(!audioInputSnapshot.linked);
+    assert(audioInputSnapshot.channels[1].panPercent == -20);
+    assert(audioInputSnapshot.channels[0].auxSendPercent[1] == 65);
+    assert(audioInputSnapshot.channels[1].auxSendPercent[1] == 65);
+    assert(audioInputSnapshot.channels[0].eqSampleRate == 48000.0f);
+    assert(audioInputSnapshot.channels[1].eqSampleRate == 48000.0f);
+
+    const std::uint64_t expectedSequences[] = {2, 3, 4, 5, 6, 7};
+    const std::uint32_t expectedTickets[] = {
+        linkTicket, gainTicket, auxTicket, eqTicket, unlinkTicket, panTicket
+    };
+    for (std::size_t i = 0; i < 6; ++i) {
+        assert(ackPublisher.publishNext(controller, session, ackPayload));
+        const auto ack = nlohmann::json::parse(ackPayload);
+        assert(ack["kind"] == "audio_ack");
+        assert(ack["epoch"] == epoch);
+        assert(ack["sequence"] == expectedSequences[i]);
+        assert(ack["audio_ticket"] == expectedTickets[i]);
+        assert(ack["status"] == "applied");
+    }
+    assert(!ackPublisher.publishNext(controller, session, ackPayload));
+
     assert(session.invalidate(epoch));
     return 0;
 }
