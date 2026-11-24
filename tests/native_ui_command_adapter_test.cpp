@@ -172,4 +172,166 @@ int main() {
     snapshot = publisher.publish();
     assert(snapshot.tracks[5].faderValue == mpcmixer::MixerController::kFaderMaximum);
     assert(dispatcher.lastAcceptedSequence() == 10);
+
+    // Typed Audio In commands share the same serialized dispatcher as tracks.
+    message = {};
+    message.sequence = 11;
+    message.type = "SetAudioInputPairLinked";
+    message.hasFlag = true;
+    message.flag = true;
+    assert(mpcmixer::NativeUiCommandAdapter::dispatch(message, dispatcher).accepted());
+
+    message = {};
+    message.sequence = 12;
+    message.type = "SetAudioInputPairStereoGain";
+    message.hasValue = true;
+    message.value = 80;
+    assert(mpcmixer::NativeUiCommandAdapter::dispatch(message, dispatcher).accepted());
+
+    message = {};
+    message.sequence = 13;
+    message.type = "SetAudioInputPairBalance";
+    message.hasValue = true;
+    message.value = -25;
+    assert(mpcmixer::NativeUiCommandAdapter::dispatch(message, dispatcher).accepted());
+
+    message = {};
+    message.sequence = 14;
+    message.type = "SetAudioInputPairStereoMute";
+    message.hasFlag = true;
+    message.flag = true;
+    assert(mpcmixer::NativeUiCommandAdapter::dispatch(message, dispatcher).accepted());
+
+    message = {};
+    message.sequence = 15;
+    message.type = "SetAudioInputChannelAuxSend";
+    message.hasTrack = true;
+    message.track = 1;
+    message.hasIndex = true;
+    message.index = 2;
+    message.hasValue = true;
+    message.value = 75;
+    assert(mpcmixer::NativeUiCommandAdapter::dispatch(message, dispatcher).accepted());
+
+    message = {};
+    message.sequence = 16;
+    message.type = "SetAudioInputChannelSolo";
+    message.hasTrack = true;
+    message.track = 0;
+    message.hasFlag = true;
+    message.flag = true;
+    assert(mpcmixer::NativeUiCommandAdapter::dispatch(message, dispatcher).accepted());
+
+    // Mono pan is rejected while linked and does not consume its sequence.
+    message = {};
+    message.sequence = 17;
+    message.type = "SetAudioInputChannelPan";
+    message.hasTrack = true;
+    message.track = 1;
+    message.hasValue = true;
+    message.value = -30;
+    assert(mpcmixer::NativeUiCommandAdapter::dispatch(message, dispatcher).status ==
+           mpcmixer::MixerUiCommandStatus::Invalid);
+    assert(dispatcher.lastAcceptedSequence() == 16);
+
+    message = {};
+    message.sequence = 17;
+    message.type = "SetAudioInputPairLinked";
+    message.hasFlag = true;
+    message.flag = false;
+    assert(mpcmixer::NativeUiCommandAdapter::dispatch(message, dispatcher).accepted());
+
+    message = {};
+    message.sequence = 18;
+    message.type = "SetAudioInputChannelPan";
+    message.hasTrack = true;
+    message.track = 1;
+    message.hasValue = true;
+    message.value = -30;
+    assert(mpcmixer::NativeUiCommandAdapter::dispatch(message, dispatcher).accepted());
+
+    message = {};
+    message.sequence = 19;
+    message.type = "SetAudioInputChannelEqBand";
+    message.hasTrack = true;
+    message.track = 1;
+    message.hasIndex = true;
+    message.index = 5;
+    message.hasFrequencyHz = true;
+    message.frequencyHz = 10000.0f;
+    message.hasQ = true;
+    message.q = 0.8f;
+    message.hasGainDb = true;
+    message.gainDb = -2.0f;
+    message.hasSampleRate = true;
+    message.sampleRate = 48000.0f;
+    assert(mpcmixer::NativeUiCommandAdapter::dispatch(message, dispatcher).accepted());
+
+    message = {};
+    message.sequence = 20;
+    message.type = "SetAudioInputChannelGain";
+    message.hasTrack = true;
+    message.track = 0;
+    message.hasValue = true;
+    message.value = 90;
+    assert(mpcmixer::NativeUiCommandAdapter::dispatch(message, dispatcher).accepted());
+
+    message = {};
+    message.sequence = 21;
+    message.type = "SetAudioInputChannelMute";
+    message.hasTrack = true;
+    message.track = 0;
+    message.hasFlag = true;
+    message.flag = false;
+    assert(mpcmixer::NativeUiCommandAdapter::dispatch(message, dispatcher).accepted());
+
+    message = {};
+    message.sequence = 22;
+    message.type = "SetAudioInputChannelSolo";
+    message.hasTrack = true;
+    message.track = 1;
+    message.hasFlag = true;
+    message.flag = false;
+    assert(mpcmixer::NativeUiCommandAdapter::dispatch(message, dispatcher).accepted());
+
+    const auto audioInput = controller.desiredStateSnapshot();
+    assert(!audioInput.audioInputLinked);
+    assert(audioInput.audioInputChannels[0].gain == 0.9f);
+    assert(audioInput.audioInputChannels[1].gain == 0.8f);
+    assert(!audioInput.audioInputChannels[0].mute);
+    assert(audioInput.audioInputChannels[1].mute);
+    assert(audioInput.audioInputChannels[0].solo);
+    assert(!audioInput.audioInputChannels[1].solo);
+    assert(audioInput.audioInputChannels[0].auxSend[2] == 0.75f);
+    assert(audioInput.audioInputChannels[1].auxSend[2] == 0.75f);
+    assert(audioInput.audioInputChannels[1].pan == -0.3f);
+    assert(audioInput.audioInputEq[1][5].frequencyHz == 10000.0f);
+    assert(audioInput.audioInputEq[1][5].q == 0.8f);
+    assert(audioInput.audioInputEq[1][5].gainDb == -2.0f);
+    assert(dispatcher.lastAcceptedSequence() == 22);
+
+    // Audio Input EQ requires an explicit sample rate; malformed side/bus
+    // indices are rejected before they can consume a command sequence.
+    message = {};
+    message.sequence = 23;
+    message.type = "SetAudioInputChannelEqBand";
+    message.hasTrack = true;
+    message.track = 0;
+    message.hasIndex = true;
+    message.index = 0;
+    message.hasFrequencyHz = true;
+    message.frequencyHz = 1000.0f;
+    message.hasQ = true;
+    message.q = 1.0f;
+    message.hasGainDb = true;
+    message.gainDb = 0.0f;
+    assert(mpcmixer::NativeUiCommandAdapter::dispatch(message, dispatcher).status ==
+           mpcmixer::MixerUiCommandStatus::Invalid);
+    message.hasSampleRate = true;
+    message.sampleRate = 48000.0f;
+    message.track = 2;
+    assert(mpcmixer::NativeUiCommandAdapter::dispatch(message, dispatcher).status ==
+           mpcmixer::MixerUiCommandStatus::Invalid);
+    assert(dispatcher.lastAcceptedSequence() == 22);
+
 }
