@@ -196,6 +196,13 @@ The presentation snapshot therefore exposes `faderValue`,
 `masterFaderValue`, and `levelValue` rather than misleading percent names;
 these values can legitimately exceed 100.
 
+The typed `NativeUiCommandAdapter` now maps the Audio In pair LINK, shared
+stereo gain/balance/Mute, per-side gain/pan/Mute/Solo, Aux Sends and six-band EQ
+into the same dispatcher. Audio In EQ carries an explicit sample rate. These
+typed mappings are host-side only: the legacy JSON decoder and protocol v1
+wire decoder do not yet expose them, and the browser prototype is still not
+bound to the dispatcher.
+
 Insert enable is intentionally reported as unsupported. The UI cannot supply
 an arbitrary `AudioInsert*`: effect construction, ownership, and replacement
 acknowledgement belong to a future native host. The command envelope is not
