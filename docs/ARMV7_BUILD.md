@@ -10,14 +10,15 @@ The `ARMv7 toolchain check` workflow uses Debian Bullseye's
 ```
 
 It compiles the C++14 audio-engine, duplex host, stereo Audio In pair, logical
-Main-plus-Aux output host, meter, and shared signal-reference test programs as
-ARMv7 executables, then checks ELF architecture, interpreter and runtime
-symbol versions. The duplex host test covers the ten-channel logical output layout (Main L/R
+Main-plus-Aux output host, duplex backend lifecycle, meter, and shared
+signal-reference test programs as ARMv7 executables, then checks ELF
+architecture, interpreter and runtime symbol versions. The duplex host test covers the ten-channel logical output layout (Main L/R
 plus four stereo Aux send pairs), partial send layouts, and the ten-channel
 logical input layout (source L/R plus four stereo Aux Return pairs), including
 return gain, balance, mute, and malformed-pair handling. The
-workflow also builds small graphics-loader capability probes. Test executables
-are uploaded as CI artifacts for inspection; they are not executed on the MPC.
+workflow also builds small graphics-loader capability probes. Selected test
+executables are uploaded as CI artifacts for inspection; the cross-compiled
+binaries are not executed on the MPC.
 
 ## What this does and does not prove
 
