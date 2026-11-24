@@ -27,6 +27,8 @@ struct NativeUiCommandMessage {
     float q = 0.0f;
     bool hasGainDb = false;
     float gainDb = 0.0f;
+    bool hasSampleRate = false;
+    float sampleRate = 48000.0f;
 };
 
 class NativeUiCommandAdapter {
@@ -44,7 +46,8 @@ public:
         const NativeUiCommandMessage& message,
         MixerUiCommand& command) noexcept {
         command.sequence = message.sequence;
-        const bool hasEqFields = message.hasFrequencyHz || message.hasQ || message.hasGainDb;
+        const bool hasEqFields = message.hasFrequencyHz || message.hasQ ||
+            message.hasGainDb || message.hasSampleRate;
 
         if (message.type == "SetTrackFader") {
             if (!message.hasTrack || message.hasIndex || !message.hasValue || message.hasFlag || hasEqFields ||
@@ -89,6 +92,7 @@ public:
             command.track = message.track;
             command.index = message.index;
             command.eqBand = {message.frequencyHz, message.q, message.gainDb};
+            command.sampleRate = message.hasSampleRate ? message.sampleRate : 48000.0f;
             return true;
         }
         if (message.type == "SetTrackMute" || message.type == "SetTrackSolo") {
@@ -115,6 +119,94 @@ public:
                 return false;
             command.type = MixerUiCommandType::SetMasterMute;
             command.flag = message.flag;
+            return true;
+        }
+        if (message.type == "SetAudioInputPairLinked") {
+            if (message.hasTrack || message.hasIndex || message.hasValue ||
+                !message.hasFlag || hasEqFields)
+                return false;
+            command.type = MixerUiCommandType::SetAudioInputPairLinked;
+            command.flag = message.flag;
+            return true;
+        }
+        if (message.type == "SetAudioInputPairStereoGain" ||
+            message.type == "SetAudioInputPairBalance") {
+            if (message.hasTrack || message.hasIndex || !message.hasValue ||
+                message.hasFlag || hasEqFields)
+                return false;
+            if (message.type == "SetAudioInputPairStereoGain") {
+                if (message.value < 0 ||
+                    message.value > MixerController::kFaderMaximum) return false;
+                command.type = MixerUiCommandType::SetAudioInputPairStereoGain;
+            } else {
+                if (message.value < MixerController::kPanMinimum ||
+                    message.value > MixerController::kPanMaximum) return false;
+                command.type = MixerUiCommandType::SetAudioInputPairBalance;
+            }
+            command.value = message.value;
+            return true;
+        }
+        if (message.type == "SetAudioInputPairStereoMute") {
+            if (message.hasTrack || message.hasIndex || message.hasValue ||
+                !message.hasFlag || hasEqFields)
+                return false;
+            command.type = MixerUiCommandType::SetAudioInputPairStereoMute;
+            command.flag = message.flag;
+            return true;
+        }
+        if (message.type == "SetAudioInputChannelGain" ||
+            message.type == "SetAudioInputChannelPan") {
+            if (!message.hasTrack || message.hasIndex || !message.hasValue ||
+                message.hasFlag || hasEqFields || message.track >= 2)
+                return false;
+            if (message.type == "SetAudioInputChannelGain") {
+                if (message.value < 0 ||
+                    message.value > MixerController::kFaderMaximum) return false;
+                command.type = MixerUiCommandType::SetAudioInputChannelGain;
+            } else {
+                if (message.value < MixerController::kPanMinimum ||
+                    message.value > MixerController::kPanMaximum) return false;
+                command.type = MixerUiCommandType::SetAudioInputChannelPan;
+            }
+            command.track = message.track;
+            command.value = message.value;
+            return true;
+        }
+        if (message.type == "SetAudioInputChannelMute" ||
+            message.type == "SetAudioInputChannelSolo") {
+            if (!message.hasTrack || message.hasIndex || message.hasValue ||
+                !message.hasFlag || hasEqFields || message.track >= 2)
+                return false;
+            command.type = message.type == "SetAudioInputChannelMute"
+                ? MixerUiCommandType::SetAudioInputChannelMute
+                : MixerUiCommandType::SetAudioInputChannelSolo;
+            command.track = message.track;
+            command.flag = message.flag;
+            return true;
+        }
+        if (message.type == "SetAudioInputChannelAuxSend") {
+            if (!message.hasTrack || !message.hasIndex || !message.hasValue ||
+                message.hasFlag || hasEqFields || message.track >= 2 ||
+                message.index >= AudioEngine::kAuxBusCount ||
+                message.value < 0 || message.value > MixerController::kAuxMaximum)
+                return false;
+            command.type = MixerUiCommandType::SetAudioInputChannelAuxSend;
+            command.track = message.track;
+            command.index = message.index;
+            command.value = message.value;
+            return true;
+        }
+        if (message.type == "SetAudioInputChannelEqBand") {
+            if (!message.hasTrack || !message.hasIndex || message.hasValue ||
+                message.hasFlag || !message.hasFrequencyHz || !message.hasQ ||
+                !message.hasGainDb || !message.hasSampleRate ||
+                message.track >= 2 || message.index >= SixBandEq::kBandCount)
+                return false;
+            command.type = MixerUiCommandType::SetAudioInputChannelEqBand;
+            command.track = message.track;
+            command.index = message.index;
+            command.eqBand = {message.frequencyHz, message.q, message.gainDb};
+            command.sampleRate = message.sampleRate;
             return true;
         }
         return false;
