@@ -4,10 +4,12 @@
 
 **Protocol codecs and transport-neutral session logic implemented; transport and device integration remain unimplemented.** The repository has strict decoders for v1 commands, client `hello` / `snapshot_request`, and full snapshots; serializers cover full snapshots and the server responses `hello`, `command_result`, `audio_ack`, and `protocol_error`. A host integration test exercises snapshot decode, readiness gating, command dispatch, and audio acknowledgement. The socket/IPC endpoint, native UI integration, and device integration are not implemented. The target OS and process permissions remain unverified.
 
-Protocol v1 deliberately exposes only the six commands already supported by
-`NativeUiCommandAdapter`: track fader, pan, mute, solo, master fader, and master
-mute. Other controls visible in `MixerUiCommandDispatcher` are not implicitly
-available over this protocol. In particular, inserts remain unsupported.
+Protocol v1 deliberately exposes only six wire commands: track fader, pan,
+mute, solo, master fader, and master mute. The typed
+`NativeUiCommandAdapter` also maps track Aux/EQ and Audio In pair controls,
+but those additional commands are not accepted by the v1 decoder or exposed on
+the v1 wire surface. Other controls visible in `MixerUiCommandDispatcher` are
+not implicitly available over this protocol. Inserts remain unsupported.
 
 The protocol is transport-independent. The proposed four-byte big-endian length
 prefix from `NATIVE_UI_IPC_TRANSPORT_DECISION.md` frames UTF-8 JSON payloads; the
