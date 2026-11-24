@@ -22,7 +22,7 @@ public:
 
     bool start() noexcept override {
         ++startCalls;
-        if (!prepared) return false;
+        if (!prepared || failStart) return false;
         running = true;
         return true;
     }
@@ -47,6 +47,7 @@ public:
     }
 
     bool failPrepare = false;
+    bool failStart = false;
     bool prepared = false;
     bool running = false;
     unsigned prepareCalls = 0;
@@ -83,6 +84,13 @@ int main() {
     backend.failPrepare = false;
     assert(host.prepare(backend, format));
     assert(!host.prepare(backend, format));
+
+    // A failed start preserves the prepared configuration but does not run.
+    backend.failStart = true;
+    assert(!host.start());
+    assert(backend.prepared);
+    assert(!backend.running);
+    backend.failStart = false;
     assert(host.start());
 
     float left[2] = {1.0f, 1.0f};
