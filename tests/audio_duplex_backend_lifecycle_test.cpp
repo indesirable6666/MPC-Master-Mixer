@@ -122,5 +122,69 @@ int main() {
     assert(scopedBackend.stopCalls == 1);
     assert(scopedBackend.shutdownCalls == 1);
 
+    // The offline driver follows the same lifecycle contract as a future
+    // device backend, without opening or probing any hardware.
+    struct OfflineProbe {
+        unsigned calls = 0;
+    };
+    const auto copyOfflineBlock = [](void* context,
+                                    const AudioDuplexBuffer& block) {
+        OfflineProbe* probe = static_cast<OfflineProbe*>(context);
+        ++probe->calls;
+        for (std::size_t frame = 0; frame < block.frameCount; ++frame) {
+            block.outputChannels[0][frame] = block.inputChannels[0][frame];
+            block.outputChannels[1][frame] = block.inputChannels[1][frame];
+        }
+    };
+
+    OfflineAudioDuplexBackend offline;
+    AudioDuplexFormat offlineFormat;
+    offlineFormat.maxFramesPerBlock = 4;
+    AudioDuplexFormat invalidOfflineFormat = offlineFormat;
+    invalidOfflineFormat.sampleRate = 0;
+    OfflineProbe offlineProbe;
+    assert(!offline.start());
+    assert(!offline.prepare(invalidOfflineFormat, copyOfflineBlock, &offlineProbe));
+    assert(!offline.start());
+    assert(offline.prepare(offlineFormat, copyOfflineBlock, &offlineProbe));
+    assert(offline.start());
+
+    const float offlineInputLeft[] = {0.25f, -0.5f};
+    const float offlineInputRight[] = {-0.75f, 1.0f};
+    const float* offlineInputs[] = {offlineInputLeft, offlineInputRight};
+    float offlineOutputLeft[2] = {};
+    float offlineOutputRight[2] = {};
+    float* offlineOutputs[] = {offlineOutputLeft, offlineOutputRight};
+    const AudioDuplexBuffer offlineBlock{
+        offlineInputs, offlineOutputs, 2, 2, 2
+    };
+    assert(offline.processBlock(offlineBlock) == AudioDuplexStatus::Processed);
+    assert(offlineProbe.calls == 1);
+    assert(offlineOutputLeft[1] == -0.5f);
+    assert(offlineOutputRight[1] == 1.0f);
+
+    // A second prepare is rejected without tearing down the active stream.
+    AudioDuplexFormat replacementFormat = offlineFormat;
+    replacementFormat.sampleRate = 96000;
+    assert(!offline.prepare(replacementFormat, copyOfflineBlock, &offlineProbe));
+    assert(offline.processBlock(offlineBlock) == AudioDuplexStatus::Processed);
+    assert(offlineProbe.calls == 2);
+
+    offline.stop();
+    assert(offline.processBlock(offlineBlock) == AudioDuplexStatus::NotPrepared);
+    assert(offline.start()); // stop retains the prepared configuration.
+    assert(offline.processBlock(offlineBlock) == AudioDuplexStatus::Processed);
+    assert(offlineProbe.calls == 3);
+    offline.shutdown();
+    assert(!offline.start());
+    assert(offline.processBlock(offlineBlock) == AudioDuplexStatus::NotPrepared);
+
+    // shutdown() releases the previous configuration and permits re-prepare.
+    assert(offline.prepare(replacementFormat, copyOfflineBlock, &offlineProbe));
+    assert(offline.start());
+    assert(offline.processBlock(offlineBlock) == AudioDuplexStatus::Processed);
+    assert(offlineProbe.calls == 4);
+    offline.shutdown();
+
     return 0;
 }
