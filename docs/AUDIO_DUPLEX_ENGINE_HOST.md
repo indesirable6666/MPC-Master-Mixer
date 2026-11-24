@@ -79,8 +79,12 @@ backend must provide an explicit physical mapping.
 ## Thread and lifecycle contract
 
 - Call `prepare`, `start`, `stop`, and `shutdown` on the control
-  thread. Input routes are atomic and may be updated while running; each
-  channel's route is sampled once per callback block.
+  thread. Prepare only an unprepared backend. A repeated prepare is rejected
+  without disturbing the active session; a failed first prepare leaves the
+  backend stopped and unprepared. A failed start leaves it prepared but stopped.
+  Stop prevents later callbacks before returning; shutdown releases the
+  configuration and permits a subsequent prepare. Input routes are atomic and
+  may be updated while running; each channel's route is sampled once per block.
 - The backend invokes the static callback with its own planar float buffers;
   the host expects the prepared output count and the documented logical order.
 - The callback builds fixed-size stack arrays for track and Aux pointers and
