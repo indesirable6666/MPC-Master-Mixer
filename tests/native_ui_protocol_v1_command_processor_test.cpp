@@ -92,6 +92,7 @@ int main() {
     assert(ackJson["sequence"] == 1);
     assert(ackJson["audio_ticket"] == acceptedAudioTicket);
     assert(ackJson["status"] == "applied");
+    assert(ackPublisher.markDelivered(session));
     assert(!ackPublisher.publishNext(controller, session, ackPayload));
 
     // Audio In commands now traverse the same strict v1 wire decoder,
