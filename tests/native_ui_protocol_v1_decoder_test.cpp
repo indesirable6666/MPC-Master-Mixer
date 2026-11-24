@@ -83,7 +83,7 @@ int main() {
     reject(R"({"version":1,"kind":"command","epoch":1,"sequence":1,"type":"SetMasterMute","flag":true}{})");
     reject(R"({"version":1,"kind":"command","epoch":1,"sequence":1,"type":"SetMasterMute","flag":true.0})");
     reject(R"({"version":1,"kind":"command","epoch":1,"sequence":1,"type":"SetAudioInputPairLinked","flag":true,"track":0})");
-    reject(R"({"version":1,"kind":"command","epoch":1,"sequence":1,"type":"SetAudioInputChannelAuxSend","track":0,"index":4,"value":50})");
+    reject(R"({"version":1,"kind":"command","epoch":1,"sequence":1,"type":"SetAudioInputChannelAuxSend","track":0,"index":4.0,"value":50})");
     reject(R"({"version":1,"kind":"command","epoch":1,"sequence":1,"type":"SetAudioInputChannelEqBand","track":0,"index":1,"frequencyHz":1000,"q":1,"gainDb":0})");
     reject(R"({"version":1,"kind":"command","epoch":1,"sequence":1,"type":"SetAudioInputChannelEqBand","track":0,"index":1,"frequencyHz":1000,"q":1,"gainDb":0,"sampleRate":"48000"})");
     reject(R"({"version":1,"kind":"command","epoch":1,"sequence":1,"type":"SetTrackEqBand","track":0,"index":1,"frequencyHz":1000,"q":1,"gainDb":0,"sampleRate":48000,"flag":false})");
