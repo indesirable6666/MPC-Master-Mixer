@@ -177,6 +177,7 @@ int main() {
         assert(ack["sequence"] == expectedSequences[i]);
         assert(ack["audio_ticket"] == expectedTickets[i]);
         assert(ack["status"] == "applied");
+        assert(ackPublisher.markDelivered(session));
     }
     assert(!ackPublisher.publishNext(controller, session, ackPayload));
 
