@@ -5,9 +5,9 @@
 The transport-independent native command adapter is implemented in
 `src/mixer/native_ui_command_adapter.hpp`. It maps typed, already-decoded
 messages into `MixerUiCommand` and dispatches them on the serialized control
-thread. The typed adapter includes Audio In pair and per-side commands; the
-legacy JSON decoder and protocol-v1 wire decoder intentionally expose narrower
-command subsets until their schemas are extended.
+thread. The strict protocol-v1 decoder now exposes track Aux/EQ and Audio In
+pair/per-side commands through this adapter. The older unversioned JSON decoder
+remains narrower and does not expose Audio In controls.
 
 This is not an IPC transport, native UI toolkit, or device integration. The
 browser prototype remains offline and simulated. A strict JSON decoder is now
@@ -84,10 +84,12 @@ Example decoded message:
 
 ### Normative decoder rules
 
-The legacy JSON decoder enforces the following narrower wire rules before
-constructing its typed message. The Audio In mappings above are available to
-future transports that construct `NativeUiCommandMessage` directly; neither
-the legacy JSON decoder nor protocol v1 currently exposes those new commands.
+The legacy JSON decoder enforces the following narrower, unversioned wire
+rules before constructing its typed message. It remains limited to its
+track/master command subset. Protocol v1 uses a separate strict decoder and
+now accepts the track Aux/EQ and Audio In commands in the mapping table above.
+The selected parser dependency and SAX implementation constraints are recorded
+in [JSON decoder dependency decision](JSON_DECODER_DEPENDENCY_DECISION.md).
 The selected parser dependency and SAX implementation constraints are recorded
 in [JSON decoder dependency decision](JSON_DECODER_DEPENDENCY_DECISION.md).
 
@@ -118,19 +120,20 @@ in [JSON decoder dependency decision](JSON_DECODER_DEPENDENCY_DECISION.md).
   representable as `float`; the legacy decoder accepts them only for
   `SetTrackEqBand`. The dispatcher validates frequency against the 48 kHz
   default sample rate and the complete EQ parameter ranges before queueing.
-- The typed Audio In EQ adapter additionally requires an explicit finite
-  `sampleRate` in the 8000..192000 Hz range; this field is not yet accepted by
-  either wire decoder.
+- The typed Audio In EQ adapter and the protocol-v1 decoder require an
+  explicit finite `sampleRate` in the 8000..192000 Hz range. The legacy
+  unversioned decoder does not expose Audio In EQ.
 - `flag`, when present, must be a JSON boolean. Do not coerce 0/1, strings,
   or null to booleans.
 - Required fields are command-specific as shown in the mapping table. Reject
   missing required fields. Also reject fields that are not defined for the
   selected command, rather than silently ignoring contradictory payload data.
 - Set each presence flag (`hasTrack`, `hasIndex`, `hasValue`, `hasFlag`,
-  `hasFrequencyHz`, `hasQ`, and `hasGainDb`) only after the corresponding
-  field has passed exact JSON type and representability checks. A future decoder
-  for Audio In EQ must also set `hasSampleRate` only after validating it.
-  Never manufacture a default value to make a missing field appear present.
+  `hasFrequencyHz`, `hasQ`, `hasGainDb`, and `hasSampleRate`) only after
+  the corresponding field has passed exact JSON type and representability
+  checks. Never manufacture a presence flag to make a missing required field
+  appear present; the track EQ command's omitted sample rate is the sole
+  documented default and remains explicitly absent in the decoded message.
 - Bound the transport frame size before parsing. The decoder currently enforces
   a 1024-byte maximum; the future transport must apply the same bound while
   receiving frames, before constructing an unbounded input buffer.
@@ -269,11 +272,12 @@ old-epoch acknowledgements without exposing them to the active epoch.
 single-active-connection enforcement, stale disconnect rejection, invalidation,
 and exhaustion without zero wraparound.
 
-`tests/native_ui_json_decoder_test.cpp` covers valid command envelopes,
-malformed/trailing input, top-level non-objects, duplicate and unknown keys,
-nested values, wrong JSON types, integer boundaries/overflow, missing and
-command-inapplicable fields, oversized frames, and exact command-name matching.
-The typed adapter remains responsible for fader/pan/Aux-send range validation after
+`tests/native_ui_json_decoder_test.cpp` covers the legacy unversioned command
+envelopes and their strict field/type rules. The v1-specific
+`tests/native_ui_protocol_v1_decoder_test.cpp` now covers the expanded track
+Aux/EQ and Audio In command set, finite numeric fields, required sample rate,
+duplicate/unknown fields, and unchanged output after rejection. The typed
+adapter remains responsible for fader/pan/Aux-send range validation after
 successful decoding; the dispatcher validates EQ frequency, Q, gain, and the
 complete six-band configuration before queueing.
 
