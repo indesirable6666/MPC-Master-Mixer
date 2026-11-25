@@ -196,19 +196,33 @@ The presentation snapshot therefore exposes `faderValue`,
 `masterFaderValue`, and `levelValue` rather than misleading percent names;
 these values can legitimately exceed 100.
 
-The typed `NativeUiCommandAdapter` now maps the Audio In pair LINK, shared
-stereo gain/balance/Mute, per-side gain/pan/Mute/Solo, Aux Sends and six-band EQ
-into the same dispatcher. Audio In EQ carries an explicit sample rate. These
-typed mappings are host-side only: the legacy JSON decoder and protocol v1
-wire decoder do not yet expose them, and the browser prototype is still not
-bound to the dispatcher.
+The strict `NativeUiProtocolV1Decoder` now exposes the track and Audio In
+DSP controls through a bounded JSON command envelope. Supported wire commands
+include track fader/pan/Mute/Solo, Aux Sends and EQ; Master fader/Mute; Audio In
+pair LINK, shared gain/balance/Mute; and per-side gain/pan/Mute/Solo, Aux Sends
+and six-band EQ. Audio In EQ carries an explicit sample rate. The decoder
+checks exact field sets and JSON types; the adapter and dispatcher enforce
+model ranges, EQ validity and linked-mode restrictions.
 
-Insert enable is intentionally reported as unsupported. The UI cannot supply
-an arbitrary `AudioInsert*`: effect construction, ownership, and replacement
-acknowledgement belong to a future native host. The command envelope is not
-yet a byte-level serialization format, IPC transport, browser binding, or
-proof of engine/device integration. The dispatcher itself is called on the
-controller's serialized producer thread.
+`NativeUiProtocolV1CommandProcessor` gates commands on the active session
+epoch and a fully delivered, audio-caught-up snapshot. Its `command_result`
+means accepted/queued only. A separate `audio_ack` is published after the
+audio callback applies the corresponding ticket. The v1 snapshot serializer
+and decoder carry the 16-track state, four logical Aux Returns, Master and
+value-only Audio In pair state. These contracts are covered by offline host
+tests and selected ARMv7 cross-compilation checks.
+
+A caller-driven `NativeUiUnixStreamProtocolDriver` composes the v1 handlers,
+snapshot/ACK delivery and framed nonblocking stream abstractions. It does not
+create or listen on a socket, own an event loop, choose an endpoint path or
+permissions, or provide a deployed application. The browser prototype remains
+local demo state and is not bound to this native protocol. No MPC endpoint,
+physical audio route or hardware feedback is implemented by these components.
+
+Insert enable remains unsupported on the v1 wire protocol. A UI boolean cannot
+safely construct or transfer ownership of an arbitrary `AudioInsert*`; effect
+construction and replacement lifetime remain native-host responsibilities.
+The dispatcher itself runs on the controller's serialized producer thread.
 
 
 The desired-state and presentation snapshots also carry a value-only Audio In
@@ -224,8 +238,8 @@ with logical indices only; no device backend or physical port mapping exists.
 
 Like track state, the snapshot is a producer-side desired copy: it is not proof
 that the audio callback has applied a command, and it is not hardware feedback.
-The new EQ and Aux UI command types are transport-neutral dispatch operations;
-the browser prototype is not yet bound to this native dispatcher.
+The v1 wire protocol now transports the Audio In EQ and Aux commands, while the
+browser prototype remains unbound to the native dispatcher.
 
 
 ## All-track presentation consistency
