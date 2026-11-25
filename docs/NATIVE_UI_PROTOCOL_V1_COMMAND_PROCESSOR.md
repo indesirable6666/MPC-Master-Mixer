@@ -2,51 +2,76 @@
 
 ## Scope
 
-`NativeUiProtocolV1CommandProcessor` is the control-thread ingress for v1
-mixer command messages. It connects the strict v1 command decoder, typed
-command adapter, session readiness/epoch gate, bounded audio-ticket tracker,
-and command-result serializer.
+`NativeUiProtocolV1CommandProcessor` is the serialized control-thread ingress
+for v1 mixer command messages. It connects the strict JSON decoder, typed
+command adapter, session epoch/readiness gate, bounded audio-ticket tracker,
+and command-result serializer. It owns no socket and performs no work on the
+audio callback.
 
-## Processing order
+## Supported command families
 
-1. Strictly decode the JSON command envelope (maximum 1024 bytes).
-2. Reject a stale or inactive connection epoch.
+After the active session has received a complete, audio-caught-up snapshot,
+the v1 command processor accepts:
+
+- Track fader, pan, Mute and Solo.
+- Track Aux Send and one six-band EQ parameter update (frequency, Q, gain;
+  track EQ sample rate defaults to 48 kHz when omitted).
+- Master fader and Mute.
+- Audio In pair LINK/UNLINK, shared stereo gain, balance and Mute.
+- Audio In channel gain, pan, Mute, Solo, Aux Send and six-band EQ. The
+  channel `track` field is side 0 (left) or 1 (right); Audio In EQ requires
+  an explicit sample rate.
+- Linked-mode restrictions are enforced by the dispatcher/controller. For
+  example, mono Pan is rejected while the pair is linked; shared gain, Mute,
+  Solo, EQ and Aux state remain coordinated.
+
+The strict decoder checks the exact JSON field set and primitive types.
+The adapter and dispatcher then validate target indices, parameter ranges,
+sample-rate/Nyquist constraints, and current LINK mode. The transport-neutral
+dispatcher also has an Aux Return command, but that command is not part of the
+current v1 wire decoder. Insert enable remains unsupported on the wire: a
+boolean cannot safely construct or transfer ownership of an `AudioInsert*`.
+
+## Processing and acknowledgement
+
+1. Decode one bounded JSON command (maximum 1024 bytes).
+2. Reject an inactive or stale connection epoch.
 3. Reject commands until the current session has received a complete,
    audio-caught-up snapshot.
-4. Convert the six supported first-slice commands to typed mixer commands:
-   track fader, pan, mute, solo, Master fader, and Master mute.
-5. Dispatch through `NativeUiSessionCoordinator`, which reserves bounded
-   acknowledgement capacity and records any nonzero audio ticket.
-6. Serialize a `command_result` response. An accepted result means the
-   control command was queued/accepted; it does not mean the audio callback has
-   applied it.
+4. Convert the decoded message to a typed mixer command.
+5. Dispatch on the serialized producer thread. The session reserves bounded
+   acknowledgement capacity and records the returned nonzero audio ticket.
+6. Serialize a `command_result`. `accepted` means the command was queued;
+   it does not mean the audio callback has applied it.
+7. After the callback applies the ticket, the control thread publishes the
+   corresponding `audio_ack`. The transport consumes that ACK only after the
+   complete framed response has been sent.
 
-The caller sends the returned response through the transport. Later, after the
-audio callback applies a ticket, the control thread drains the session through
-`NativeUiProtocolV1AudioAckPublisher::publishNext()`. That helper serializes the
-matching epoch, sequence, and audio ticket into an `audio_ack` payload; the
-transport then sends that payload. The audio callback never serializes or
-performs transport work. Queue-full rejection does not consume
-the command sequence, allowing the same sequence to be retried.
+Queue-full or invalid commands do not consume the next accepted sequence.
+The caller must preserve one serialized producer and retry a queue-full
+command with the same sequence only after backpressure clears.
 
-## Boundaries
+## Snapshot synchronization
 
-This processor does not own or access sockets, descriptors, UI widgets, the
-audio callback, or hardware. It must run on the serialized control/transport
-thread. EQ, Aux, insert, and other commands remain outside this initial v1
-command envelope and are not silently mapped to another operation.
+The v1 snapshot serializer/decoder carry all 16 tracks, four logical Aux
+Returns, Master state, and the value-only Audio In pair state (LINK, shared
+controls, both channel states, six-band EQ, four Aux sends and insert
+occupancy flags). A session becomes ready only after the complete snapshot
+frame is reported delivered and its audio ticket watermark is caught up.
+Snapshots represent controller desired state plus an explicit applied
+watermark; they are not hardware feedback.
 
-The host test covers not-ready and stale-session rejection, accepted command
-dispatch, out-of-order results, malformed track index rejection, and delayed
-audio acknowledgement. The ARMv7 workflow compiles the same test; no MPC
-hardware execution is implied.
+## Boundaries and tests
 
-## Applied audio acknowledgement publisher
+The protocol processor and caller-driven Unix-stream protocol driver are
+control-thread components. Framing, partial writes, backpressure, connection
+epochs, snapshot delivery and delayed audio ACKs have offline host tests.
+The command-processor test also drives Audio In LINK/UNLINK, shared and
+per-side controls, EQ/Aux commands and ordinary track EQ/Aux through the
+strict decoder and verifies FIFO audio acknowledgements.
 
-`NativeUiProtocolV1AudioAckPublisher` is a small control-thread-only bridge
-from `NativeUiSessionCoordinator::popApplied()` to the v1 `audio_ack`
-serializer. It emits at most one completed acknowledgement per call, keeps
-the output unchanged when no acknowledgement is ready, and leaves socket
-transmission to the future transport owner. The command processor test covers
-no-early-ACK behavior, the callback applying the ticket, and the serialized
-ACK envelope. This does not add endpoint lifecycle or hardware access.
+These tests establish software contracts with synthetic buffers and host
+memory only. They do not establish a deployed application, a browser-to-native
+binding, an MPC socket endpoint, physical audio routing, live MIDI, or hardware
+feedback. The ARMv7 workflow compiles selected test binaries but does not run
+them on the MPC.
