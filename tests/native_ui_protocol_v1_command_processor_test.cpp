@@ -95,82 +95,108 @@ int main() {
     assert(ackPublisher.markDelivered(session));
     assert(!ackPublisher.publishNext(controller, session, ackPayload));
 
-    // Audio In commands now traverse the same strict v1 wire decoder,
+    // Audio In and track DSP commands traverse the strict v1 wire decoder,
     // readiness gate, typed adapter, dispatcher and acknowledgement ledger.
-    const auto submit = [&](const std::string& payload, std::uint64_t sequence) {
-        const auto submitted = processor.process(payload, session, dispatcher, response);
+    const auto payloadFor = [&](std::uint64_t sequence, const std::string& fields) {
+        return std::string(R"({"version":1,"kind":"command","epoch":)") +
+            std::to_string(epoch) + R"(,"sequence":)" +
+            std::to_string(sequence) + "," + fields + "}";
+    };
+    const auto submit = [&](const std::string& fields, std::uint64_t sequence) {
+        const auto submitted = processor.process(
+            payloadFor(sequence, fields), session, dispatcher, response);
         assert(submitted.status == NativeUiProtocolV1CommandProcessStatus::Accepted);
         assert(submitted.commandResult.accepted());
         assert(submitted.commandResult.sequence == sequence);
         assert(submitted.commandResult.audioTicket != 0);
         const auto reply = nlohmann::json::parse(response);
         assert(reply["kind"] == "command_result");
+        assert(reply["epoch"] == epoch);
         assert(reply["sequence"] == sequence);
         assert(reply["status"] == "accepted");
         return submitted.commandResult.audioTicket;
     };
 
-    const std::string link =
-        std::string(R"({"version":1,"kind":"command","epoch":)") +
-        std::to_string(epoch) +
-        R"(,"sequence":2,"type":"SetAudioInputPairLinked","flag":true})";
-    const std::uint32_t linkTicket = submit(link, 2);
+    const std::uint32_t linkTicket =
+        submit(R"("type":"SetAudioInputPairLinked","flag":true)", 2);
+    const std::uint32_t gainTicket =
+        submit(R"("type":"SetAudioInputPairStereoGain","value":88)", 3);
+    const std::uint32_t balanceTicket =
+        submit(R"("type":"SetAudioInputPairBalance","value":-35)", 4);
+    const std::uint32_t muteTicket =
+        submit(R"("type":"SetAudioInputPairStereoMute","flag":true)", 5);
+    const std::uint32_t soloTicket =
+        submit(R"("type":"SetAudioInputChannelSolo","track":1,"flag":true)", 6);
+    const std::uint32_t auxTicket =
+        submit(R"("type":"SetAudioInputChannelAuxSend","track":0,"index":1,"value":65)", 7);
+    const std::uint32_t linkedEqTicket =
+        submit(R"("type":"SetAudioInputChannelEqBand","track":0,"index":2,"frequencyHz":1000,"q":0.8,"gainDb":3,"sampleRate":48000)", 8);
 
-    const std::string gain =
-        std::string(R"({"version":1,"kind":"command","epoch":)") +
-        std::to_string(epoch) +
-        R"(,"sequence":3,"type":"SetAudioInputPairStereoGain","value":88})";
-    const std::uint32_t gainTicket = submit(gain, 3);
-
-    const std::string aux =
-        std::string(R"({"version":1,"kind":"command","epoch":)") +
-        std::to_string(epoch) +
-        R"(,"sequence":4,"type":"SetAudioInputChannelAuxSend","track":0,"index":1,"value":65})";
-    const std::uint32_t auxTicket = submit(aux, 4);
-
-    const std::string eq =
-        std::string(R"({"version":1,"kind":"command","epoch":)") +
-        std::to_string(epoch) +
-        R"(,"sequence":5,"type":"SetAudioInputChannelEqBand","track":1,"index":2,"frequencyHz":1000,"q":0.8,"gainDb":3,"sampleRate":48000})";
-    const std::uint32_t eqTicket = submit(eq, 5);
-
-    const std::string invalidPan =
-        std::string(R"({"version":1,"kind":"command","epoch":)") +
-        std::to_string(epoch) +
-        R"(,"sequence":6,"type":"SetAudioInputChannelPan","track":1,"value":-20})";
-    result = processor.process(invalidPan, session, dispatcher, response);
+    // Pan is not meaningful while the pair is linked. Rejection must leave
+    // sequence 9 available for the following LINK transition.
+    result = processor.process(payloadFor(
+        9, R"("type":"SetAudioInputChannelPan","track":1,"value":-20)"),
+        session, dispatcher, response);
     assert(result.status == NativeUiProtocolV1CommandProcessStatus::Rejected);
     assert(result.commandResult.status == MixerUiCommandStatus::Invalid);
-    assert(dispatcher.lastAcceptedSequence() == 5);
+    assert(dispatcher.lastAcceptedSequence() == 8);
 
-    const std::string unlink =
-        std::string(R"({"version":1,"kind":"command","epoch":)") +
-        std::to_string(epoch) +
-        R"(,"sequence":6,"type":"SetAudioInputPairLinked","flag":false})";
-    const std::uint32_t unlinkTicket = submit(unlink, 6);
+    const std::uint32_t unlinkTicket =
+        submit(R"("type":"SetAudioInputPairLinked","flag":false)", 9);
+    const std::uint32_t panTicket =
+        submit(R"("type":"SetAudioInputChannelPan","track":1,"value":-20)", 10);
+    const std::uint32_t channelGainTicket =
+        submit(R"("type":"SetAudioInputChannelGain","track":0,"value":74)", 11);
+    const std::uint32_t channelMuteTicket =
+        submit(R"("type":"SetAudioInputChannelMute","track":1,"flag":false)", 12);
+    const std::uint32_t channelSoloTicket =
+        submit(R"("type":"SetAudioInputChannelSolo","track":0,"flag":false)", 13);
+    const std::uint32_t monoEqTicket =
+        submit(R"("type":"SetAudioInputChannelEqBand","track":0,"index":3,"frequencyHz":1500,"q":1,"gainDb":-1,"sampleRate":96000)", 14);
+    const std::uint32_t trackAuxTicket =
+        submit(R"("type":"SetTrackAuxSend","track":3,"index":2,"value":45)", 15);
+    const std::uint32_t trackEqTicket =
+        submit(R"("type":"SetTrackEqBand","track":3,"index":1,"frequencyHz":1200,"q":0.8,"gainDb":-2.5,"sampleRate":96000)", 16);
 
-    const std::string pan =
-        std::string(R"({"version":1,"kind":"command","epoch":)") +
-        std::to_string(epoch) +
-        R"(,"sequence":7,"type":"SetAudioInputChannelPan","track":1,"value":-20})";
-    const std::uint32_t panTicket = submit(pan, 7);
-
-    // All commands are applied together at a block boundary. Desired state
-    // is visible in the snapshot, while the audio ACKs remain FIFO and explicit.
+    // All commands are applied at a block boundary. The snapshot exposes
+    // desired values while each audio ACK remains FIFO and separately gated.
     bridge.process(inputs, left, right, 1);
-    const auto audioInputSnapshot = publisher.publish().audioInputPair;
+    const auto snapshotAfterCommands = publisher.publish();
+    const auto& audioInputSnapshot = snapshotAfterCommands.audioInputPair;
     assert(!audioInputSnapshot.linked);
+    assert(audioInputSnapshot.stereoGainValue == 88);
+    assert(audioInputSnapshot.balancePercent == -35);
+    assert(audioInputSnapshot.stereoMute);
+    assert(audioInputSnapshot.stereoSolo);
+    assert(audioInputSnapshot.stereoAuxSendPercent[1] == 65);
+    assert(audioInputSnapshot.channels[0].gainValue == 74);
+    assert(audioInputSnapshot.channels[1].gainValue == 88);
+    assert(audioInputSnapshot.channels[0].mute);
+    assert(!audioInputSnapshot.channels[1].mute);
+    assert(!audioInputSnapshot.channels[0].solo);
+    assert(audioInputSnapshot.channels[1].solo);
     assert(audioInputSnapshot.channels[1].panPercent == -20);
     assert(audioInputSnapshot.channels[0].auxSendPercent[1] == 65);
     assert(audioInputSnapshot.channels[1].auxSendPercent[1] == 65);
-    assert(audioInputSnapshot.channels[0].eqSampleRate == 48000.0f);
+    assert(audioInputSnapshot.channels[0].eqSampleRate == 96000.0f);
     assert(audioInputSnapshot.channels[1].eqSampleRate == 48000.0f);
+    assert(audioInputSnapshot.channels[0].eq[3].frequencyHz == 1500.0f);
+    assert(audioInputSnapshot.channels[1].eq[2].gainDb == 3.0f);
+    assert(snapshotAfterCommands.tracks[3].auxSendPercent[2] == 45);
+    assert(snapshotAfterCommands.tracks[3].eqConfigured);
+    assert(snapshotAfterCommands.tracks[3].eqSampleRate == 96000.0f);
+    assert(snapshotAfterCommands.tracks[3].eq[1].gainDb == -2.5f);
 
-    const std::uint64_t expectedSequences[] = {2, 3, 4, 5, 6, 7};
-    const std::uint32_t expectedTickets[] = {
-        linkTicket, gainTicket, auxTicket, eqTicket, unlinkTicket, panTicket
+    const std::uint64_t expectedSequences[] = {
+        2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16
     };
-    for (std::size_t i = 0; i < 6; ++i) {
+    const std::uint32_t expectedTickets[] = {
+        linkTicket, gainTicket, balanceTicket, muteTicket, soloTicket,
+        auxTicket, linkedEqTicket, unlinkTicket, panTicket, channelGainTicket,
+        channelMuteTicket, channelSoloTicket, monoEqTicket, trackAuxTicket,
+        trackEqTicket
+    };
+    for (std::size_t i = 0; i < 15; ++i) {
         assert(ackPublisher.publishNext(controller, session, ackPayload));
         const auto ack = nlohmann::json::parse(ackPayload);
         assert(ack["kind"] == "audio_ack");
