@@ -463,7 +463,8 @@
             !integer(message.audio_ticket, 0, 4294967295)) return false;
         const sequence = canonicalUint64(message.sequence, false);
         const entry = sequence === null ? null : this.pending.get(sequence);
-        if (!entry) return false;
+        if (!entry || entry.status !== "sent" ||
+            (message.status !== "accepted" && message.audio_ticket !== 0)) return false;
         if (message.status === "accepted" && message.audio_ticket !== 0) {
           entry.status = "awaiting_ack";
           entry.audioTicket = message.audio_ticket;
