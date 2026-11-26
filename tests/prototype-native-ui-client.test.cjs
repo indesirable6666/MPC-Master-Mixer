@@ -112,6 +112,10 @@ test('accepted asynchronous commands remain pending until a matching audio ACK',
   })), true);
   assert.equal(client.state().pendingCommands, 1);
   assert.equal(client.receive(JSON.stringify({
+    version: 1, kind: 'command_result', epoch: 7, sequence: 1,
+    status: 'accepted', audio_ticket: 56
+  })), false); // A duplicate result cannot replace the first ticket.
+  assert.equal(client.receive(JSON.stringify({
     version: 1, kind: 'audio_ack', epoch: 7, sequence: 1,
     audio_ticket: 56, status: 'applied'
   })), false);
