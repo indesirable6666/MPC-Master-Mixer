@@ -82,5 +82,8 @@ jobs:
           console.log('Prototype structure, unique IDs and inline JavaScript syntax checks passed.');
           NODE
 
-      - name: Run prototype interaction tests
-        run: node --test tests/prototype-interactions.test.cjs
+      - name: Check transport-neutral protocol client syntax
+        run: node --check prototype/native-ui-protocol-client.js
+
+      - name: Run prototype and protocol-client tests
+        run: node --test tests/prototype-*.test.cjs
