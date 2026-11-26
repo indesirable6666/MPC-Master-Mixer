@@ -20,8 +20,6 @@
     SetAudioInputPairStereoGain: ["value"],
     SetAudioInputPairBalance: ["value"],
     SetAudioInputPairStereoMute: ["flag"],
-    SetAudioInputPairStereoSolo: ["flag"],
-    SetAudioInputPairStereoAuxSend: ["index", "value"],
     SetAudioInputChannelGain: ["track", "value"],
     SetAudioInputChannelPan: ["track", "value"],
     SetAudioInputChannelMute: ["track", "flag"],
@@ -174,6 +172,11 @@
       Object.prototype.hasOwnProperty.call(value, name));
   }
 
+  function utf8ByteLength(value) {
+    if (typeof TextEncoder !== "undefined") return new TextEncoder().encode(value).length;
+    return unescape(encodeURIComponent(value)).length;
+  }
+
   function integer(value, min, max) {
     return Number.isInteger(value) && value >= min && value <= max;
   }
@@ -259,7 +262,7 @@
     if (!exactKeys(command, required)) return false;
     const type = command.type;
     const hasTrack = Object.prototype.hasOwnProperty.call(command, "track");
-    const trackMax = type.indexOf("AudioInputChannel") === 0 ? 1 : 15;
+    const trackMax = type.indexOf("SetAudioInputChannel") === 0 ? 1 : 15;
     if (hasTrack && !integer(command.track, 0, trackMax)) return false;
     if (Object.prototype.hasOwnProperty.call(command, "index")) {
       const maximum = type.indexOf("EqBand") >= 0 ? 5 : 3;
@@ -292,7 +295,7 @@
       this.send = config.send;
       this.clientName = config.clientName || "touch-mixer";
       if (typeof this.clientName !== "string" || this.clientName.length === 0 ||
-          new TextEncoder().encode(this.clientName).length > 64) {
+          utf8ByteLength(this.clientName) > 64) {
         throw new TypeError("clientName must contain 1..64 UTF-8 bytes");
       }
       this.onState = typeof config.onState === "function" ? config.onState : function () {};
@@ -411,7 +414,10 @@
       let message;
       try { message = parseProtocolJson(payload); }
       catch (error) { return false; }
-      if (!exactKeys(message, ["version", "kind", "epoch"]) ||
+      if (!message || typeof message !== "object" || Array.isArray(message) ||
+          !Object.prototype.hasOwnProperty.call(message, "version") ||
+          !Object.prototype.hasOwnProperty.call(message, "kind") ||
+          !Object.prototype.hasOwnProperty.call(message, "epoch") ||
           message.version !== 1 || typeof message.kind !== "string") return false;
       const epoch = canonicalUint64(message.epoch, true);
       if (epoch === null) return false;
